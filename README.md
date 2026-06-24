@@ -69,9 +69,8 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-* [nodejs](https://nodejs.org/) 12.x or higher
-* sqlite3
-* Probably some other stuff
+* [nodejs](https://nodejs.org/) 18.x or higher
+* Build tools for native modules: `build-essential`, `python3`, `pkg-config`, `libsqlite3-dev`
 
 #### Recommended
 
@@ -86,7 +85,7 @@ These instructions will get you a copy of the project up and running on your loc
 2) Launch the app from the Terminal:
 
 ```
-    $ sudo apt-get install npm sqlite3
+    $ sudo apt-get install build-essential python3 pkg-config libsqlite3-dev
     $ npm install npm@latest -g
     $ npm install pm2 -g
     $ cd server

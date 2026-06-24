@@ -1,4 +1,5 @@
 # 0.4.1 - TBA
+* Update sqlite3 dependencies for current Node.js and Debian releases #652
 * Package.json now used as source of truth for all version statements. #646 @Danrw
 * Fix critical security and functional issues in develop branch @Danrw
 * Fix authentication bypass vulnerability in API routes (req.isAuthenticated missing parentheses) @Danrw
