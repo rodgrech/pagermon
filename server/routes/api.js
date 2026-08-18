@@ -58,9 +58,20 @@ var waterNswAttemptSlot = null;
 var waterNswGaugeCache = { fetchedAt: 0, data: null };
 var waterNswGaugeAttemptSlot = null;
 var waterNswAlgaeCache = { fetchedAt: 0, data: null };
+var receiverHeartbeatFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/receiver-heartbeats.json');
+var receiverHeartbeats = {};
+var receiverDefinitions = {
+  RFSPAGE: { id: 'RFSPAGE', label: 'RFSPAGE', location: 'RDIO server', frequency: '148.5875 MHz' },
+  RemoteSDR1: { id: 'RemoteSDR1', label: 'RemoteSDR1', location: 'Raspberry Pi', frequency: '148.5875 MHz' }
+};
 var centralWestGaugeMetadata = require('./central-west-gauges.json');
 var waterNswCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-dams.json');
 var waterNswGaugeCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-gauges.json');
+try {
+  receiverHeartbeats = JSON.parse(fs.readFileSync(receiverHeartbeatFile, 'utf8')) || {};
+} catch (receiverHeartbeatError) {
+  receiverHeartbeats = {};
+}
 try {
   var persistedDamData = JSON.parse(fs.readFileSync(waterNswCacheFile, 'utf8'));
   waterNswCache = { fetchedAt: Number(persistedDamData.fetchedAt || 0) * 1000, data: persistedDamData };
@@ -1535,11 +1546,29 @@ router.route('/central-west/dashboard')
           rows.forEach(function (row) { delete row.address; });
         }
         var latest = rows.length ? Number(rows[0].timestamp) : null;
+        var nowSeconds = Math.floor(Date.now() / 1000);
+        var receivers = Object.keys(receiverDefinitions).map(function (id) {
+          var definition = receiverDefinitions[id];
+          var heartbeat = receiverHeartbeats[id] || {};
+          var lastSeen = Number(heartbeat.lastSeen) || null;
+          var age = lastSeen ? nowSeconds - lastSeen : null;
+          var state = age === null ? 'offline' : age <= 180 ? 'online' : age <= 600 ? 'stale' : 'offline';
+          return {
+            id: definition.id,
+            label: definition.label,
+            location: definition.location,
+            frequency: definition.frequency,
+            state: state,
+            lastSeen: lastSeen,
+            age: age
+          };
+        });
         res.status(200).json({
           serverTime: Math.floor(Date.now() / 1000),
           uptime: Math.floor(process.uptime()),
           latestTimestamp: latest,
           receiverState: latest && (Date.now() / 1000 - latest) < 86400 ? 'receiving' : 'quiet',
+          receivers: receivers,
           messages: rows
         });
       })
@@ -1547,6 +1576,27 @@ router.route('/central-west/dashboard')
         logger.main.error(err);
         res.status(500).send(err);
       });
+  });
+
+router.route('/central-west/receiver-heartbeat')
+  .post(authHelper.isAdmin, function (req, res) {
+    var id = String(req.body.id || '').trim();
+    if (!Object.prototype.hasOwnProperty.call(receiverDefinitions, id)) {
+      return res.status(400).json({ error: 'Unknown receiver id.' });
+    }
+    receiverHeartbeats[id] = {
+      lastSeen: Math.floor(Date.now() / 1000),
+      identifier: String(req.body.identifier || '').slice(0, 100)
+    };
+    try {
+      fs.mkdirSync(path.dirname(receiverHeartbeatFile), { recursive: true });
+      fs.writeFileSync(receiverHeartbeatFile + '.tmp', JSON.stringify(receiverHeartbeats, null, 2) + '\n', { mode: 0o600 });
+      fs.renameSync(receiverHeartbeatFile + '.tmp', receiverHeartbeatFile);
+    } catch (err) {
+      logger.main.error(err);
+      return res.status(500).json({ error: 'Unable to persist receiver heartbeat.' });
+    }
+    return res.status(200).json({ status: 'ok', id: id, lastSeen: receiverHeartbeats[id].lastSeen });
   });
 
 router.route('/central-west/bom-warnings')

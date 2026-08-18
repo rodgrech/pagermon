@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-west-alerts-static-v10-radar-layers';
+const CACHE_NAME = 'central-west-alerts-static-v12-service-status';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/textAngular.css',

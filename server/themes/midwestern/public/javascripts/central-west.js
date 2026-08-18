@@ -159,6 +159,14 @@
     return {state: state, label: label, lastSeen: humanDuration(age), uptime: humanDuration(uptime).replace(' ago', '')};
   }
 
+  function receiverHealth(receiver) {
+    var copy = Object.assign({}, receiver || {});
+    var state = copy.state || 'offline';
+    copy.statusLabel = state === 'online' ? 'Online' : state === 'stale' ? 'Beacon delayed' : 'Offline';
+    copy.lastSeenLabel = copy.age === null || typeof copy.age === 'undefined' ? 'Never reported' : humanDuration(Number(copy.age));
+    return copy;
+  }
+
   function escapeHtml(value) {
     return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -263,5 +271,5 @@
     return '<svg class="cw-aircraft-svg" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(' + Number(track || 0) + 'deg)">' + paths[kind] + '</svg>';
   }
 
-  window.CentralWestAlerts = {decorateMessage: decorateMessage, groupIncidents: groupIncidents, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, renderMap: renderMap, setRadar: setRadar};
+  window.CentralWestAlerts = {decorateMessage: decorateMessage, groupIncidents: groupIncidents, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar};
 })(window);

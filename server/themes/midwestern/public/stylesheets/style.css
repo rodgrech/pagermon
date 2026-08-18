@@ -162,6 +162,8 @@ a:hover, a:focus {
     width: 225px;
 }
 @media (max-width: 767px) {
+  .cw-health-beacons { grid-template-columns: 1fr; }
+  .cw-server-health { flex-direction: column; gap: 2px; }
     .btn-group-vertical {
         text-align: start!important;
         position: relative!important;
@@ -169,6 +171,34 @@ a:hover, a:focus {
         right:0px!important;
         width: 100%!important;
     }
+}
+
+/* Logged-in receiver status page */
+.cw-status-page { max-width: 920px; margin: 24px auto 50px; }
+.cw-status-heading { margin-bottom: 20px; }
+.cw-status-heading p { color: #6b7c8d; }
+.cw-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.cw-status-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 18px; background: #fff; border: 1px solid #d9e2ea; border-left: 5px solid #8595a5; border-radius: 5px; box-shadow: 0 2px 7px rgba(23,42,61,.08); }
+.cw-status-card.cw-health-online { border-left-color: #2f9d62; }
+.cw-status-card.cw-health-stale { border-left-color: #e09a26; }
+.cw-status-card.cw-health-offline { border-left-color: #c34b55; }
+.cw-status-card .cw-health-dot { width: 13px; height: 13px; }
+.cw-status-card h3 { margin: 0 0 4px; font-size: 18px; }
+.cw-status-card p, .cw-status-card span { margin: 0; color: #708090; }
+.cw-status-value { text-align: right; }
+.cw-status-value strong, .cw-status-value span { display: block; }
+.cw-status-meta { margin-top: 18px; padding: 14px 18px; background: #eef3f7; border-radius: 5px; color: #526577; }
+body.cw-dark .cw-status-card { background: #1b2c3e; border-color: #31465b; }
+body.cw-dark .cw-status-card.cw-health-online { border-left-color: #45ba7c; }
+body.cw-dark .cw-status-card.cw-health-stale { border-left-color: #f0ad3d; }
+body.cw-dark .cw-status-card.cw-health-offline { border-left-color: #e16670; }
+body.cw-dark .cw-status-card h3 { color: #edf4fa; }
+body.cw-dark .cw-status-meta { background: #172637; color: #b9c8d5; }
+@media (max-width: 767px) {
+  .cw-status-page { margin: 12px 0 30px; }
+  .cw-status-grid { grid-template-columns: 1fr; }
+  .cw-status-card { grid-template-columns: auto 1fr; }
+  .cw-status-value { grid-column: 2; text-align: left; }
 }
 
 #buttons-capcodes {
@@ -748,6 +778,15 @@ footer,
 .cw-health-stale, .cw-health-offline { border-left-color: #bd3e4b; }
 .cw-health-stale .cw-health-dot, .cw-health-offline .cw-health-dot { background: #bd3e4b; }
 .cw-health-note { margin-left: auto; font-size: 11px; }
+.cw-health-beacons { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 10px; align-items: stretch; border-left-color: var(--mw-blue); }
+.cw-receiver-beacon { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 11px; border: 1px solid var(--mw-border); border-left: 4px solid #bd3e4b; border-radius: 5px; background: rgba(255,255,255,.55); }
+.cw-receiver-beacon > div { display: flex; flex-direction: column; min-width: 0; }
+.cw-receiver-beacon > div span { font-size: 11px; color: var(--mw-muted); }
+.cw-receiver-state { text-align: right; }
+.cw-receiver-beacon.cw-health-online { border-left-color: #24945e; }
+.cw-receiver-beacon.cw-health-stale { border-left-color: #e49b21; }
+.cw-receiver-beacon.cw-health-offline { border-left-color: #bd3e4b; }
+.cw-server-health { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: var(--mw-muted); padding: 0 3px; }
 .cw-panel { margin-top: 12px; padding: 14px; background: #fff; border: 1px solid var(--mw-border); border-radius: 7px; }
 .cw-empty { padding: 22px; color: var(--mw-muted); text-align: center; }
 .cw-incident, .cw-discovery { margin-bottom: 10px; padding: 12px 14px; background: #f9fbfd; border: 1px solid #dfe7ee; border-left: 5px solid #8794a0; border-radius: 5px; }
@@ -897,6 +936,7 @@ body.cw-dark .cw-agency-suggestion, body.cw-dark .cw-correlation { color: #b8cdd
 body.cw-dark { --mw-border: #31465b; --mw-muted: #9cacbb; background: #0e1925 !important; color: #dce6ef; }
 body.cw-dark #content, body.cw-dark .container-fluid { background: #0e1925; }
 body.cw-dark .table, body.cw-dark .cw-panel, body.cw-dark .cw-health { background: #172637; color: #dce6ef; }
+body.cw-dark .cw-receiver-beacon { background: rgba(8,20,32,.42); }
 body.cw-dark .table > thead > tr > th { background: #1d3044; color: #b8c8d7; border-color: #31465b; }
 body.cw-dark .table > tbody > tr > td { background: #172637; border-color: #2b3e51; }
 body.cw-dark .table > tbody > tr:nth-child(even) > td { background: #1a2a3c; }

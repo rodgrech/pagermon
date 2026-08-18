@@ -38,4 +38,14 @@ router.get('/', function (req, res, next) {
     res.render('index', { pageTitle: 'Home' });
 });
 
+/* Detailed receiver status is private account information. */
+router.get('/service-status', function (req, res) {
+    if (!req.isAuthenticated()) {
+        req.flash('loginMessage', 'You need to be logged in to view service status');
+        return res.redirect('/auth/login');
+    }
+
+    res.render('service-status', { pageTitle: 'Service Status' });
+});
+
 module.exports = router;

@@ -65,12 +65,8 @@
           <button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()" title="Full-screen operations display"><i class="fa fa-expand"></i> Operations</button>
         </div>
 
-        <div class="cw-health" ng-class="'cw-health-' + health.state">
-          <span class="cw-health-dot"></span>
-          <strong>{{health.label}}</strong>
-          <span>Last page: {{health.lastSeen}}</span>
-          <span>Server uptime: {{health.uptime}}</span>
-          <span class="cw-health-note">Health is inferred from received traffic.</span>
+        <div class="cw-health">
+          <div class="cw-server-health"><strong>{{health.label}}</strong><span>Last page: {{health.lastSeen}} · Server uptime: {{health.uptime}}</span></div>
         </div>
 
         <div class="cw-panel" ng-show="dashboardView == 'incidents'">
@@ -430,6 +426,7 @@
       $scope.darkMode = localStorage.getItem('cw-dark-mode') === 'true';
       document.body.classList.toggle('cw-dark', $scope.darkMode);
       $scope.health = { state: 'loading', label: 'Checking receiver', lastSeen: 'Unknown', uptime: 'Unknown' };
+      $scope.receivers = [];
       $scope.incidents = [];
       $scope.unknownCapcodes = [];
       $scope.bomWarnings = [];
@@ -537,6 +534,7 @@
           var now = Number(data.serverTime);
           var age = data.latestTimestamp ? now - Number(data.latestTimestamp) : null;
           $scope.health = CentralWestAlerts.health(age, Number(data.uptime));
+          $scope.receivers = (data.receivers || []).map(CentralWestAlerts.receiverHealth);
           angular.forEach(data.messages, CentralWestAlerts.decorateMessage);
           $scope.incidents = CentralWestAlerts.groupIncidents(data.messages);
           CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
