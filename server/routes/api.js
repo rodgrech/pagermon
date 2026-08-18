@@ -13,6 +13,7 @@ var axios = require('axios');
 var sqlite3 = require('sqlite3');
 var path = require('path');
 var fs = require('fs');
+var net = require('net');
 
 var nconf = require('nconf');
 
@@ -1584,9 +1585,11 @@ router.route('/central-west/receiver-heartbeat')
     if (!Object.prototype.hasOwnProperty.call(receiverDefinitions, id)) {
       return res.status(400).json({ error: 'Unknown receiver id.' });
     }
+    var externalIp = String(req.body.externalIp || '').trim();
     receiverHeartbeats[id] = {
       lastSeen: Math.floor(Date.now() / 1000),
-      identifier: String(req.body.identifier || '').slice(0, 100)
+      identifier: String(req.body.identifier || '').slice(0, 100),
+      externalIp: net.isIP(externalIp) ? externalIp : (receiverHeartbeats[id] && receiverHeartbeats[id].externalIp) || ''
     };
     try {
       fs.mkdirSync(path.dirname(receiverHeartbeatFile), { recursive: true });
@@ -1597,6 +1600,28 @@ router.route('/central-west/receiver-heartbeat')
       return res.status(500).json({ error: 'Unable to persist receiver heartbeat.' });
     }
     return res.status(200).json({ status: 'ok', id: id, lastSeen: receiverHeartbeats[id].lastSeen });
+  });
+
+router.route('/central-west/receiver-status')
+  .get(isSessionUser, function (req, res) {
+    var nowSeconds = Math.floor(Date.now() / 1000);
+    var receivers = Object.keys(receiverDefinitions).map(function (id) {
+      var definition = receiverDefinitions[id];
+      var heartbeat = receiverHeartbeats[id] || {};
+      var lastSeen = Number(heartbeat.lastSeen) || null;
+      var age = lastSeen ? nowSeconds - lastSeen : null;
+      return {
+        id: definition.id,
+        label: definition.label,
+        location: definition.location,
+        frequency: definition.frequency,
+        state: age === null ? 'offline' : age <= 180 ? 'online' : age <= 600 ? 'stale' : 'offline',
+        lastSeen: lastSeen,
+        age: age,
+        externalIp: net.isIP(String(heartbeat.externalIp || '')) ? heartbeat.externalIp : null
+      };
+    });
+    return res.status(200).json({ serverTime: nowSeconds, uptime: Math.floor(process.uptime()), receivers: receivers });
   });
 
 router.route('/central-west/bom-warnings')

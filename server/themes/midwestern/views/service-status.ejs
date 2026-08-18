@@ -37,7 +37,7 @@
     return (days ? days + 'd ' : '') + hours + 'h';
   }
   function refresh() {
-    fetch('/api/central-west/dashboard?limit=1', {credentials: 'same-origin', cache: 'no-store'})
+    fetch('/api/central-west/receiver-status', {credentials: 'same-origin', cache: 'no-store'})
       .then(function (response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
       .then(function (data) {
         var receivers = data.receivers || [];
@@ -46,7 +46,8 @@
           var label = state === 'online' ? 'Online' : state === 'stale' ? 'Beacon delayed' : 'Offline';
           return '<article class="cw-status-card cw-health-' + escapeHtml(state) + '">' +
             '<span class="cw-health-dot"></span><div><h3>' + escapeHtml(receiver.label) + '</h3>' +
-            '<p>' + escapeHtml(receiver.location) + ' · ' + escapeHtml(receiver.frequency) + '</p></div>' +
+            '<p>' + escapeHtml(receiver.location) + ' · ' + escapeHtml(receiver.frequency) + '</p>' +
+            '<p><strong>External IP:</strong> ' + escapeHtml(receiver.externalIp || 'Awaiting receiver report') + '</p></div>' +
             '<div class="cw-status-value"><strong>' + label + '</strong><span>Last check-in ' + ageLabel(receiver.age) + '</span></div></article>';
         }).join('') || '<div class="alert alert-warning">No receivers are configured.</div>';
         document.getElementById('server-status').innerHTML = '<strong>PageMon server online</strong> · Uptime ' + uptimeLabel(data.uptime) + ' · Last refreshed ' + new Date().toLocaleTimeString();
