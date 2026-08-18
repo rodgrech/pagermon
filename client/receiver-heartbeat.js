@@ -3,6 +3,7 @@
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
+const os = require('os');
 
 const receiverId = process.argv[2];
 if (!receiverId) throw new Error('Receiver id is required.');
@@ -10,6 +11,16 @@ if (!receiverId) throw new Error('Receiver id is required.');
 const config = JSON.parse(fs.readFileSync('config/config.json', 'utf8'));
 const endpoint = new URL(String(config.hostname).replace(/\/$/, '') + '/api/central-west/receiver-heartbeat');
 const ipCacheFile = '/tmp/central-west-alerts-' + receiverId.replace(/[^a-z0-9_-]/gi, '') + '-public-ip.json';
+
+function internalIpv4() {
+  const addresses = [];
+  Object.keys(os.networkInterfaces()).forEach(function (name) {
+    (os.networkInterfaces()[name] || []).forEach(function (address) {
+      if (address.family === 'IPv4' && !address.internal) addresses.push(address.address);
+    });
+  });
+  return addresses[0] || null;
+}
 
 function cachedPublicIp() {
   try {
@@ -36,7 +47,7 @@ function cachedPublicIp() {
 }
 
 cachedPublicIp().then(function (externalIp) {
-  const payload = JSON.stringify({ id: receiverId, identifier: config.identifier || receiverId, externalIp: externalIp });
+  const payload = JSON.stringify({ id: receiverId, identifier: config.identifier || receiverId, externalIp: externalIp, internalIp: internalIpv4() });
   const transport = endpoint.protocol === 'https:' ? https : http;
   const request = transport.request(endpoint, {
     method: 'POST',

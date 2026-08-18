@@ -47,6 +47,7 @@
           return '<article class="cw-status-card cw-health-' + escapeHtml(state) + '">' +
             '<span class="cw-health-dot"></span><div><h3>' + escapeHtml(receiver.label) + '</h3>' +
             '<p>' + escapeHtml(receiver.location) + ' · ' + escapeHtml(receiver.frequency) + '</p>' +
+            '<p><strong>Internal IP:</strong> ' + escapeHtml(receiver.internalIp || 'Awaiting receiver report') + '</p>' +
             '<p><strong>External IP:</strong> ' + escapeHtml(receiver.externalIp || 'Awaiting receiver report') + '</p></div>' +
             '<div class="cw-status-value"><strong>' + label + '</strong><span>Last check-in ' + ageLabel(receiver.age) + '</span></div></article>';
         }).join('') || '<div class="alert alert-warning">No receivers are configured.</div>';

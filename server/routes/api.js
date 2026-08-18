@@ -1586,10 +1586,12 @@ router.route('/central-west/receiver-heartbeat')
       return res.status(400).json({ error: 'Unknown receiver id.' });
     }
     var externalIp = String(req.body.externalIp || '').trim();
+    var internalIp = String(req.body.internalIp || '').trim();
     receiverHeartbeats[id] = {
       lastSeen: Math.floor(Date.now() / 1000),
       identifier: String(req.body.identifier || '').slice(0, 100),
-      externalIp: net.isIP(externalIp) ? externalIp : (receiverHeartbeats[id] && receiverHeartbeats[id].externalIp) || ''
+      externalIp: net.isIP(externalIp) ? externalIp : (receiverHeartbeats[id] && receiverHeartbeats[id].externalIp) || '',
+      internalIp: net.isIP(internalIp) ? internalIp : (receiverHeartbeats[id] && receiverHeartbeats[id].internalIp) || ''
     };
     try {
       fs.mkdirSync(path.dirname(receiverHeartbeatFile), { recursive: true });
@@ -1618,7 +1620,8 @@ router.route('/central-west/receiver-status')
         state: age === null ? 'offline' : age <= 180 ? 'online' : age <= 600 ? 'stale' : 'offline',
         lastSeen: lastSeen,
         age: age,
-        externalIp: net.isIP(String(heartbeat.externalIp || '')) ? heartbeat.externalIp : null
+        externalIp: net.isIP(String(heartbeat.externalIp || '')) ? heartbeat.externalIp : null,
+        internalIp: net.isIP(String(heartbeat.internalIp || '')) ? heartbeat.internalIp : null
       };
     });
     return res.status(200).json({ serverTime: nowSeconds, uptime: Math.floor(process.uptime()), receivers: receivers });
