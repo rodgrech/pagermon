@@ -9,6 +9,10 @@ var pluginHandler = require('../plugins/pluginHandler');
 var logger = require('../log');
 var db = require('../knex/knex.js');
 var converter = require('json-2-csv');
+var axios = require('axios');
+var sqlite3 = require('sqlite3');
+var path = require('path');
+var fs = require('fs');
 
 var nconf = require('nconf');
 
@@ -46,6 +50,64 @@ var dbtype = nconf.get('database:type');
 
 // dupe init
 var msgBuffer = [];
+var bomWarningCache = { fetchedAt: 0, data: null };
+var rfsIncidentCache = { fetchedAt: 0, data: null };
+var radarCache = { fetchedAt: 0, data: null };
+var waterNswCache = { fetchedAt: 0, data: null };
+var waterNswAttemptSlot = null;
+var waterNswGaugeCache = { fetchedAt: 0, data: null };
+var waterNswGaugeAttemptSlot = null;
+var waterNswAlgaeCache = { fetchedAt: 0, data: null };
+var centralWestGaugeMetadata = require('./central-west-gauges.json');
+var waterNswCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-dams.json');
+var waterNswGaugeCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-gauges.json');
+try {
+  var persistedDamData = JSON.parse(fs.readFileSync(waterNswCacheFile, 'utf8'));
+  waterNswCache = { fetchedAt: Number(persistedDamData.fetchedAt || 0) * 1000, data: persistedDamData };
+} catch (damCacheError) {
+  // A successful API request will create the persistent cache.
+}
+try {
+  var persistedGaugeData = JSON.parse(fs.readFileSync(waterNswGaugeCacheFile, 'utf8'));
+  waterNswGaugeCache = { fetchedAt: Number(persistedGaugeData.fetchedAt || 0) * 1000, data: persistedGaugeData };
+} catch (gaugeCacheError) {
+  // A successful API request will create the persistent cache.
+}
+var rdioDatabasePath = path.resolve('/home/rodgrech/Applications/rdio-scanner.db');
+
+function isSessionUser(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  return res.status(401).json({ error: 'A logged-in PageMon session is required.' });
+}
+
+function sydneyDayParts(timestamp) {
+  var parts = new Intl.DateTimeFormat('en-AU', { timeZone: 'Australia/Sydney', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(timestamp));
+  var values = {};
+  parts.forEach(function (part) { values[part.type] = part.value; });
+  return { key: values.year + '-' + values.month + '-' + values.day, hour: Number(values.hour) };
+}
+
+function waterNswDateTime(timestamp) {
+  var date = new Date(timestamp);
+  var parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Australia/Sydney', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date);
+  var values = {};
+  parts.forEach(function (part) { values[part.type] = part.value; });
+  return values.day + '-' + values.month + '-' + values.year + ' ' + values.hour + ':' + values.minute;
+}
+
+function radioAgency(groupLabel, tagLabel) {
+  var source = String(groupLabel || '').trim();
+  var tag = String(tagLabel || '').trim();
+  if (/rural fire|\brfs\b/i.test(source + ' ' + tag)) return { name: 'NSW Rural Fire Service', code: 'rfs' };
+  if (/fire and rescue|\bfrnsw\b/i.test(source + ' ' + tag)) return { name: 'Fire and Rescue NSW', code: 'frnsw' };
+  if (/state emergency|\bses\b/i.test(source + ' ' + tag)) return { name: 'NSW State Emergency Service', code: 'ses' };
+  if (/ambulance|\bnswas\b/i.test(source + ' ' + tag)) return { name: 'NSW Ambulance', code: 'ambulance' };
+  if (/national parks|\bnpws\b/i.test(source + ' ' + tag)) return { name: 'NSW National Parks and Wildlife Service', code: 'npws' };
+  if (/volunteer rescue|\bvra\b/i.test(source + ' ' + tag)) return { name: 'NSW Volunteer Rescue Association', code: 'vra' };
+  if (source) return { name: source, code: 'other' };
+  if (tag && !/^untagged$/i.test(tag)) return { name: tag, code: 'other' };
+  return { name: '', code: 'unknown' };
+}
 
 
 router.route('/messages')
@@ -1451,6 +1513,512 @@ router.route('/user/:id')
       res.status(400).json({ 'error': 'User ID 1 is protected' });
       logger.main.error('Unable to delete user ID 1')
     }
+  });
+
+// Central West dashboard data. This is deliberately read-only and derives its
+// state from the existing messages/capcodes tables, so no database migration is
+// required and upgrades remain easy to roll back.
+router.route('/central-west/dashboard')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var limit = Math.min(parseInt(req.query.limit, 10) || 500, 1000);
+    var hideAddresses = HideCapcode && (!req.isAuthenticated() || req.user.role !== 'admin');
+
+    db.from('messages')
+      .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
+      .select('messages.id', 'messages.timestamp', 'messages.message', 'messages.source',
+        'messages.address', 'messages.alias_id', 'capcodes.alias', 'capcodes.agency',
+        'capcodes.icon', 'capcodes.color')
+      .orderBy('messages.timestamp', 'desc')
+      .limit(limit)
+      .then(function (rows) {
+        if (hideAddresses) {
+          rows.forEach(function (row) { delete row.address; });
+        }
+        var latest = rows.length ? Number(rows[0].timestamp) : null;
+        res.status(200).json({
+          serverTime: Math.floor(Date.now() / 1000),
+          uptime: Math.floor(process.uptime()),
+          latestTimestamp: latest,
+          receiverState: latest && (Date.now() / 1000 - latest) < 86400 ? 'receiving' : 'quiet',
+          messages: rows
+        });
+      })
+      .catch(function (err) {
+        logger.main.error(err);
+        res.status(500).send(err);
+      });
+  });
+
+router.route('/central-west/bom-warnings')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var now = Date.now();
+    if (bomWarningCache.data && now - bomWarningCache.fetchedAt < 10 * 60 * 1000) {
+      return res.status(200).json(bomWarningCache.data);
+    }
+
+    axios.get('https://www.bom.gov.au/fwo/IDZ00061.warnings_land_nsw.xml', {
+      timeout: 12000,
+      headers: { 'User-Agent': 'CentralWestAlerts/1.0 PageMon weather warning panel' },
+      responseType: 'text'
+    }).then(function (response) {
+      var xml = String(response.data || '');
+      var items = [];
+      var itemPattern = /<item>([\s\S]*?)<\/item>/gi;
+      var match;
+      function field(block, name) {
+        var result = new RegExp('<' + name + '>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/' + name + '>', 'i').exec(block);
+        return result ? result[1].replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim() : '';
+      }
+      while ((match = itemPattern.exec(xml)) !== null) {
+        var title = field(match[1], 'title');
+        var description = field(match[1], 'description');
+        var combined = title + ' ' + description;
+        var local = /central west|central tablelands|central western slopes|mudgee|mid-western|gulgong|rylstone|kandos|wellington|dubbo|orange|bathurst|lithgow|oberon|cudgegong|macquarie river|castlereagh river/i.test(combined);
+        items.push({
+          title: title,
+          description: description,
+          link: field(match[1], 'link'),
+          published: field(match[1], 'pubDate'),
+          local: local
+        });
+      }
+      var payload = {
+        fetchedAt: Math.floor(now / 1000),
+        source: 'Australian Bureau of Meteorology',
+        sourceUrl: 'https://www.bom.gov.au/nsw/warnings/',
+        localWarnings: items.filter(function (item) { return item.local; }),
+        statewideCount: items.length
+      };
+      bomWarningCache = { fetchedAt: now, data: payload };
+      res.status(200).json(payload);
+    }).catch(function (err) {
+      logger.main.warn('Unable to retrieve BOM warning feed: ' + err.message);
+      if (bomWarningCache.data) return res.status(200).json(bomWarningCache.data);
+      res.status(502).json({ error: 'BOM warning feed is temporarily unavailable' });
+    });
+  });
+
+router.route('/central-west/rfs-incidents')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var now = Date.now();
+    if (rfsIncidentCache.data && now - rfsIncidentCache.fetchedAt < 10 * 60 * 1000) {
+      return res.status(200).json(rfsIncidentCache.data);
+    }
+    axios.get('https://www.rfs.nsw.gov.au/feeds/majorIncidents.json', {
+      timeout: 15000,
+      headers: { 'User-Agent': 'CentralWestAlerts/1.0 PageMon incident map' }
+    }).then(function (response) {
+      function pointFromGeometry(geometry) {
+        if (!geometry) return null;
+        if (geometry.type === 'Point') return geometry.coordinates;
+        if (geometry.type === 'GeometryCollection') {
+          for (var i = 0; i < geometry.geometries.length; i++) {
+            var point = pointFromGeometry(geometry.geometries[i]);
+            if (point) return point;
+          }
+        }
+        return null;
+      }
+      var incidents = (response.data.features || []).map(function (feature) {
+        var point = pointFromGeometry(feature.geometry);
+        if (!point) return null;
+        var longitude = Number(point[0]);
+        var latitude = Number(point[1]);
+        // Broad Central West window: includes neighbouring incidents that may
+        // affect travel or response without filling the map with all of NSW.
+        if (latitude < -34.5 || latitude > -30.8 || longitude < 147.3 || longitude > 151.0) return null;
+        var properties = feature.properties || {};
+        return {
+          title: properties.title || 'RFS incident',
+          category: properties.category || 'Incident',
+          description: String(properties.description || '').replace(/<br\s*\/?\s*>/gi, ' · ').replace(/<[^>]+>/g, ''),
+          link: properties.link || 'https://www.rfs.nsw.gov.au/fire-information/fires-near-me',
+          published: properties.pubDate || '',
+          latitude: latitude,
+          longitude: longitude
+        };
+      }).filter(Boolean);
+      var payload = { fetchedAt: Math.floor(now / 1000), incidents: incidents };
+      rfsIncidentCache = { fetchedAt: now, data: payload };
+      res.status(200).json(payload);
+    }).catch(function (err) {
+      logger.main.warn('Unable to retrieve RFS incident feed: ' + err.message);
+      if (rfsIncidentCache.data) return res.status(200).json(rfsIncidentCache.data);
+      res.status(502).json({ error: 'RFS incident feed is temporarily unavailable' });
+    });
+  });
+
+router.route('/central-west/waternsw-dams')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var now = Date.now();
+    var currentSydneyDay = sydneyDayParts(now);
+    var currentSlot = currentSydneyDay.key + (currentSydneyDay.hour >= 12 ? '-12' : '-00');
+    if (waterNswCache.data) {
+      var cachedSydneyDay = sydneyDayParts(waterNswCache.fetchedAt || Number(waterNswCache.data.fetchedAt || 0) * 1000);
+      var cachedSlot = cachedSydneyDay.key + (cachedSydneyDay.hour >= 12 ? '-12' : '-00');
+      if (cachedSlot === currentSlot || waterNswAttemptSlot === currentSlot) return res.status(200).json(waterNswCache.data);
+    }
+    waterNswAttemptSlot = currentSlot;
+    var subscriptionKey = process.env.WATERNSW_DATA_KEY || process.env.WATERNSW_SUBSCRIPTION_KEY;
+    if (!subscriptionKey) return res.status(503).json({ error: 'WaterNSW API subscription is not configured' });
+    var sourceUrl = 'https://api.waternsw.com.au/water/surface-water-data-api';
+    var localDams = {
+      '421148': { name: 'Windamere Dam', latitude: -32.7259, longitude: 149.7675 },
+      '421078': { name: 'Burrendong Dam', latitude: -32.6673, longitude: 149.1115 },
+      '412010': { name: 'Wyangala Dam', latitude: -33.9688, longitude: 148.9517 },
+      '421189': { name: 'Oberon Dam', latitude: -33.7250, longitude: 149.8646 },
+      '412106': { name: 'Carcoar Dam', latitude: -33.6179, longitude: 149.1776 }
+    };
+    var latestRequest = axios.get(sourceUrl, {
+      timeout: 20000,
+      params: { siteId: Object.keys(localDams).join(','), frequency: 'Latest', variable: 'ActiveStoragePercentage,TotalStorageVolume,StorageWaterLevel,SpillwayOutflow', pageNumber: 1 },
+      headers: { 'Ocp-Apim-Subscription-Key': subscriptionKey, 'Accept': 'application/json', 'User-Agent': 'CentralWestAlerts/1.0 WaterNSW storage panel' }
+    });
+    var dailyRequest = axios.get(sourceUrl, {
+      timeout: 60000,
+      params: { siteId: Object.keys(localDams).join(','), frequency: 'Daily', dataType: 'AutoQC', variable: 'ActiveStoragePercentage', startDate: waterNswDateTime(now - 4 * 24 * 60 * 60 * 1000), endDate: waterNswDateTime(now - 10 * 60 * 1000), pageNumber: 1 },
+      headers: { 'Ocp-Apim-Subscription-Key': subscriptionKey, 'Accept': 'application/json', 'User-Agent': 'CentralWestAlerts/1.0 WaterNSW daily storage trend' }
+    });
+    Promise.all([latestRequest, dailyRequest]).then(function (responses) {
+      var response = responses[0];
+      var dailyResponse = responses[1];
+      var grouped = {};
+      Object.keys(localDams).forEach(function (siteId) { grouped[siteId] = { readings: {}, observedAt: null }; });
+      (response.data.latestRecords || []).forEach(function (record) {
+        var group = grouped[String(record.siteId)];
+        if (!group) return;
+        group.readings[record.variableName] = record;
+        if (!group.observedAt || record.variableName === 'ActiveStoragePercentage') group.observedAt = record.timeStamp;
+      });
+      var dailyBySite = {};
+      (dailyResponse.data.records || []).forEach(function (record) {
+        var siteId = String(record.siteId);
+        if (!dailyBySite[siteId]) dailyBySite[siteId] = [];
+        dailyBySite[siteId].push(record);
+      });
+      Object.keys(dailyBySite).forEach(function (siteId) {
+        dailyBySite[siteId].sort(function (a, b) { return String(a.timeStamp).localeCompare(String(b.timeStamp)); });
+      });
+      var todayLabel = waterNswDateTime(now).split(' ')[0];
+      var dams = Object.keys(localDams).map(function (siteId) {
+        var metadata = localDams[siteId];
+        var group = grouped[siteId];
+        var percentageRecord = group.readings.ActiveStoragePercentage;
+        var volumeRecord = group.readings.TotalStorageVolume;
+        if (!percentageRecord) return null;
+        var percentage = Number(percentageRecord.value);
+        var volumeMl = volumeRecord ? Number(volumeRecord.value) : null;
+        var capacityMl = volumeMl !== null && percentage > 0 ? Math.round(volumeMl / (percentage / 100)) : null;
+        var previousRecords = (dailyBySite[siteId] || []).filter(function (record) { return String(record.timeStamp).indexOf(todayLabel) !== 0; });
+        var previousRecord = previousRecords.length ? previousRecords[previousRecords.length - 1] : null;
+        var percentageChange = previousRecord ? Number((percentage - Number(previousRecord.value)).toFixed(3)) : null;
+        var status = percentage > 100 ? 'possible-spill' : percentage >= 100 ? 'full' : percentage >= 95 ? 'near-capacity' : 'normal';
+        return { name: metadata.name, siteId: siteId, percentage: percentage, dailyChange: percentageChange, previousPercentage: previousRecord ? Number(previousRecord.value) : null, trendObservedAt: previousRecord ? previousRecord.timeStamp : null, weeklyChange: null, capacityMl: capacityMl, volumeMl: volumeMl, storageLevelM: group.readings.StorageWaterLevel ? Number(group.readings.StorageWaterLevel.value) : null, observedAt: group.observedAt, status: status, possibleSpill: status === 'possible-spill', latitude: metadata.latitude, longitude: metadata.longitude, link: 'https://www.waternsw.com.au/nsw-dams' };
+      }).filter(Boolean);
+      if (!dams.length) throw new Error('WaterNSW API returned no Central West storage readings');
+      dams.push({
+        name: 'Rylstone Dam',
+        percentage: null,
+        weeklyChange: null,
+        capacityMl: 3038,
+        volumeMl: null,
+        status: 'level-unavailable',
+        possibleSpill: false,
+        latitude: -32.7859022,
+        longitude: 149.9901407,
+        operator: 'Mid-Western Regional Council',
+        note: 'Council-owned town water supply dam. A continuous public storage reading is not currently available.',
+        lastOfficialReport: { percentage: 95, reportedAt: '2025-05-28T16:00:00+10:00', trend: 'rising', historical: true, link: 'https://www.midwestern.nsw.gov.au/Council/Media-and-news/Latest-news/Rylstone-Dam-nearing-capacity-and-likely-to-spill' },
+        link: 'https://www.midwestern.nsw.gov.au/Services/Water-services/Water-supply/Rylstone-Dam'
+      });
+      dams.sort(function (a, b) { return (b.percentage === null ? -1 : b.percentage) - (a.percentage === null ? -1 : a.percentage); });
+      var payload = { fetchedAt: Math.floor(now / 1000), source: 'WaterNSW Water Data API and Mid-Western Regional Council', sourceUrl: sourceUrl, dams: dams, alerts: dams.filter(function (dam) { return dam.possibleSpill; }).map(function (dam) { return { type: 'possible-spill', title: dam.name + ' may be spilling or releasing', description: 'Published storage is ' + dam.percentage + '%. Confirm current spill and release conditions with WaterNSW or the Early Warning Network.', dam: dam.name, link: dam.link }; }) };
+      waterNswCache = { fetchedAt: now, data: payload };
+      fs.writeFile(waterNswCacheFile, JSON.stringify(payload), function (writeError) { if (writeError) logger.main.warn('Unable to persist WaterNSW dam cache: ' + writeError.message); });
+      res.status(200).json(payload);
+    }).catch(function (err) {
+      logger.main.warn('Unable to retrieve WaterNSW dam levels from API: ' + err.message);
+      if (waterNswCache.data) {
+        waterNswCache.data.stale = true;
+        return res.status(200).json(waterNswCache.data);
+      }
+      res.status(502).json({ error: 'WaterNSW dam levels are temporarily unavailable' });
+    });
+  });
+
+router.route('/central-west/waternsw-rylstone-gauges')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var now = Date.now();
+    if (waterNswGaugeCache.data) {
+      var currentSydneyDay = sydneyDayParts(now);
+      var cachedSydneyDay = sydneyDayParts(waterNswGaugeCache.fetchedAt || Number(waterNswGaugeCache.data.fetchedAt || 0) * 1000);
+      var currentSlot = currentSydneyDay.key + (currentSydneyDay.hour >= 12 ? '-12' : '-00');
+      var cachedSlot = cachedSydneyDay.key + (cachedSydneyDay.hour >= 12 ? '-12' : '-00');
+      if (cachedSlot === currentSlot || waterNswGaugeAttemptSlot === currentSlot) return res.status(200).json(waterNswGaugeCache.data);
+      waterNswGaugeAttemptSlot = currentSlot;
+    }
+    if (!waterNswGaugeCache.data) {
+      var uncachedSydneyDay = sydneyDayParts(now);
+      waterNswGaugeAttemptSlot = uncachedSydneyDay.key + (uncachedSydneyDay.hour >= 12 ? '-12' : '-00');
+    }
+    var subscriptionKey = process.env.WATERNSW_DATA_KEY || process.env.WATERNSW_SUBSCRIPTION_KEY;
+    if (!subscriptionKey) return res.status(503).json({ error: 'WaterNSW API subscription is not configured' });
+    var sites = {};
+    (centralWestGaugeMetadata.sites || []).forEach(function (site) {
+      var siteId = String(site.siteId);
+      sites[siteId] = {
+        name: siteId === '421184' ? 'Cudgegong River upstream Rylstone' : siteId === '421903' ? 'Cudgegong River at Rylstone' : site.siteName,
+        latitude: site.latitude,
+        longitude: site.longitude,
+        position: siteId === '421184' ? 'Upstream of Rylstone Dam' : siteId === '421903' ? 'Downstream at Rylstone' : 'WaterNSW site ' + siteId,
+        featured: siteId === '421184' || siteId === '421903'
+      };
+    });
+    var siteIds = Object.keys(sites);
+    var batches = [];
+    for (var i = 0; i < siteIds.length; i += 20) batches.push(siteIds.slice(i, i + 20));
+    var requests = batches.map(function (batch) {
+      return axios.get('https://api.waternsw.com.au/water/surface-water-data-api', {
+        timeout: 20000,
+        params: { siteId: batch.join(','), frequency: 'Latest', pageNumber: 1 },
+        headers: { 'Ocp-Apim-Subscription-Key': subscriptionKey, 'Accept': 'application/json', 'User-Agent': 'CentralWestAlerts/1.0 WaterNSW gauge map' }
+      });
+    });
+    Promise.all(requests).then(function (responses) {
+      var grouped = {};
+      var qualities = {};
+      Object.keys(sites).forEach(function (siteId) {
+        grouped[siteId] = Object.assign({ siteId: siteId, readings: {}, observedAt: null, quality: null }, sites[siteId]);
+      });
+      responses.forEach(function (response) {
+        Object.assign(qualities, response.data.qualities || {});
+        (response.data.latestRecords || []).forEach(function (record) {
+          var gauge = grouped[String(record.siteId)];
+          if (!gauge) return;
+          gauge.readings[record.variableName] = { value: record.value, unit: record.unitOfMeasure, observedAt: record.timeStamp, qualityCode: record.qualityCode };
+          if (!gauge.observedAt) gauge.observedAt = record.timeStamp;
+        });
+      });
+      Object.keys(grouped).forEach(function (siteId) {
+        var gauge = grouped[siteId];
+        var primary = gauge.readings.StreamWaterLevel || gauge.readings.FlowRate;
+        if (primary) {
+          gauge.observedAt = primary.observedAt;
+          gauge.quality = qualities[String(primary.qualityCode)] || null;
+        }
+      });
+      var payload = { fetchedAt: Math.floor(now / 1000), source: 'WaterNSW Water Data API', bounds: centralWestGaugeMetadata.bounds, gauges: Object.keys(grouped).map(function (siteId) { return grouped[siteId]; }) };
+      waterNswGaugeCache = { fetchedAt: now, data: payload };
+      fs.writeFile(waterNswGaugeCacheFile, JSON.stringify(payload), function (writeError) { if (writeError) logger.main.warn('Unable to persist WaterNSW gauge cache: ' + writeError.message); });
+      res.status(200).json(payload);
+    }).catch(function (err) {
+      logger.main.warn('Unable to retrieve Central West WaterNSW gauges: ' + err.message);
+      if (waterNswGaugeCache.data) {
+        waterNswGaugeCache.data.stale = true;
+        return res.status(200).json(waterNswGaugeCache.data);
+      }
+      res.status(502).json({ error: 'Central West WaterNSW gauges are temporarily unavailable' });
+    });
+  });
+
+router.route('/central-west/waternsw-algae-alerts')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var now = Date.now();
+    if (waterNswAlgaeCache.data && now - waterNswAlgaeCache.fetchedAt < 60 * 60 * 1000) {
+      return res.status(200).json(waterNswAlgaeCache.data);
+    }
+    var sourceUrl = 'https://nula.waternsw.com.au/arcgis/rest/services/External_Maps/AlgalAlerts/FeatureServer/0/query';
+    axios.get(sourceUrl, {
+      timeout: 15000,
+      params: { where: '1=1', outFields: 'site_code,site_name,region,lat,long,current_status,current_tox_count,current_tox_bio,current_cyan_count,current_cyan_bio,comments,first_date,useage,dom_tox,Timestamp', returnGeometry: true, f: 'json' },
+      headers: { 'Accept': 'application/json', 'User-Agent': 'CentralWestAlerts/1.0 WaterNSW algae map' }
+    }).then(function (response) {
+      var statusLabels = { '0': 'Green', '1': 'Amber', '2': 'Red' };
+      var sites = ((response.data || {}).features || []).map(function (feature) {
+        var item = feature.attributes || {};
+        var latitude = Number(item.lat || (feature.geometry || {}).y);
+        var longitude = Number(item.long || (feature.geometry || {}).x);
+        return {
+          siteCode: item.site_code,
+          name: item.site_name,
+          region: item.region,
+          latitude: latitude,
+          longitude: longitude,
+          statusCode: String(item.current_status),
+          status: statusLabels[String(item.current_status)] || 'Unknown',
+          toxicCount: item.current_tox_count,
+          toxicBiovolume: item.current_tox_bio,
+          cyanobacteriaCount: item.current_cyan_count,
+          cyanobacteriaBiovolume: item.current_cyan_bio,
+          dominantToxicSpecies: item.dom_tox,
+          usage: item.useage,
+          comments: item.comments,
+          sampledAt: item.first_date,
+          updatedAt: item.Timestamp
+        };
+      }).filter(function (site) {
+        return isFinite(site.latitude) && isFinite(site.longitude) && site.latitude >= -34.3 && site.latitude <= -31.5 && site.longitude >= 148.7 && site.longitude <= 150.25;
+      });
+      var payload = { fetchedAt: Math.floor(now / 1000), source: 'WaterNSW Algal Alert Map', sourceUrl: 'https://www.waternsw.com.au/water-services/water-quality/algae-alerts', sites: sites, alerts: sites.filter(function (site) { return site.status === 'Red' || site.status === 'Amber'; }) };
+      waterNswAlgaeCache = { fetchedAt: now, data: payload };
+      res.status(200).json(payload);
+    }).catch(function (err) {
+      logger.main.warn('Unable to retrieve WaterNSW algae alerts: ' + err.message);
+      if (waterNswAlgaeCache.data) return res.status(200).json(waterNswAlgaeCache.data);
+      res.status(502).json({ error: 'WaterNSW algae alerts are temporarily unavailable' });
+    });
+  });
+
+router.route('/central-west/aircraft')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    axios.get('http://192.168.1.118/skyaware/data/aircraft.json', { timeout: 4000 })
+      .then(function (response) {
+        var data = response.data || {};
+        var aircraft = (data.aircraft || []).filter(function (item) {
+          return typeof item.lat === 'number' && typeof item.lon === 'number';
+        }).map(function (item) {
+          return {
+            hex: item.hex,
+            flight: String(item.flight || '').trim(),
+            registration: item.r || '',
+            aircraftType: item.t || '',
+            latitude: item.lat,
+            longitude: item.lon,
+            altitude: item.alt_baro === 'ground' ? 'ground' : (item.alt_baro || item.alt_geom || null),
+            speed: item.gs || null,
+            track: item.track || null,
+            verticalRate: item.baro_rate || item.geom_rate || null,
+            emergency: item.emergency || 'none',
+            category: item.category || '',
+            seen: item.seen || 0,
+            messages: item.messages || 0
+          };
+        });
+        res.status(200).json({ now: data.now || Date.now() / 1000, aircraft: aircraft });
+      }).catch(function (err) {
+        logger.main.warn('Unable to retrieve local PiAware feed: ' + err.message);
+        res.status(502).json({ error: 'PiAware receiver is temporarily unavailable' });
+      });
+  });
+
+// Read-only bridge to the local Rdio Scanner database. These routes require
+// an authenticated browser session; PageMon API keys cannot retrieve radio
+// metadata or audio.
+router.route('/central-west/radio-calls')
+  .get(isSessionUser, function (req, res) {
+    var limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 25, 1), 50);
+    var radioDb = new sqlite3.Database(rdioDatabasePath, sqlite3.OPEN_READONLY, function (openError) {
+      if (openError) {
+        logger.main.error('Unable to open Rdio Scanner database: ' + openError.message);
+        return res.status(503).json({ error: 'Radio history is temporarily unavailable.' });
+      }
+
+      var sql = [
+        'select c.id, c.dateTime, c.system, s.label as systemLabel,',
+        'c.talkgroup, coalesce(t.label, t.name) as talkgroupLabel,',
+        'c.frequency, c.source, u.label as sourceLabel, g.label as groupLabel, x.label as tagLabel,',
+        'length(c.audio) as audioBytes, c.audioType, c.audioName',
+        'from rdioScannerCalls c',
+        'left join rdioScannerSystems s on s.id = c.system',
+        'left join rdioScannerTalkgroups t on t.systemId = c.system and t.id = c.talkgroup',
+        'left join rdioScannerUnits u on u.systemId = c.system and u.id = c.source',
+        'left join rdioScannerGroups g on g._id = t.groupId',
+        'left join rdioScannerTags x on x._id = t.tagId',
+        'order by c.id desc limit ?'
+      ].join(' ');
+
+      radioDb.all(sql, [limit], function (queryError, rows) {
+        radioDb.close();
+        if (queryError) {
+          logger.main.error('Unable to query Rdio Scanner calls: ' + queryError.message);
+          return res.status(503).json({ error: 'Radio history is temporarily unavailable.' });
+        }
+        rows.forEach(function (row) {
+          var parsed = Date.parse(String(row.dateTime || '').replace(' +0000 UTC', 'Z'));
+          var agency = radioAgency(row.groupLabel, row.tagLabel);
+          row.timestamp = isNaN(parsed) ? null : Math.floor(parsed / 1000);
+          row.agencyName = agency.name;
+          row.agencyCode = agency.code;
+          delete row.dateTime;
+          delete row.groupLabel;
+          delete row.tagLabel;
+          row.audioUrl = '/api/central-west/radio-calls/' + row.id + '/audio';
+        });
+        res.set('Cache-Control', 'private, no-store');
+        res.status(200).json({ calls: rows, fetchedAt: Math.floor(Date.now() / 1000) });
+      });
+    });
+  });
+
+router.route('/central-west/radio-calls/:id/audio')
+  .get(isSessionUser, function (req, res) {
+    var id = parseInt(req.params.id, 10);
+    if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'Invalid radio call ID.' });
+
+    var radioDb = new sqlite3.Database(rdioDatabasePath, sqlite3.OPEN_READONLY, function (openError) {
+      if (openError) {
+        logger.main.error('Unable to open Rdio Scanner database for audio: ' + openError.message);
+        return res.status(503).json({ error: 'Radio audio is temporarily unavailable.' });
+      }
+      radioDb.get('select audio, audioName, audioType from rdioScannerCalls where id = ?', [id], function (queryError, row) {
+        radioDb.close();
+        if (queryError) {
+          logger.main.error('Unable to retrieve Rdio Scanner audio: ' + queryError.message);
+          return res.status(503).json({ error: 'Radio audio is temporarily unavailable.' });
+        }
+        if (!row || !row.audio) return res.status(404).json({ error: 'Radio call not found.' });
+
+        var audio = Buffer.isBuffer(row.audio) ? row.audio : Buffer.from(row.audio);
+        var contentType = row.audioType || (/\.m4a$/i.test(row.audioName || '') ? 'audio/mp4' : 'audio/mpeg');
+        var range = req.headers.range;
+        res.set('Accept-Ranges', 'bytes');
+        res.set('Cache-Control', 'private, max-age=3600');
+        res.type(contentType);
+
+        if (range) {
+          var match = /^bytes=(\d*)-(\d*)$/.exec(range);
+          if (!match) return res.status(416).set('Content-Range', 'bytes */' + audio.length).end();
+          var start = match[1] ? parseInt(match[1], 10) : 0;
+          var end = match[2] ? parseInt(match[2], 10) : audio.length - 1;
+          if (start < 0 || end < start || start >= audio.length) return res.status(416).set('Content-Range', 'bytes */' + audio.length).end();
+          end = Math.min(end, audio.length - 1);
+          res.status(206);
+          res.set('Content-Range', 'bytes ' + start + '-' + end + '/' + audio.length);
+          res.set('Content-Length', String(end - start + 1));
+          return res.end(audio.slice(start, end + 1));
+        }
+
+        res.set('Content-Length', String(audio.length));
+        return res.end(audio);
+      });
+    });
+  });
+
+router.route('/central-west/weather-radar')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var now = Date.now();
+    if (radarCache.data && now - radarCache.fetchedAt < 10 * 60 * 1000) {
+      return res.status(200).json(radarCache.data);
+    }
+    axios.get('https://api.rainviewer.com/public/weather-maps.json', { timeout: 10000 })
+      .then(function (response) {
+        var data = response.data || {};
+        var frames = data.radar && data.radar.past ? data.radar.past : [];
+        var latest = frames.length ? frames[frames.length - 1] : null;
+        if (!latest || !data.host) throw new Error('No radar frame available');
+        var payload = {
+          generated: data.generated,
+          frameTime: latest.time,
+          tileUrl: data.host + latest.path + '/256/{z}/{x}/{y}/2/1_1.png',
+          attribution: 'Weather radar by RainViewer'
+        };
+        radarCache = { fetchedAt: now, data: payload };
+        res.status(200).json(payload);
+      }).catch(function (err) {
+        logger.main.warn('Unable to retrieve RainViewer radar metadata: ' + err.message);
+        if (radarCache.data) return res.status(200).json(radarCache.data);
+        res.status(502).json({ error: 'Weather radar is temporarily unavailable' });
+      });
   });
 
 router.use([handleError]);

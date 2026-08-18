@@ -1,0 +1,789 @@
+{
+  "totalStreamGauges": 2445,
+  "centralWestCount": 62,
+  "bounds": {
+    "south": -34.3,
+    "north": -31.5,
+    "west": 148.7,
+    "east": 150.25
+  },
+  "sites": [
+    {
+      "siteId": "210006",
+      "siteName": "GOULBURN RIVER AT COGGAN",
+      "latitude": -32.3444,
+      "longitude": 150.1013,
+      "variablesMonitored": {
+        "variable1": "Rainfall",
+        "variable2": "StreamWaterLevel",
+        "variable3": "FlowRate",
+        "variable4": "Conductivity",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "212008",
+      "siteName": "COXS RIVER AT BATHURST ROAD",
+      "latitude": -33.4277,
+      "longitude": 150.0825,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "212011",
+      "siteName": "COXS RIVER DOWNSTREAM LAKE LYELL",
+      "latitude": -33.5343,
+      "longitude": 150.0951,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "Turbidity",
+        "variable5": "WaterTemperature",
+        "variable6": "pH",
+        "variable7": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "212013",
+      "siteName": "MEGALONG CREEK AT NARROW NECK",
+      "latitude": -33.730728,
+      "longitude": 150.242858,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "212042",
+      "siteName": "FARMERS CREEK AT MOUNT WALKER",
+      "latitude": -33.4962,
+      "longitude": 150.0984,
+      "variablesMonitored": {
+        "variable1": "Rainfall",
+        "variable2": "StreamWaterLevel",
+        "variable3": "FlowRate",
+        "variable4": "Conductivity",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "212045",
+      "siteName": "COXS RIVER AT ISLAND HILL",
+      "latitude": -33.760586,
+      "longitude": 150.195247,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "212054",
+      "siteName": "COXS RIVER AT WALLERAWANG POWER STATION",
+      "latitude": -33.3971,
+      "longitude": 150.0839,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "212055",
+      "siteName": "NEUBECKS CREEK UPSTREAM OF WALLERAWANG COLLIERY",
+      "latitude": -33.358291,
+      "longitude": 150.05678,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "212058",
+      "siteName": "COXS RIVER UPSTREAM LAKE LYELL",
+      "latitude": -33.485416,
+      "longitude": 150.076872,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "Turbidity",
+        "variable5": "WaterTemperature",
+        "variable6": "pH",
+        "variable7": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "2122510",
+      "siteName": "FARMERS CREEK UPSTREAM LITHGOW STP",
+      "latitude": -33.478058,
+      "longitude": 150.137707,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "ElectricConductivityUncorrected",
+        "variable4": "Conductivity",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "2122512",
+      "siteName": "COXS RIVER AT GLENROY BRIDGE",
+      "latitude": -33.54499967,
+      "longitude": 150.14055554,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "ElectricConductivityUncorrected",
+        "variable4": "Conductivity",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "2122513",
+      "siteName": "COXS RIVER DOWNSTREAM LAKE LYELL",
+      "latitude": -33.536688,
+      "longitude": 150.091681,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "ElectricConductivityUncorrected",
+        "variable4": "Conductivity",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "2122514",
+      "siteName": "COXS RIVER UPSTREAM LAKE LYELL",
+      "latitude": -33.468612,
+      "longitude": 150.085465,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "ElectricConductivityUncorrected",
+        "variable4": "Conductivity",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "2122515",
+      "siteName": "COXS RIVER AT WALLERAWANG POWER STATION",
+      "latitude": -33.399047,
+      "longitude": 150.082845,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "ElectricConductivityUncorrected",
+        "variable4": "Conductivity",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "2122516",
+      "siteName": "FARMERS CREEK AT MOUNT WALKER",
+      "latitude": -33.497674,
+      "longitude": 150.098527,
+      "variablesMonitored": {
+        "variable1": "Rainfall",
+        "variable2": "StreamWaterLevel",
+        "variable3": "FlowRate",
+        "variable4": "ElectricConductivityUncorrected",
+        "variable5": "Conductivity",
+        "variable6": "Turbidity",
+        "variable7": "WaterTemperature",
+        "variable8": "pH",
+        "variable9": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "212260",
+      "siteName": "KOWMUNG RIVER AT CEDAR FORD",
+      "latitude": -33.94642,
+      "longitude": 150.24428,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "Turbidity",
+        "variable5": "WaterTemperature",
+        "variable6": "pH",
+        "variable7": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "2122996",
+      "siteName": "TONALLI RIVER @ FIRE ROAD W2 (SITE NO.2)",
+      "latitude": -34.112539,
+      "longitude": 150.202283,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "ElectricConductivityUncorrected",
+        "variable4": "Turbidity",
+        "variable5": "WaterTemperature",
+        "variable6": "pH",
+        "variable7": "DissolvedOxygen"
+      }
+    },
+    {
+      "siteId": "41200209",
+      "siteName": "ABERCROMBIE RIVER AT ABERCROMBIE NO.2",
+      "latitude": -33.956499,
+      "longitude": 149.315944,
+      "variablesMonitored": {
+        "variable1": "Rainfall",
+        "variable2": "StreamWaterLevel",
+        "variable3": "FlowRate",
+        "variable4": "Conductivity",
+        "variable5": "ElectricalConductivityUncorrected",
+        "variable6": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "41200210",
+      "siteName": "COOKSVALE CREEK AT UPPER-MONTANA",
+      "latitude": -34.043563,
+      "longitude": 149.418045,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "412027",
+      "siteName": "LACHLAN RIVER AT REIDS FLAT",
+      "latitude": -34.129803,
+      "longitude": 149.020018,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "412029",
+      "siteName": "BOOROWA RIVER AT PROSSERS CROSSING",
+      "latitude": -34.14253,
+      "longitude": 148.811316,
+      "variablesMonitored": {
+        "variable1": "Rainfall",
+        "variable2": "StreamWaterLevel",
+        "variable3": "FlowRate",
+        "variable4": "Conductivity",
+        "variable5": "ElectricalConductivityUncorrected",
+        "variable6": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "412056",
+      "siteName": "BELUBULA RIVER AT THE NEEDLES",
+      "latitude": -33.58,
+      "longitude": 148.8481,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "412066",
+      "siteName": "ABERCROMBIE RIVER AT HADLEY NO.2",
+      "latitude": -34.113897,
+      "longitude": 149.596721,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "412067",
+      "siteName": "LACHLAN RIVER DOWNSTREAM WYANGALA DAM",
+      "latitude": -33.982508,
+      "longitude": 148.935836,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "412077",
+      "siteName": "BELUBULA RIVER AT CARCOAR",
+      "latitude": -33.614572,
+      "longitude": 149.144915,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "412080",
+      "siteName": "FLYERS CREEK AT BENEREE",
+      "latitude": -33.5111,
+      "longitude": 149.0415,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "412175",
+      "siteName": "HOVELLS CREEK AT HOVELLS CREEK NO.2",
+      "latitude": -34.003677,
+      "longitude": 148.872607,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "419086",
+      "siteName": "BUNDELLA CREEK AT BUNDELLA",
+      "latitude": -31.570469,
+      "longitude": 149.982986,
+      "variablesMonitored": {
+        "variable1": "Rainfall",
+        "variable2": "StreamWaterLevel",
+        "variable3": "FlowRate",
+        "variable4": "Conductivity",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "420004",
+      "siteName": "CASTLEREAGH RIVER AT MENDOORAN",
+      "latitude": -31.819477,
+      "longitude": 149.117343,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "420007",
+      "siteName": "CASTLEREAGH RIVER AT BINNAWAY",
+      "latitude": -31.52328667,
+      "longitude": 149.35171728,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "420901",
+      "siteName": "CASTLEREAGH RIVER AT LUCAS BRIDGE UPSTREAM GILGANDRA",
+      "latitude": -31.811411,
+      "longitude": 148.769606,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel"
+      }
+    },
+    {
+      "siteId": "42100201",
+      "siteName": "FISH RIVER UPSTREAM CAMPBELLS RIVER CONFLUENCE",
+      "latitude": -33.492427,
+      "longitude": 149.629733,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "42100202",
+      "siteName": "CAMPBELLS RIVER AT BIDGERIBBIN",
+      "latitude": -33.510929,
+      "longitude": 149.625045,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "42100203",
+      "siteName": "MACQUARIE RIVER AT MARYVALE RESERVE",
+      "latitude": -32.50192,
+      "longitude": 148.914882,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "Conductivity",
+        "variable3": "ElectricalConductivityUncorrected",
+        "variable4": "Turbidity",
+        "variable5": "WaterTemperature",
+        "variable6": "pH",
+        "variable7": "DissolvedOxygen",
+        "variable8": "DissolvedOxygenSaturation"
+      }
+    },
+    {
+      "siteId": "421003",
+      "siteName": "MACQUARIE RIVER AT WELLINGTON",
+      "latitude": -32.542658443,
+      "longitude": 148.942357556,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "421008",
+      "siteName": "BELL RIVER AT WELLINGTON",
+      "latitude": -32.555627206,
+      "longitude": 148.941377,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel"
+      }
+    },
+    {
+      "siteId": "421018",
+      "siteName": "BELL RIVER AT NEUREA",
+      "latitude": -32.678439,
+      "longitude": 148.949181,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "421019",
+      "siteName": "CUDGEGONG RIVER AT YAMBLE BRIDGE",
+      "latitude": -32.407854,
+      "longitude": 149.334492,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature",
+        "variable6": "DissolvedOxygen",
+        "variable7": "DissolvedOxygenSaturation"
+      }
+    },
+    {
+      "siteId": "421026",
+      "siteName": "TURON RIVER AT SOFALA",
+      "latitude": -33.080268,
+      "longitude": 149.690157,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "421027",
+      "siteName": "BELL RIVER AT GOWAN GREEN",
+      "latitude": -32.802161569,
+      "longitude": 148.979080936,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "421040",
+      "siteName": "MACQUARIE RIVER AT DOWNSTREAM BURRENDONG DAM",
+      "latitude": -32.6332,
+      "longitude": 149.0811,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen",
+        "variable9": "DissolvedOxygenSaturation"
+      }
+    },
+    {
+      "siteId": "421042",
+      "siteName": "TALBRAGAR RIVER AT ELONG ELONG",
+      "latitude": -32.091575,
+      "longitude": 149.0666,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "421050",
+      "siteName": "BELL RIVER AT MOLONG",
+      "latitude": -33.0309,
+      "longitude": 148.9509,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "421051",
+      "siteName": "BLACKMANS CREEK NEAR ORANGE",
+      "latitude": -33.263797,
+      "longitude": 149.129233,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "421079",
+      "siteName": "CUDGEGONG RIVER AT D/S WINDAMERE DAM",
+      "latitude": -32.708827,
+      "longitude": 149.754571,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen",
+        "variable9": "DissolvedOxygenSaturation"
+      }
+    },
+    {
+      "siteId": "421149",
+      "siteName": "CUDGEGONG RIVER AT ROCKY WATERHOLE",
+      "latitude": -32.6204,
+      "longitude": 149.6418,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen",
+        "variable9": "DissolvedOxygenSaturation"
+      }
+    },
+    {
+      "siteId": "421150",
+      "siteName": "CUDGEGONG RIVER AT WILBETREE ROAD",
+      "latitude": -32.5086,
+      "longitude": 149.57,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "Turbidity",
+        "variable6": "WaterTemperature",
+        "variable7": "pH",
+        "variable8": "DissolvedOxygen",
+        "variable9": "DissolvedOxygenSaturation"
+      }
+    },
+    {
+      "siteId": "421176",
+      "siteName": "LITTLE RIVER AT ARTHURVILLE NO. 2",
+      "latitude": -32.571624,
+      "longitude": 148.724746,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "421178",
+      "siteName": "MOLONG CREEK AT DOWNSTREAM BORENORE CREEK",
+      "latitude": -33.15755556,
+      "longitude": 148.95975,
+      "variablesMonitored": {
+        "variable1": "Rainfall",
+        "variable2": "StreamWaterLevel"
+      }
+    },
+    {
+      "siteId": "421184",
+      "siteName": "CUDGEGONG RIVER AT UPSTREAM RYLSTONE",
+      "latitude": -32.78508803,
+      "longitude": 150.02272768,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "421185",
+      "siteName": "SUMMER HILL CREEK AT ICELY ROAD",
+      "latitude": -33.303052,
+      "longitude": 149.152775,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "421186",
+      "siteName": "PLOUGHMANS SWAMP CREEK DOWNSTREAM MOLONG ROAD",
+      "latitude": -33.256828,
+      "longitude": 149.076455,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "421187",
+      "siteName": "FISH RIVER AT UPSTREAM OBERON DAM",
+      "latitude": -33.76284573,
+      "longitude": 149.82861402,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "421188",
+      "siteName": "DUCKMALOI RIVER AT WEIR SPILLWAY",
+      "latitude": -33.75322792,
+      "longitude": 149.92898922,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Turbidity"
+      }
+    },
+    {
+      "siteId": "421191",
+      "siteName": "MACQUARIE RIVER AT YARRACOONA",
+      "latitude": -33.157565,
+      "longitude": 149.490342,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "Conductivity",
+        "variable4": "ElectricalConductivityUncorrected",
+        "variable5": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "421192",
+      "siteName": "MACQUARIE RIVER DOWNSTREAM LONG POINT",
+      "latitude": -33.015681,
+      "longitude": 149.268093,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "421193",
+      "siteName": "FISH RIVER AT DOWNSTREAM OF OBERON DAM",
+      "latitude": -33.720628,
+      "longitude": 149.868474,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "421194",
+      "siteName": "TALBRAGAR RIVER AT GULAMBULA BRIDGE",
+      "latitude": -32.180833,
+      "longitude": 148.738888,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel"
+      }
+    },
+    {
+      "siteId": "421196",
+      "siteName": "OUTFLOW DS SUMA PARK DAM",
+      "latitude": -33.2702117,
+      "longitude": 149.1442736,
+      "variablesMonitored": {
+        "variable1": "FlowRate",
+        "variable2": "WaterTemperature",
+        "variable3": "DissolvedOxygen",
+        "variable4": "DissolvedOxygenSaturation"
+      }
+    },
+    {
+      "siteId": "421197",
+      "siteName": "SUMMER HILL CREEK AT 3RD CROSSING BRIDGE",
+      "latitude": -33.211944,
+      "longitude": 149.13777,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    },
+    {
+      "siteId": "421903",
+      "siteName": "CUDGEGONG RIVER AT RYLSTONE",
+      "latitude": -32.80194444,
+      "longitude": 149.96305556,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate",
+        "variable3": "WaterTemperature"
+      }
+    },
+    {
+      "siteId": "421904",
+      "siteName": "TALBRAGAR RIVER AT DUNEDOO",
+      "latitude": -32.004553,
+      "longitude": 149.379677,
+      "variablesMonitored": {
+        "variable1": "StreamWaterLevel",
+        "variable2": "FlowRate"
+      }
+    }
+  ]
+}

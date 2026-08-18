@@ -1,0 +1,23 @@
+{
+    "name": "Central West Alerts",
+    "short_name": "CW Alerts",
+    "description": "Central West emergency pager, incident, weather and aircraft dashboard",
+    "start_url": "/",
+    "scope": "/",
+    "icons": [
+        {
+            "src": "/android-chrome-192x192.png?v=yyx75bRMkG",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/android-chrome-512x512.png?v=yyx75bRMkG",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#14283d",
+    "background_color": "#0e1925",
+    "display": "standalone",
+    "orientation": "any"
+}

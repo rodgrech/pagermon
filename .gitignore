@@ -94,5 +94,12 @@ server/sessions
 #coverage
 server/coverage/
 
+# Central West Alerts runtime data and local rollback copies
+server/cache/
+server/backups/
+server/**/*.bak
+server/**/*.bak-*
+server/**/*.before-*
+
 # macOS Spotlight
 **/.DS_Store
