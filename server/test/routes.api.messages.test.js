@@ -33,7 +33,11 @@ passportStub.install(server);
 // set required settings in config file
 
 beforeEach(() => db.migrate.rollback().then(() => db.migrate.latest().then(() => db.seed.run())));
-afterEach(() => db.migrate.rollback().then(() => passportStub.logout()));
+afterEach(() => {
+        nconf.set('messages:redactPhoneNumbers', false);
+        nconf.save();
+        return db.migrate.rollback().then(() => passportStub.logout());
+});
 
 describe('POST /api/messages', () => {
         it('should POST new message', done => {
@@ -77,6 +81,58 @@ describe('POST /api/messages', () => {
                                 res.status.should.eql(401);
                                 res.type.should.eql('application/json');
                                 done();
+                        });
+        });
+        it('should redact Australian mobile and landline numbers when enabled', done => {
+                nconf.set('messages:redactPhoneNumbers', true);
+                nconf.save();
+                chai.request(server)
+                        .post('/api/messages')
+                        .set({
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'User-Agent': 'CI-Test',
+                                apikey: 'reallylongkeythatneedstobechanged',
+                        })
+                        .send({
+                                address: '000000',
+                                message: 'Call 0412 345 678, +61 412 345 678 or (02) 1234 5678. Public 1300 123 456.',
+                                datetime,
+                                source: 'CI-Test',
+                        })
+                        .end(async (err, res) => {
+                                try {
+                                        should.not.exist(err);
+                                        res.status.should.eql(200);
+                                        const row = await db('messages').where('id', '=', 6).first();
+                                        row.message.should.eql('Call XXXXXXXXXX, XXXXXXXXXX or XXXXXXXXXX. Public 1300 123 456.');
+                                        done();
+                                } catch (assertionError) {
+                                        done(assertionError);
+                                }
+                        });
+        });
+        it('should preserve phone numbers when redaction is disabled', done => {
+                nconf.set('messages:redactPhoneNumbers', false);
+                nconf.save();
+                const original = 'Call 0412 345 678 or (02) 1234 5678.';
+                chai.request(server)
+                        .post('/api/messages')
+                        .set({
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'User-Agent': 'CI-Test',
+                                apikey: 'reallylongkeythatneedstobechanged',
+                        })
+                        .send({ address: '000000', message: original, datetime, source: 'CI-Test' })
+                        .end(async (err, res) => {
+                                try {
+                                        should.not.exist(err);
+                                        res.status.should.eql(200);
+                                        const row = await db('messages').where('id', '=', 6).first();
+                                        row.message.should.eql(original);
+                                        done();
+                                } catch (assertionError) {
+                                        done(assertionError);
+                                }
                         });
         });
 });

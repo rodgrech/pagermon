@@ -39,6 +39,7 @@
     "adminShow": false,
     "HideCapcode": false,
     "HideSource": false,
+    "redactPhoneNumbers": false,
     "apiSecurity": false
   },
   "auth": {

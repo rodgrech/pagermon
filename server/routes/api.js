@@ -22,6 +22,21 @@ function returningId(result) {
     : first;
 }
 
+function redactAustralianPhoneNumbers(message) {
+  if (typeof message !== 'string') return message;
+
+  var phonePatterns = [
+    /(^|[^\d])(?:\+61|0061)[\s().-]*4(?:[\s().-]*\d){8}(?!\d)/g,
+    /(^|[^\d])04(?:[\s().-]*\d){8}(?!\d)/g,
+    /(^|[^\d])(?:\+61|0061)[\s().-]*[2378](?:[\s().-]*\d){8}(?!\d)/g,
+    /(^|[^\d])(?:0[\s.-]*[2378]|\(0[2378]\))(?:[\s().-]*\d){8}(?!\d)/g
+  ];
+
+  return phonePatterns.reduce(function (redacted, pattern) {
+    return redacted.replace(pattern, '$1XXXXXXXXXX');
+  }, message);
+}
+
 var nconf = require('nconf');
 
 var confFile = './config/config.json';
@@ -263,6 +278,10 @@ router.route('/messages')
       var adminShow = nconf.get('messages:adminShow');
       var data = req.body;
       data.pluginData = {};
+
+      if (nconf.get('messages:redactPhoneNumbers')) {
+        data.message = redactAustralianPhoneNumbers(data.message);
+      }
 
       if (filterDupes) {
         // this is a bad solution and tech debt that will bite us in the ass if we ever go HA, but that's a problem for future me and that guy's a dick
