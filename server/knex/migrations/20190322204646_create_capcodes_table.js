@@ -1,10 +1,12 @@
 
-exports.up = function(db, Promise) {
+exports.up = function(db) {
   return db.schema.hasTable('capcodes').then(function(exists) {
     if (!exists) {
       return db.schema.createTable('capcodes', table => {
-            table.charset('utf8');
-            table.collate('utf8_general_ci');
+            if (db.client.config.client === 'mysql') {
+              table.charset('utf8');
+              table.collate('utf8_general_ci');
+            }
             table.increments('id').primary().unique().notNullable();
             table.string('address', [255]).notNullable();
             table.text('alias').notNullable();

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-<% include global/header.ejs %>
+<%- include('global/header.ejs') %>
 </head>
 <body id="status-body">
-<% include global/menu.ejs %>
+<%- include('global/menu.ejs') %>
 <div id="content" class="container-fluid">
   <main class="cw-status-page">
     <div class="cw-status-heading">
@@ -62,4 +62,4 @@
   window.setInterval(refresh, 30000);
 }());
 </script>
-<% include global/footer.ejs %>
+<%- include('global/footer.ejs') %>

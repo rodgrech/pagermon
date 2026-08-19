@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-<% include header.ejs %>
+<%- include('header.ejs') %>
 <base href="/">
 </head>
 
 <body id="error-body">
 
-<% include menu.ejs %>
+<%- include('menu.ejs') %>
 
 <div id="content" class="container-fluid">
     
@@ -15,4 +15,4 @@
 <pre><%= error.stack %></pre>
 
 </div>
-<% include footer.ejs %>
+<%- include('footer.ejs') %>

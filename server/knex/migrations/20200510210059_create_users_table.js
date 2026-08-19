@@ -7,12 +7,14 @@ nconf.file({ file: confFile });
 var user = nconf.get('auth:user')
 var pwd = nconf.get('auth:encPass')
 
-exports.up = function(db, Promise) {
+exports.up = function(db) {
     return db.schema.hasTable('users').then(function(exists) {
         if (!exists) {
             return db.schema.createTable('users', table => {
-                table.charset('utf8');
-                table.collate('utf8_general_ci');
+                if (db.client.config.client === 'mysql') {
+                  table.charset('utf8');
+                  table.collate('utf8_general_ci');
+                }
                 table.increments('id').primary().unique().notNullable();
                 table.string('givenname', [255]).notNullable();
                 table.string('surname',[255])

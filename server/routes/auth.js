@@ -9,38 +9,34 @@ const confFile = './config/config.json';
 nconf.file({ file: confFile });
 nconf.load();
 
-// Brute force protection for public dupe checking routes
-const ExpressBrute = require('express-brute');
-const BruteKnex = require('brute-knex');
+// Rate limiting for login and public duplicate-checking routes.
+const { rateLimit } = require('express-rate-limit');
 
 const db = require('../knex/knex.js');
 const logger = require('../log');
 const passport = require('../auth/local');
 const authHelper = require('../middleware/authhelper')
 
-const store = new BruteKnex({
-        createTable: true,
-        knex: db,
-        tablename: 'protection',
-});
-
-const lockoutCallback = function(req, res, next, nextValidRequestDate) {
+const lockoutCallback = function(req, res) {
         res.status(429).send({ status: 'lockedout', error: 'Too many attempts, please try again later' });
-        logger.auth.info(`Lockout: ${req.ip} Next Valid: ${nextValidRequestDate}`);
+        logger.auth.info(`Rate limit lockout: ${req.ip}`);
 };
 
-const bruteforcedupe = new ExpressBrute(store, {
-        freeRetries: 10,
-        minWait: 5000, // 5 seconds
-        maxWait: 20000, // 20 seconds
-        failCallback: lockoutCallback,
+const duplicateCheckLimiter = rateLimit({
+        windowMs: 20000,
+        limit: 10,
+        standardHeaders: true,
+        legacyHeaders: false,
+        handler: lockoutCallback,
 });
 
-const bruteforcelogin = new ExpressBrute(store, {
-        freeRetries: 5,
-        minWait: 10000, // 10 seconds
-        maxWait: 15 * 60 * 1000, // 15 minutes
-        failCallback: lockoutCallback,
+const loginLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        limit: 4,
+        standardHeaders: true,
+        legacyHeaders: false,
+        skipSuccessfulRequests: true,
+        handler: lockoutCallback,
 });
 
 // End Bruteforce
@@ -59,7 +55,7 @@ router.route('/login')
                         res.redirect('/');
                 }
         })
-        .post(bruteforcelogin.prevent, function(req, res, next) {
+        .post(loginLimiter, function(req, res, next) {
                 passport.authenticate('login-user', (err, user) => {
                         if (err) {
                                 //this is commented out as it seems to fire when a user is disabled?! even tho the below functions still run
@@ -94,8 +90,6 @@ router.route('/login')
                                                                         lastlogondate: currentDatetime,
                                                                 })
                                                                 .then(() => {
-                                                                        // reset the bruteforce timer after successful login
-                                                                        bruteforcelogin.reset(null);
                                                                         if (user.role !== 'admin') {
                                                                                 res.status(200).send({
                                                                                         status: 'ok',
@@ -126,10 +120,13 @@ router.route('/login')
                 })(req, res, next);
         });
 
-router.route('/logout').get(authHelper.isLoggedIn, function(req, res) {
-        req.logout();
-        res.redirect('/');
-        logger.auth.debug(`Successful Logout ${req.user.username}`);
+router.route('/logout').get(authHelper.isLoggedIn, function(req, res, next) {
+        const username = req.user.username;
+        req.logout(function(err) {
+                if (err) return next(err);
+                logger.auth.debug(`Successful Logout ${username}`);
+                return res.redirect('/');
+        });
 });
 
 router.route('/profile/').get(authHelper.isLoggedIn, function(req, res) {
@@ -168,7 +165,6 @@ router.route('/profile/:id')
                         const lastlogondate = Date.now();
                         console.time('insert');
                         db.from('users')
-                                .returning('id')
                                 .where('username', '=', req.user.username)
                                 .update({
                                         username,
@@ -323,7 +319,7 @@ router.route('/reset')
                 }
         });
 
-router.route('/userCheck/username/:id').get(bruteforcedupe.prevent, function(req, res, next) {
+router.route('/userCheck/username/:id').get(duplicateCheckLimiter, function(req, res, next) {
         const { id } = req.params;
         db.from('users')
                 .select('username')
@@ -353,7 +349,7 @@ router.route('/userCheck/username/:id').get(bruteforcedupe.prevent, function(req
                 });
 });
 
-router.route('/userCheck/email/:id').get(bruteforcedupe.prevent, function(req, res, next) {
+router.route('/userCheck/email/:id').get(duplicateCheckLimiter, function(req, res, next) {
         const { id } = req.params;
         db.from('users')
                 .select('email')
@@ -384,4 +380,3 @@ router.route('/userCheck/email/:id').get(bruteforcedupe.prevent, function(req, r
 });
 
 module.exports = router;
-
