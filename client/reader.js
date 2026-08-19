@@ -41,10 +41,6 @@ if(hostname.substr(-1) === '/') {
   var uri = hostname+'/api/messages'
 }
 
-var http = require('http');
-var request = require('request');
-require('request').debug = true;
-var rp = require('request-promise-native');
 var moment = require('moment');
 
 var colors = require('colors/safe');
@@ -179,18 +175,19 @@ rl.on('line', (line) => {
 });
 
 var sendPage = function(message,retries) {
-  var options = {
+  var body = new URLSearchParams(message);
+  fetch(uri, {
     method: 'POST',
-    uri: uri,
     headers: {
       'X-Requested-With': 'XMLHttpRequest',
       'User-Agent': 'PagerMon reader.js',
+      'Content-Type': 'application/x-www-form-urlencoded',
       apikey: apikey
     },
-    form: message
-  };
-  rp(options)
-  .then(function (body) {
+    body: body
+  })
+  .then(function (response) {
+    if (!response.ok) throw new Error('HTTP ' + response.status);
     // console.log(colors.success('Message delivered. ID: '+body)); 
   })
   .catch(function (err) {

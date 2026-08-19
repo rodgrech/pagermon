@@ -20,7 +20,6 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var fs = require('fs');
 var session = require('express-session');
-var request = require('request');
 var SQLiteStore = require('connect-sqlite3')(session);
 var flash    = require('connect-flash');
 
@@ -102,7 +101,8 @@ var app = express();
 
 
 var server = http.createServer(app);
-var io = require('socket.io').listen(server);
+var SocketIOServer = require('socket.io').Server;
+var io = new SocketIOServer(server);
     server.listen(port);
     server.on('error', onError);
     server.on('listening', onListening);

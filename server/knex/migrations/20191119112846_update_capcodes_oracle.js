@@ -2,13 +2,15 @@ var nconf = require('nconf');
 var confFile = './config/config.json';
 var dbtype = nconf.get('database:type');
 
-exports.up = function(db, Promise) {
+exports.up = function(db) {
   if (dbtype == 'oracledb') {
     return db.schema.hasTable('capcodes').then(function(exists) {
       if (!exists) {
         return db.schema.createTable('capcodes', table => {
-          table.charset('utf8');
-          table.collate('utf8_general_ci');
+          if (db.client.config.client === 'mysql') {
+            table.charset('utf8');
+            table.collate('utf8_general_ci');
+          }
           table.increments('id').primary().unique().notNullable();
           table.string('address', [255]).notNullable();
           table.string('alias', [1000]).notNullable();
@@ -43,7 +45,5 @@ exports.up = function(db, Promise) {
 exports.down = function(db, Promise) {
   
 };
-
-
 
 

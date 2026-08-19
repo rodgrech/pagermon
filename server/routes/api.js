@@ -10,6 +10,13 @@ var logger = require('../log');
 var db = require('../knex/knex.js');
 var converter = require('json-2-csv');
 
+function returningId(result) {
+  var first = Array.isArray(result) ? result[0] : result;
+  return first && typeof first === 'object' && Object.prototype.hasOwnProperty.call(first, 'id')
+    ? first.id
+    : first;
+}
+
 var nconf = require('nconf');
 
 var confFile = './config/config.json';
@@ -324,12 +331,7 @@ router.route('/messages')
                     db('messages').insert(insertmsg).returning('id')
                       .then((result) => {
                         // emit the full message
-                        var msgId;
-                        if (Array.isArray(result)) {
-                          msgId = result[0];
-                        } else {
-                          msgId = result;
-                        }
+                        var msgId = returningId(result);
                         logger.main.debug(result);
 
                         if (dbtype == 'oracledb') {
@@ -447,7 +449,7 @@ router.route('/messages')
                                 }
                               });
                             }
-                            res.status(200).send('' + result);
+                            res.status(200).send('' + msgId);
                           })
                           .catch((err) => {
                             res.status(500).send(err);
@@ -767,7 +769,7 @@ router.route('/capcodes')
         .returning('id')
         .then((result) => {
           res.status(200);
-          res.send('' + result);
+          res.send('' + returningId(result));
           if (!updateRequired || updateRequired == 0) {
             nconf.set('database:aliasRefreshRequired', 1);
             nconf.save();
@@ -974,7 +976,7 @@ router.route('/capcodes/:id')
                 }
               }
             }
-            res.status(200).send({ 'status': 'ok', 'id': result })
+            res.status(200).send({ 'status': 'ok', 'id': returningId(result) })
           })
           .catch((err) => {
             console.timeEnd('insert');
@@ -1249,7 +1251,7 @@ router.route('/user')
               .then((response) => {
                 //add logging
                 logger.main.debug('created user id: ' + response)
-                res.status(200).send({ 'status': 'ok', 'id': response[0] });
+                res.status(200).send({ 'status': 'ok', 'id': returningId(response) });
               })
               .catch((err) => {
                 logger.main.error(err)
@@ -1421,7 +1423,7 @@ router.route('/user/:id')
           .returning('id')
           .then((result) => {
             console.timeEnd('insert');
-            res.status(200).send({ 'status': 'ok', 'id': result[0] })
+            res.status(200).send({ 'status': 'ok', 'id': returningId(result) })
           })
           .catch((err) => {
             console.timeEnd('insert');
