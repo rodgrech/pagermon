@@ -318,8 +318,7 @@
               var socket = io({transports: ['websocket'], upgrade: false});
               return {
                 open: function () {
-                  socket = io({transports: ['websocket'], upgrade: false});
-                  socket.open();
+                  if (socket.disconnected) socket.open();
                 },
                 on: function (eventName, callback) {
                   socket.on(eventName, function () {
@@ -351,8 +350,7 @@
               var adminSocket = io('/adminio', {transports: ['websocket'], upgrade: false});
               return {
                 open: function () {
-                  adminSocket = io('/adminio', {transports: ['websocket'], upgrade: false});
-                  adminSocket.open();
+                  if (adminSocket.disconnected) adminSocket.open();
                 },
                 on: function (eventName, callback) {
                   adminSocket.on(eventName, function () {
@@ -524,6 +522,12 @@
 
       $scope.setDashboardView = function (view) {
         $scope.dashboardView = view;
+        // A standalone iOS PWA may have been suspended long enough to miss
+        // websocket events. Opening Feed must therefore perform a real fetch.
+        if (view === 'feed' && angular.isFunction($scope.updateData)) {
+          $scope.updateData(1);
+          $scope.refreshDashboard();
+        }
         if (view === 'map') {
           window.setTimeout(function () { CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites); }, 50);
         }
@@ -634,6 +638,7 @@
       $scope.refreshRadio();
       radioPoll = $interval($scope.refreshRadio, 15000);
       <% } %>
+      var activeSocketMode = socket;
       // get new message on socket event
       $scope.$on('$viewContentLoaded', function() {
       
@@ -645,45 +650,45 @@
   <% if (!apisecurity) { %>
     <% if (hidecapcode) { %>
       <% if ((login && user.role == 'admin')) { %>
-        var socketMode = adminSocket
+        activeSocketMode = adminSocket
         adminSocket.open();
       <% } else { %>
-        var socketMode = socket
+        activeSocketMode = socket
         socket.open();
         adminSocket.close()
         <% } %>
     <%} else { %>
       <% if (pdwmode) { %>
         <% if ((login && user.role == 'admin')) { %>
-          var socketMode = adminSocket
+          activeSocketMode = adminSocket
           adminSocket.open();
         <% } else { %>
-          var socketMode = socket
+          activeSocketMode = socket
           socket.open();
           adminSocket.close()
         <% } %>
       <% } else { %>
-        var socketMode = socket
+        activeSocketMode = socket
         socket.open();
         adminSocket.close()
       <% } %>
     <% } %>	
   <% } else { %>
     <% if ((login && user.role == 'admin')) { %>
-      var socketMode = adminSocket
+      activeSocketMode = adminSocket
       adminSocket.open();
     <% } else if (login) { %>
-      var socketMode = socket
+      activeSocketMode = socket
       socket.open();
       adminSocket.close()
     <% } else { %>
-      var socketMode = socket
+      activeSocketMode = socket
       socket.close();
       adminSocket.close();
       <% } %>
   <% } %>
   
-    socketMode.on('messagePost', function(message) {
+    activeSocketMode.on('messagePost', function(message) {
         // Send Browser Notifications  
     <% if (apisecurity) { %>
       <% if (login) { %>
@@ -765,6 +770,9 @@
                 var queryObj = {};
                 queryObj.page = curPage;
                 queryObj.limit = limit;
+                // Prevent WebKit and intermediate proxies from reusing an old
+                // API response when the PWA is resumed or manually refreshed.
+                queryObj._ts = Date.now();
 
                 if ($routeParams.q || query) {
                   $scope.query = query || $routeParams.q;
@@ -901,6 +909,22 @@
               // run the updateData function on load
               $scope.updateData();
 
+              function refreshAfterResume() {
+                if (document.visibilityState && document.visibilityState !== 'visible') return;
+                $scope.$evalAsync(function () {
+                  activeSocketMode.open();
+                  $scope.updateData(1);
+                  $scope.refreshDashboard();
+                });
+              }
+
+              // iOS freezes standalone PWAs in the background. These events
+              // cover app switching, lock/unlock, bfcache restores and network
+              // recovery without relying solely on the websocket connection.
+              document.addEventListener('visibilitychange', refreshAfterResume);
+              $window.addEventListener('pageshow', refreshAfterResume);
+              $window.addEventListener('online', refreshAfterResume);
+
               // helper functions below
               $scope.range = function (min, max, step) {
                 step = step || 1;
@@ -951,6 +975,9 @@
         if (waterGaugePoll) $interval.cancel(waterGaugePoll);
         if (algaePoll) $interval.cancel(algaePoll);
         $window.removeEventListener('keydown', operationsEscape);
+        document.removeEventListener('visibilitychange', refreshAfterResume);
+        $window.removeEventListener('pageshow', refreshAfterResume);
+        $window.removeEventListener('online', refreshAfterResume);
         document.body.classList.remove('cw-operations');
         socket.close();
       });

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-west-alerts-static-v12-service-status';
+const CACHE_NAME = 'central-west-alerts-static-v13-pwa-refresh';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/textAngular.css',
