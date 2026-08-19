@@ -23,7 +23,11 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                 }),
                 Profile: $resource('/auth/profile/me', null, {
                     'post': { method: 'POST', isArray: false }
-                })
+                }),
+                PushConfig: $resource('/api/push/config'),
+                PushCapcodes: $resource('/api/push/capcodes', null, {'query': {method: 'GET', isArray: true}}),
+                PushSubscription: $resource('/api/push/subscription', null, {'remove': {method: 'DELETE', isArray: false}}),
+                PushTest: $resource('/api/push/test')
             };
         }])
 

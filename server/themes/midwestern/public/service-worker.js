@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-west-alerts-static-v13-pwa-refresh';
+const CACHE_NAME = 'central-west-alerts-static-v14-web-push';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/textAngular.css',
@@ -32,5 +32,31 @@ self.addEventListener('fetch', function (event) {
       return response;
     });
     return cached || network;
+  }));
+});
+
+self.addEventListener('push', function(event) {
+  var data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (error) { data = {body: event.data.text()}; }
+  event.waitUntil(self.registration.showNotification(data.title || 'Central West Alerts', {
+    body: data.body || 'A new pager message was received.',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    tag: data.tag || 'central-west-alert',
+    data: {url: data.url || '/'}
+  }));
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  var target = event.notification.data && event.notification.data.url || '/';
+  event.waitUntil(clients.matchAll({type: 'window', includeUncontrolled: true}).then(function(windows) {
+    for (var i = 0; i < windows.length; i += 1) {
+      if ('focus' in windows[i]) {
+        windows[i].navigate(target);
+        return windows[i].focus();
+      }
+    }
+    return clients.openWindow(target);
   }));
 });

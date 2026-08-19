@@ -47,3 +47,29 @@
           </form>
         </div>
 </div>
+
+<div class="row" style="padding-top: 20px">
+  <div class="col-xs-12">
+    <hr>
+    <h5><i class="fa fa-bell"></i> Pager push notifications</h5>
+    <div class="alert alert-warning" ng-if="!push.supported">This browser does not support Web Push. On iPhone, install this site using Add to Home Screen first.</div>
+    <div class="alert alert-info" ng-if="push.supported && !push.enabled">Push notifications are currently disabled by an administrator.</div>
+    <div ng-if="push.supported && push.enabled" class="form-horizontal">
+      <div class="form-group">
+        <label class="col-xs-4 col-sm-3 control-label">Capcode</label>
+        <div class="col-xs-8 col-sm-9">
+          <select class="form-control" ng-model="push.capcode">
+            <option value="">Select one capcode</option>
+            <option ng-repeat="item in push.capcodes" value="{{item.address}}">{{item.address}} — {{item.alias || 'Unknown'}}{{item.agency ? ' (' + item.agency + ')' : ''}}</option>
+          </select>
+          <span class="help-block">Your account can follow one capcode. The same choice applies to every subscribed device.</span>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-success" ng-click="enablePush()"><i class="fa fa-bell"></i> {{push.subscribed ? 'Save capcode' : 'Enable on this device'}}</button>
+        <button type="button" class="btn btn-default" ng-if="push.subscribed" ng-click="testPush()">Send test</button>
+        <button type="button" class="btn btn-danger" ng-if="push.subscribed" ng-click="disablePush()">Disable this device</button>
+      </div>
+    </div>
+  </div>
+</div>

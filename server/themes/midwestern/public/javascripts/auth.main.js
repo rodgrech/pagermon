@@ -23,7 +23,13 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                 }),
                 Profile: $resource('/auth/profile/me', null, {
                     'post': { method: 'POST', isArray: false }
-                })
+                }),
+                PushConfig: $resource('/api/push/config'),
+                PushCapcodes: $resource('/api/push/capcodes', null, {'query': {method: 'GET', isArray: true}}),
+                PushSubscription: $resource('/api/push/subscription', null, {
+                    'remove': {method: 'DELETE', isArray: false}
+                }),
+                PushTest: $resource('/api/push/test')
             };
         }])
 
@@ -183,9 +189,71 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         };
     }])
 
-    .controller('ProfileController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout) {
+    .controller('ProfileController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', '$window', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout, $window) {
         $scope.alertMessage = {};
         $scope.loading = true;
+        $scope.push = {supported: 'serviceWorker' in navigator && 'PushManager' in window, enabled: false, subscribed: false, capcode: '', capcodes: []};
+
+        function pushMessage(text, type) {
+            $scope.alertMessage.text = text;
+            $scope.alertMessage.type = type || 'alert-info';
+            $scope.alertMessage.show = true;
+        }
+
+        function applicationServerKey(value) {
+            var padding = '='.repeat((4 - value.length % 4) % 4);
+            var raw = atob((value + padding).replace(/-/g, '+').replace(/_/g, '/'));
+            return Uint8Array.from(raw, function(character) { return character.charCodeAt(0); });
+        }
+
+        function refreshPushState() {
+            Api.PushConfig.get().$promise.then(function(config) {
+                $scope.push.enabled = config.enabled;
+                $scope.push.publicKey = config.publicKey;
+                $scope.push.capcode = config.capcode || '';
+                if (!$scope.push.supported || !config.enabled) return;
+                Api.PushCapcodes.query().$promise.then(function(rows) { $scope.push.capcodes = rows; });
+                navigator.serviceWorker.ready.then(function(registration) {
+                    return registration.pushManager.getSubscription();
+                }).then(function(subscription) {
+                    $scope.$evalAsync(function() { $scope.push.subscribed = Boolean(subscription); });
+                });
+            });
+        }
+
+        $scope.enablePush = function() {
+            if (!$scope.push.capcode) return pushMessage('Select one capcode first.', 'alert-warning');
+            Notification.requestPermission().then(function(permission) {
+                if (permission !== 'granted') throw new Error('Notification permission was not granted.');
+                return navigator.serviceWorker.ready;
+            }).then(function(registration) {
+                return registration.pushManager.getSubscription().then(function(existing) {
+                    return existing || registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: applicationServerKey($scope.push.publicKey)});
+                });
+            }).then(function(subscription) {
+                return Api.PushSubscription.save({subscription: subscription.toJSON(), capcode: $scope.push.capcode}).$promise;
+            }).then(function() {
+                $scope.push.subscribed = true;
+                pushMessage('Push notifications saved for capcode ' + $scope.push.capcode + '.', 'alert-success');
+            }).catch(function(error) {
+                $scope.$evalAsync(function() { pushMessage(error.data && error.data.error || error.message || 'Unable to enable push notifications.', 'alert-danger'); });
+            });
+        };
+
+        $scope.disablePush = function() {
+            navigator.serviceWorker.ready.then(function(registration) { return registration.pushManager.getSubscription(); }).then(function(subscription) {
+                if (!subscription) return Api.PushSubscription.remove({}).$promise;
+                var endpoint = subscription.endpoint;
+                return Api.PushSubscription.remove({endpoint: endpoint}).$promise.then(function() { return subscription.unsubscribe(); });
+            }).then(function() {
+                $scope.$evalAsync(function() { $scope.push.subscribed = false; pushMessage('Push notifications disabled on this device.', 'alert-success'); });
+            });
+        };
+
+        $scope.testPush = function() {
+            Api.PushTest.save().$promise.then(function() { pushMessage('Test notification sent.', 'alert-success'); }, function(response) { pushMessage(response.data.error || 'Test failed.', 'alert-danger'); });
+        };
+        refreshPushState();
         $scope.userSubmit = function () {
             $scope.loading = true;
             Api.Profile.save(null, $scope.user).$promise.then(function (response) {

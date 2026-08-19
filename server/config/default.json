@@ -65,5 +65,13 @@
     "gaEnable": false,
     "gaTrackingCode": ""
   },
+  "notifications": {
+    "webPush": {
+      "enabled": false,
+      "subject": "mailto:admin@example.com",
+      "publicKey": "",
+      "privateKey": ""
+    }
+  },
   "plugins": {}
 }

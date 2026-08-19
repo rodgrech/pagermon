@@ -14,6 +14,7 @@ var sqlite3 = require('sqlite3');
 var path = require('path');
 var fs = require('fs');
 var net = require('net');
+var webPushNotifications = require('../lib/webPush');
 
 function returningId(result) {
   var first = Array.isArray(result) ? result[0] : result;
@@ -456,6 +457,9 @@ router.route('/messages')
                               } else {
                                 row.pluginconf = {};
                               }
+                              webPushNotifications.sendForMessage(row).catch(function(error) {
+                                logger.main.error('Unable to queue web push: ' + error);
+                              });
                               logger.main.debug('afterMessage start');
                               pluginHandler.handle('message', 'after', row, function (response) {
                                 logger.main.debug(util.format('%o', response));
@@ -574,6 +578,66 @@ router.route('/messages')
     }
   });
 
+
+router.route('/push/config')
+  .get(isSessionUser, function(req, res, next) {
+    nconf.load();
+    var config = nconf.get('notifications:webPush') || {};
+    db('users').select('pushcapcode').where('id', req.user.id).first()
+      .then(function(user) {
+        return db('push_subscriptions').where('user_id', req.user.id).count({count: '*'}).first()
+          .then(function(count) {
+            res.json({
+              enabled: Boolean(config.enabled && config.publicKey),
+              publicKey: config.enabled ? (config.publicKey || '') : '',
+              capcode: user && user.pushcapcode ? user.pushcapcode : '',
+              deviceCount: Number(count && count.count || 0)
+            });
+          });
+      }).catch(next);
+  });
+
+router.route('/push/capcodes')
+  .get(isSessionUser, function(req, res, next) {
+    db('capcodes').select('address', 'alias', 'agency').whereNotNull('address').orderBy('agency').orderBy('alias')
+      .then(function(rows) { res.json(rows.filter(function(row) { return /^\d{1,32}$/.test(String(row.address)); })); }).catch(next);
+  });
+
+router.route('/push/subscription')
+  .post(isSessionUser, function(req, res, next) {
+    nconf.load();
+    var config = nconf.get('notifications:webPush') || {};
+    var subscription = req.body.subscription || {};
+    var capcode = String(req.body.capcode || '').trim();
+    if (!config.enabled) return res.status(503).json({error: 'Web push is disabled by the administrator.'});
+    if (!/^\d{1,32}$/.test(capcode) || !subscription.endpoint || !subscription.keys || !subscription.keys.p256dh || !subscription.keys.auth) {
+      return res.status(400).json({error: 'A valid capcode and push subscription are required.'});
+    }
+    return db.transaction(function(trx) {
+      return trx('users').where('id', req.user.id).update({pushcapcode: capcode}).then(function() {
+        return trx('push_subscriptions').where('endpoint', subscription.endpoint).first();
+      }).then(function(existing) {
+        var values = {user_id: req.user.id, endpoint: subscription.endpoint, p256dh: subscription.keys.p256dh, auth: subscription.keys.auth, updated_at: trx.fn.now()};
+        if (existing) return trx('push_subscriptions').where('id', existing.id).update(values);
+        values.created_at = trx.fn.now();
+        return trx('push_subscriptions').insert(values);
+      });
+    }).then(function() { res.json({status: 'ok', capcode: capcode}); }).catch(next);
+  })
+  .delete(isSessionUser, function(req, res, next) {
+    var endpoint = (req.body && req.body.endpoint) || req.query.endpoint;
+    var query = db('push_subscriptions').where('user_id', req.user.id);
+    if (endpoint) query.andWhere('endpoint', endpoint);
+    query.del().then(function() { res.json({status: 'ok'}); }).catch(next);
+  });
+
+router.route('/push/test')
+  .post(isSessionUser, function(req, res, next) {
+    webPushNotifications.sendTestForUser(req.user.id).then(function(count) {
+      if (!count) return res.status(400).json({error: 'No push-enabled device is registered.'});
+      res.json({status: 'ok', devices: count});
+    }).catch(next);
+  });
 
 router.route('/messages/:id')
   .get(authHelper.isLoggedInMessages, function (req, res, next) {

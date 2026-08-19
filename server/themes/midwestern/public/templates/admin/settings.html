@@ -456,6 +456,16 @@
                 <span class="help-block">Pending members appear under Admin → Users. Change their status to Active and save to approve them.</span>
               </div>
             </div>
+            <div class="form-group">
+              <label for="notifications.webPush.enabled" class="col-xs-4 col-sm-3 control-label">Web Push</label>
+              <div class="col-xs-8 col-sm-9">
+                <label>
+                  <input type="checkbox" name="notifications.webPush.enabled" ng-model="settings.notifications.webPush.enabled">
+                  Allow users to receive notifications for one selected capcode.
+                </label>
+                <span class="help-block">Users configure their device and capcode under My Profile.</span>
+              </div>
+            </div>
             <div class="row">
             <label class="col-xs-4 col-sm-3 control-label">API Keys</label>
             </div>
