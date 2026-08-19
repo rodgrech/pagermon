@@ -45,6 +45,8 @@ node_modules/
 server/node_modules/
 client/node_modules/
 jspm_packages/
+__pycache__/
+*.py[cod]
 
 # Typescript v1 declaration files
 typings/
