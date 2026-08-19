@@ -24,7 +24,11 @@ nconf.load();
 
 beforeEach(() => db.migrate.rollback().then(() => db.migrate.latest().then(() => db.seed.run())));
 
-afterEach(() => db.migrate.rollback().then(() => passportStub.logout()));
+afterEach(() => {
+        nconf.set('auth:requireApproval', false);
+        nconf.save();
+        return db.migrate.rollback().then(() => passportStub.logout());
+});
 
 describe('GET /auth/login', () => {
         it('should return the login page', done => {
@@ -368,6 +372,32 @@ describe('GET /auth/register', () => {
 });
 
 describe('POST /auth/register', () => {
+        it('should hold a new user for administrator approval when enabled', done => {
+                nconf.set('auth:registration', true);
+                nconf.set('auth:requireApproval', true);
+                nconf.save();
+                chai.request(server)
+                        .post('/auth/register')
+                        .send({
+                                username: 'pendinguser',
+                                password: 'changeme',
+                                givenname: 'Pending',
+                                surname: 'User',
+                                email: 'pending@example.com',
+                        })
+                        .end((err, res) => {
+                                should.not.exist(err);
+                                res.status.should.eql(200);
+                                res.body.status.should.eql('pending');
+                                res.body.redirect.should.eql('/auth/login');
+                                db('users').where('username', 'pendinguser').first().then(user => {
+                                        user.status.should.eql('disabled');
+                                        Boolean(user.approvalpending).should.eql(true);
+                                        done();
+                                }).catch(done);
+                        });
+        });
+
         it('should register a new user', done => {
                 nconf.set('auth:registration', true);
                 nconf.save();

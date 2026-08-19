@@ -57,7 +57,7 @@
               <span style="font-family: monospace;"><strong>{{user.role}}</strong></span>
             </td>
             <td class="shrink clickable-td" style="color: Maroon;" ng-click="userDetail(user.id);">
-              <span style="font-family: monospace;"><strong>{{user.status}}</strong></span>
+              <span style="font-family: monospace;"><strong>{{user.approvalpending ? 'Pending approval' : user.status}}</strong></span>
             </td>
         </tbody>
       </table>

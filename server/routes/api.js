@@ -1304,7 +1304,7 @@ router.route('/capcodeImport')
 router.route('/user')
   .get(authHelper.isAdmin, function (req, res, next) {
     db.from('users')
-      .select('id','givenname','surname','username','email','role','status','lastlogondate')
+      .select('id','givenname','surname','username','email','role','status','approvalpending','lastlogondate')
       .then((rows) => {
         res.json(rows);
       })
@@ -1338,6 +1338,7 @@ router.route('/user')
                 email: req.body.email,
                 role: req.body.role,
                 status: req.body.status,
+                approvalpending: false,
                 lastlogondate: null
               })
               .returning('id')
@@ -1361,7 +1362,7 @@ router.route('/userCheck/username/:id')
   .get(authHelper.isAdmin, function (req, res, next) {
     var id = req.params.id;
     db.from('users')
-      .select('id','givenname','surname','username','email','role','status','lastlogondate')
+      .select('id','givenname','surname','username','email','role','status','approvalpending','lastlogondate')
       .where('username', id)
       .then((row) => {
         if (row.length > 0) {
@@ -1376,7 +1377,8 @@ router.route('/userCheck/username/:id')
             "surname": "",
             "email": "",
             "role": "user",
-            "status": "active"
+            "status": "active",
+            "approvalpending": false
           };
           res.status(200);
           res.json(row);
@@ -1392,7 +1394,7 @@ router.route('/userCheck/username/:id')
   .get(authHelper.isAdmin, function (req, res, next) {
     var id = req.params.id;
     db.from('users')
-      .select('id','givenname','surname','username','email','role','status','lastlogondate')
+      .select('id','givenname','surname','username','email','role','status','approvalpending','lastlogondate')
       .where('email', id)
       .then((row) => {
         if (row.length > 0) {
@@ -1407,7 +1409,8 @@ router.route('/userCheck/username/:id')
             "surname": "",
             "email": "",
             "role": "user",
-            "status": "active"
+            "status": "active",
+            "approvalpending": false
           };
           res.status(200);
           res.json(row);
@@ -1429,14 +1432,15 @@ router.route('/user/:id')
       "surname": "",
       "email": "",
       "role": "user",
-      "status": "active"
+      "status": "active",
+      "approvalpending": false
     };
     if (id == 'new') {
       res.status(200);
       res.json(defaults);
     } else {
       db.from('users')
-        .select('id','givenname','surname','username','email','role','status','lastlogondate')
+        .select('id','givenname','surname','username','email','role','status','approvalpending','lastlogondate')
         .where('id', id)
         .then(function (row) {
           if (row.length > 0) {
@@ -1498,6 +1502,7 @@ router.route('/user/:id')
               email: req.body.email,
               role: req.body.role || 'user',
               status: req.body.status || 'disabled',
+              approvalpending: req.body.status === 'active' ? false : Boolean(req.body.approvalpending),
             }
             if (password != null) {
               const salt = bcrypt.genSaltSync();

@@ -123,7 +123,13 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                 $scope.userLoading = true;
                 Api.Register.save(null, $scope.user).$promise.then(function (response) {
                     console.log(response);
-                    if (response.status == 'ok') {
+                    if (response.status == 'pending') {
+                        $scope.alertMessage.text = response.message;
+                        $scope.alertMessage.type = 'alert-info';
+                        $scope.alertMessage.show = true;
+                        $scope.userLoading = false;
+                        $timeout(function () { $window.location.href = response.redirect; }, 5000);
+                    } else if (response.status == 'ok') {
                         $scope.alertMessage.text = 'User created!';
                         $scope.alertMessage.type = 'alert-success';
                         $scope.alertMessage.show = true;

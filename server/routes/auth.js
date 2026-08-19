@@ -65,7 +65,13 @@ router.route('/login')
                                 res.status(401).send({ status: 'failed', error: 'Check Details and try again' });
                                 logger.auth.debug(`Login Failed: ${req.body.username}`);
                         } else if (user) {
-                                if (user.status !== 'disabled') {
+                                if (user.approvalpending) {
+                                        res.status(401).send({
+                                                status: 'pending',
+                                                error: 'Account awaiting administrator approval',
+                                        });
+                                        logger.auth.info(`Pending account login blocked: ${user.username}`);
+                                } else if (user.status !== 'disabled') {
                                         req.logIn(user, function(err) {
                                                 if (err) {
                                                         res.status(401).send({
@@ -225,10 +231,19 @@ router.route('/register')
                                                                 surname: req.body.surname,
                                                                 email: req.body.email,
                                                                 role: 'user',
-                                                                status: 'active',
+                                                                status: nconf.get('auth:requireApproval') ? 'disabled' : 'active',
+                                                                approvalpending: Boolean(nconf.get('auth:requireApproval')),
                                                                 lastlogondate: Date.now(),
                                                         })
                                                         .then(() => {
+                                                                if (nconf.get('auth:requireApproval')) {
+                                                                        logger.auth.info(`Created account pending approval: ${req.body.username}`);
+                                                                        return res.status(200).json({
+                                                                                status: 'pending',
+                                                                                message: 'Registration received. An administrator must approve your account before you can sign in.',
+                                                                                redirect: '/auth/login',
+                                                                        });
+                                                                }
                                                                 passport.authenticate('login-user', (err, user) => {
                                                                         if (user) {
                                                                                 req.logIn(user, function(err) {
