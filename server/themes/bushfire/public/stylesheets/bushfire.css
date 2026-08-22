@@ -1,0 +1,200 @@
+/*
+ * Bushfire theme
+ * An independent safety-communications design using high-contrast red,
+ * fluorescent yellow, charcoal and white. It is not affiliated with, endorsed by, or an official
+ * product of the NSW Rural Fire Service or any other emergency agency.
+ */
+
+:root {
+  --bf-yellow: #d9ef2d;
+  --bf-yellow-dark: #b9cf16;
+  --bf-red-field: #d93822;
+  --bf-red-dark: #ad261c;
+  --bf-charcoal: #17191b;
+  --bf-ink: #24272a;
+  --bf-paper: #f7f5ef;
+  --bf-white: #ffffff;
+  --bf-red: #c9292f;
+  --bf-border: #d8d3c7;
+  --mw-blue: #c92f21;
+  --mw-border: #d8d3c7;
+  --mw-muted: #68655e;
+  --mw-panel: #ffffff;
+  --mw-bg: #f4f1e9;
+}
+
+body {
+  color: var(--bf-ink);
+  background:
+    linear-gradient(135deg, rgba(217,56,34,.07) 0, rgba(217,56,34,.07) 12%, transparent 12%, transparent 100%),
+    var(--bf-paper);
+}
+
+a { color: #8d1f25; }
+a:hover, a:focus { color: var(--bf-red); }
+
+.navbar {
+  background: var(--bf-red-field);
+  border: 0;
+  border-bottom: 5px solid var(--bf-yellow);
+  box-shadow: 0 3px 12px rgba(0,0,0,.28);
+}
+
+.navbar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -5px;
+  width: 38%;
+  height: 5px;
+  background: repeating-linear-gradient(110deg, var(--bf-yellow) 0 42px, transparent 42px 54px, var(--bf-white) 54px 88px, transparent 88px 103px);
+  transform: skewX(-28deg);
+  transform-origin: right;
+}
+
+.navbar .navbar-brand {
+  color: var(--bf-white);
+  font-weight: 800;
+  letter-spacing: .025em;
+}
+
+.navbar .navbar-brand:hover,
+.navbar .navbar-brand:focus { color: var(--bf-yellow); }
+
+.navbar-nav>li>a,
+.navbar-nav>li>a:focus {
+  color: #f5f5f3;
+  background: transparent;
+  font-weight: 700;
+}
+
+.navbar-nav>li>a:hover,
+.navbar-nav>li.active>a,
+.navbar-nav>li.active>a:focus,
+.navbar-nav>li.active>a:hover {
+  color: var(--bf-charcoal);
+  background: var(--bf-yellow);
+  box-shadow: none;
+}
+
+.navbar-toggle { color: var(--bf-yellow); }
+.dropdown-menu { border-top: 4px solid var(--bf-yellow); }
+.dropdown-menu>li>a:hover { background: #fff3a8; color: var(--bf-charcoal); }
+
+.triangle-down { border-top-color: var(--bf-red-field); }
+.triangle-down:hover { border-top-color: var(--bf-red-dark); }
+.triangle-down p { color: var(--bf-charcoal); }
+
+.cw-dashboard { --mw-blue: #c92f21; }
+.cw-toolbar,
+.cw-health,
+.cw-panel,
+.panel,
+.modal-content {
+  border-color: var(--bf-border);
+  border-radius: 2px;
+  box-shadow: 0 4px 14px rgba(37,34,26,.08);
+}
+
+.cw-toolbar {
+  position: relative;
+  border-top: 6px solid var(--bf-red-field);
+  background: var(--bf-white);
+}
+
+.cw-toolbar::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 0;
+  width: 18%;
+  border-top: 6px solid var(--bf-yellow);
+  transform: skewX(-35deg);
+}
+
+.panel-heading,
+.cw-warning-header {
+  color: var(--bf-white) !important;
+  background: var(--bf-red-field) !important;
+  border-bottom: 4px solid var(--bf-yellow) !important;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+
+.cw-server-health strong,
+.cw-incident-heading strong,
+h1, h2, h3, h4, h5 {
+  font-weight: 800;
+}
+
+.btn-primary,
+.pagination>.active>a,
+.pagination>.active>a:hover,
+.pagination>.active>a:focus {
+  color: var(--bf-charcoal);
+  background: var(--bf-yellow);
+  border-color: var(--bf-yellow-dark);
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  color: var(--bf-white);
+  background: var(--bf-charcoal);
+  border-color: var(--bf-charcoal);
+}
+
+.btn-info { background: var(--bf-charcoal); border-color: var(--bf-charcoal); }
+.btn-danger { background: var(--bf-red); border-color: #a51d22; }
+.badge { background: var(--bf-charcoal); color: var(--bf-yellow); }
+
+.table>thead>tr>th {
+  color: var(--bf-charcoal);
+  background: #ffe775;
+  border-bottom: 3px solid var(--bf-charcoal);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .035em;
+}
+
+.table-striped>tbody>tr:nth-of-type(odd) { background: #faf7eb; }
+.form-control:focus { border-color: var(--bf-yellow-dark); box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 0 2px rgba(255,212,0,.22); }
+
+.cw-priority-critical { border-left-color: var(--bf-red); }
+.cw-priority-high { border-left-color: #ef7e21; }
+.cw-priority-medium { border-left-color: var(--bf-yellow-dark); }
+.cw-priority-low { border-left-color: #72756f; }
+.cw-warning-active { box-shadow: inset 0 -3px 0 var(--bf-red); }
+
+.cw-operations-header {
+  color: var(--bf-white);
+  background: var(--bf-red-field);
+  border-bottom: 5px solid var(--bf-yellow);
+}
+
+.cw-health-dot { background: var(--bf-yellow); box-shadow: 0 0 0 3px rgba(255,212,0,.2); }
+.leaflet-control-layers { border-top: 4px solid var(--bf-yellow); }
+
+.cw-dark {
+  --mw-panel: #202326;
+  --mw-bg: #121416;
+  --mw-border: #3e4245;
+  --mw-muted: #c1beb5;
+  color: #f2f0e9;
+  background: #121416;
+}
+
+.cw-dark .cw-toolbar,
+.cw-dark .cw-panel,
+.cw-dark .cw-health,
+.cw-dark .panel,
+.cw-dark .modal-content { background: #202326; border-color: #3e4245; }
+.cw-dark .table-striped>tbody>tr:nth-of-type(odd) { background: #292c2f; }
+.cw-dark .table>thead>tr>th { background: #cfaa15; color: #151719; }
+
+@media (max-width: 767px) {
+  .navbar::after { width: 38%; }
+  .cw-toolbar::before { width: 35%; }
+}

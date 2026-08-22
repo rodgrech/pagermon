@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html ng-app=app lang="en">
+<%- include('global/header.ejs') %>
+<!-- Inlined and minified below <script src="/javascripts/angular-textreplace.js"></script>-->
+<script>angular.module("angular-highlight",[]).directive("highlight",function(){return{link:function(e,t,h){h.highlightClass||(h.highlightClass="angular-highlight");var l=function(t,l){var a=function(e,t){for(var h=0;h<t.length;h++){var l=new RegExp(t[h].match,"gi");if(e.search(l)>-1)return t[h]}}(t,e.replacement);if("replace"==a.highlight)var r=new RegExp(a.match),i=t.replace(r,a.replace);else i=a.highlight?'<a href="/?q='+t+'" data-toggle="popover" class="'+h.highlightClass+'" title="'+a.replace+'" onmouseenter="$(this).tooltip(\'show\')">'+t+"</a>":'<a href="/?q='+t+'" data-toggle="popover" title="'+a.replace+'" onmouseenter="$(this).tooltip(\'show\')">'+t+"</a>";return i};e.$watch("replacement",function(){if(!e.replacement||""==e.replacement)return t.html(e.highlight),!1;var h=function(e){var t,h=e.length,l=[];for(t=0;t<h;t++)l.push(e[t].match.replace(new RegExp("^ | $","g"),""));return l}(e.replacement),a=new RegExp(h.join("|"),"gmi"),r=e.highlight.replace(a,l);t.html(r)})},replace:!1,scope:{highlight:"=",replacement:"="}}});</script>
+<base href="/">
+<% if (frontPopupEnable) { %>
+  <div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true" id="discModal" id="onload">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">x</button>
+          <h4 class="modal-title"><i class="fa fa-exclamation-circle"></i><%= frontPopupTitle %></h4>
+        </div>
+        <div class="modal-body">
+        <%- frontPopupContent %>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default ok" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    $(document).ready(function() {
+      if ($.cookie("modal_cookie") == null) {
+        $('#discModal').appendTo("body");
+        function show_modal(){
+          $('#discModal').modal();
+        }
+        window.setTimeout(show_modal, 3000);
+        }
+      $(".ok").click(function() {
+        $.cookie('modal_cookie', 'true', { expires: 183, path: '/' });
+      });
+    });
+  </script>
+  <% } %>
+</head>
+
+<body id="home-body">
+
+<%- include('global/menu.ejs') %>
+
+<div id="content" class="container-fluid" ng-cloak>
+
+  <ng-view></ng-view>
+
+  <!-- Template -->
+
+  <script type="text/ng-template" id="/messages.html">
+  <div ng-show="loading" class="loading"><i class="fa fa-spinner fa-spin"></i></div>
+    <p></p>
+    <div class="row">
+      <section class="cw-dashboard">
+        <div class="cw-toolbar">
+          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'feed', 'btn-default': dashboardView != 'feed'}" ng-click="setDashboardView('feed')"><i class="fa fa-list"></i> Feed</button>
+          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'incidents', 'btn-default': dashboardView != 'incidents'}" ng-click="setDashboardView('incidents')"><i class="fa fa-layer-group"></i> Incidents <span class="badge">{{incidents.length}}</span></button>
+          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'map', 'btn-default': dashboardView != 'map'}" ng-click="setDashboardView('map')"><i class="fa fa-map-marker-alt"></i> Live map <span class="badge" ng-if="rfsIncidents.length || (integrationFeatures.piaware && aircraft.length)">{{rfsIncidents.length + (integrationFeatures.piaware ? aircraft.length : 0)}}</span></button>
+          <% if (login && user.role == 'admin') { %><button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'discovery', 'btn-default': dashboardView != 'discovery'}" ng-click="setDashboardView('discovery')"><i class="fa fa-search"></i> Discovery <span class="badge">{{unknownCapcodes.length}}</span></button><% } %>
+          <button ng-if="integrationFeatures.bom" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'warnings', 'btn-default': dashboardView != 'warnings', 'cw-warning-active': bomWarnings.length}" ng-click="setDashboardView('warnings')"><i class="fa fa-cloud-bolt"></i> BOM warnings <span class="badge" ng-if="bomWarnings.length">{{bomWarnings.length}}</span></button>
+          <button ng-if="integrationFeatures.waterNsw" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'water', 'btn-default': dashboardView != 'water', 'cw-water-alert-active': damAlerts.length}" ng-click="setDashboardView('water')"><i class="fa fa-water"></i> WaterNSW <span class="badge" ng-if="damAlerts.length">{{damAlerts.length}}</span></button>
+          <% if (login) { %><button ng-if="integrationFeatures.radio" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'radio', 'btn-default': dashboardView != 'radio'}" ng-click="setDashboardView('radio')"><i class="fa fa-broadcast-tower"></i> Radio <span class="badge" ng-if="radioCalls.length">{{radioCalls.length}}</span></button><% } %>
+          <button class="btn btn-default btn-sm pull-right" ng-click="toggleDarkMode()" title="Toggle dark mode"><i class="fa" ng-class="darkMode ? 'fa-sun' : 'fa-moon'"></i></button>
+          <button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()" title="Full-screen operations display"><i class="fa fa-expand"></i> Operations</button>
+        </div>
+
+        <div class="cw-health">
+          <div class="cw-server-health"><strong>{{health.label}}</strong><span>Last page: {{health.lastSeen}} · Server uptime: {{health.uptime}}</span></div>
+        </div>
+
+        <div class="cw-panel" ng-show="dashboardView == 'incidents'">
+          <div class="cw-empty" ng-if="!incidents.length">No recent incidents could be grouped yet.</div>
+          <article class="cw-incident cw-priority-{{incident.priority}}" ng-repeat="incident in incidents">
+            <div class="cw-incident-heading"><span class="cw-priority-label">{{incident.priority}}</span> <strong>{{incident.location || incident.agency || 'Unclassified incident'}}</strong><span class="pull-right">{{incident.messages.length}} page<span ng-if="incident.messages.length != 1">s</span></span></div>
+            <div class="cw-incident-meta">{{incident.agency || 'Unknown agency'}} · {{incident.lastSeen | date:'dd MMM HH:mm'}}</div>
+            <div class="cw-correlation cw-correlation-combined" ng-if="incident.rfsMatch"><i class="fa fa-link"></i> <strong>Combined with official RFS incident:</strong> <a ng-href="{{incident.rfsMatch.link}}" target="_blank" rel="noopener">{{incident.rfsMatch.title}}</a> · {{incident.rfsMatch.category}} · approximately {{incident.rfsMatch.distanceKm}} km<div ng-if="incident.rfsMatch.description">{{incident.rfsMatch.description}}</div></div>
+            <div class="cw-incident-message">{{incident.messages[0].message}}</div>
+            <details ng-if="incident.messages.length > 1"><summary>Show incident timeline</summary><div class="cw-timeline" ng-repeat="item in incident.messages">{{item.timestamp * 1000 | date:'HH:mm'}} — {{item.message}}</div></details>
+          </article>
+        </div>
+
+        <div class="cw-panel" ng-show="dashboardView == 'map'">
+          <div class="cw-operations-header" ng-if="operationsMode"><div><strong>Central West Alerts</strong><span>Live Operations Display</span></div><div class="cw-operations-status"><span class="cw-health-dot"></span>{{health.label}}<span ng-if="integrationFeatures.piaware"> · {{aircraft.length}} aircraft</span> · {{rfsIncidents.length}} RFS incidents</div><button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()"><i class="fa fa-compress"></i> Exit</button></div>
+          <div id="cw-incident-map"></div>
+          <div class="cw-map-legend"><span><i class="cw-map-dot cw-map-dot-pager"></i> Pager-derived approximate town</span><span><i class="cw-map-incident-legend fa fa-fire"></i> Official NSW RFS incident</span><span ng-if="integrationFeatures.piaware"><i class="cw-map-aircraft-icon fa fa-plane"></i> Live PiAware aircraft</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-dam-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="cw-dam-water" d="M3 22c3-2 5-2 8 0s5 2 8 0 5-2 10 0v5H3z"/><path class="cw-dam-wall" d="M8 7h16l3 15c-3-2-5-2-8 0s-5 2-8 0c-1.2-.8-2.3-1.2-3.4-1.3L8 7zm4 3v8m4-8v10m4-10v8"/></svg></i> WaterNSW dam</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-gauge-marker"></i> Live river gauge</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-algae-markers"><b></b><b></b><b></b></i> Algae alert</span></div>
+          <p class="cw-map-note">Pager markers show approximate town centres. RFS markers use published feed coordinates, which may represent an LGA centre until accurate spatial information is available. © State of New South Wales (NSW Rural Fire Service). <a href="https://www.rfs.nsw.gov.au/fire-information/fires-near-me" target="_blank" rel="noopener">Current information</a>.</p>
+        </div>
+
+        <% if (login && user.role == 'admin') { %><div class="cw-panel" ng-show="dashboardView == 'discovery'">
+          <div class="cw-empty" ng-if="!unknownCapcodes.length">No unknown capcodes in the recent-message window.</div>
+          <div class="cw-discovery" ng-repeat="unknown in unknownCapcodes">
+            <strong>{{unknown.address || 'Hidden capcode'}}</strong><span class="badge">{{unknown.count}}</span>
+            <div class="cw-incident-meta">Last heard {{unknown.lastSeen | date:'dd MMM yyyy HH:mm'}}</div>
+            <div>{{unknown.sample}}</div>
+            <div class="cw-agency-suggestion" ng-if="unknown.confidence"><i class="fa fa-lightbulb"></i> Suggested: <strong>{{unknown.suggestedAgency}}</strong> · {{unknown.confidence}}% heuristic confidence</div>
+            <a class="btn btn-primary btn-xs" ng-if="unknown.address" ng-href="/admin/aliases/new?address={{unknown.address}}">Create alias</a>
+          </div>
+        </div><% } %>
+
+        <div class="cw-panel cw-warnings" ng-show="dashboardView == 'warnings'">
+          <div class="cw-warning-header"><strong>Central West weather warnings</strong><span class="pull-right">NSW land warnings: {{bomStatewideCount}}</span></div>
+          <div class="cw-empty" ng-if="bomLoading">Checking the official BOM warning feed…</div>
+          <div class="cw-empty" ng-if="!bomLoading && bomError">{{bomError}}</div>
+          <div class="cw-warning-clear" ng-if="!bomLoading && !bomError && !bomWarnings.length"><i class="fa fa-check-circle"></i><strong>No Central West warnings detected</strong><span>The official NSW feed currently contains no warnings matching Central West districts or localities.</span></div>
+          <article class="cw-warning-item" ng-repeat="warning in bomWarnings">
+            <h4><i class="fa fa-exclamation-triangle"></i> {{warning.title}}</h4>
+            <p>{{warning.description}}</p>
+            <a ng-href="{{warning.link}}" target="_blank" rel="noopener">Read the complete warning on the BOM website <i class="fa fa-external-link-alt"></i></a>
+          </article>
+          <p class="cw-bom-attribution">Source: <a href="https://www.bom.gov.au/nsw/warnings/" target="_blank" rel="noopener">Australian Bureau of Meteorology</a>. Updated {{bomFetchedAt | date:'dd MMM HH:mm'}}. This panel is supplementary and must not be your sole source of emergency warning information.</p>
+        </div>
+
+        <div class="cw-panel cw-water" ng-show="dashboardView == 'water'">
+          <div class="cw-warning-header"><strong>Central West dam storage</strong><span class="pull-right">WaterNSW public storage data</span></div>
+          <div class="cw-algae-summary cw-algae-summary-top" ng-if="!algaeLoading && algaeSites.length">
+            <strong><i class="fa fa-flask"></i> Algae:</strong><span class="cw-algae-chip cw-algae-red">{{algaeCounts.Red || 0}} Red</span><span class="cw-algae-chip cw-algae-amber">{{algaeCounts.Amber || 0}} Amber</span><span class="cw-algae-chip cw-algae-green">{{algaeCounts.Green || 0}} Green</span>
+          </div>
+          <div class="cw-empty" ng-if="algaeLoading">Checking the official WaterNSW algae alert map...</div>
+          <div class="cw-empty" ng-if="!algaeLoading && algaeError">{{algaeError}}</div>
+          <div class="cw-empty" ng-if="damLoading">Checking WaterNSW dam levels...</div>
+          <div class="cw-empty" ng-if="!damLoading && damError">{{damError}}</div>
+          <article class="cw-dam-alert" ng-repeat="alert in damAlerts"><h4><i class="fa fa-exclamation-triangle"></i> {{alert.title}}</h4><p>{{alert.description}}</p><a ng-href="{{alert.link}}" target="_blank" rel="noopener">Verify with WaterNSW</a></article>
+          <div class="cw-dam-grid" ng-if="!damLoading && dams.length">
+            <article class="cw-dam-card cw-dam-{{dam.status}} cw-dam-algae-{{dam.algaeAlert.status | lowercase}}" ng-repeat="dam in dams">
+              <span class="cw-dam-trend cw-dam-trend-up" ng-if="dam.dailyChange > 0" title="Up {{dam.dailyChange | number:2}} percentage points since yesterday"><i class="fa fa-arrow-up"></i> {{dam.dailyChange | number:2}}</span>
+              <span class="cw-dam-trend cw-dam-trend-down" ng-if="dam.dailyChange < 0" title="Down {{-dam.dailyChange | number:2}} percentage points since yesterday"><i class="fa fa-arrow-down"></i> {{-dam.dailyChange | number:2}}</span>
+              <span class="cw-dam-trend cw-dam-trend-steady" ng-if="dam.dailyChange === 0" title="No change since yesterday"><i class="fa fa-minus"></i> 0.00</span>
+              <div class="cw-dam-level"><strong ng-if="dam.percentage !== null">{{dam.percentage | number:2}}%</strong><strong ng-if="dam.percentage === null"><i class="fa fa-info-circle"></i></strong><span ng-if="dam.volumeMl !== null">{{dam.volumeMl | number:0}} ML</span><span ng-if="dam.volumeMl === null">{{dam.capacityMl | number:0}} ML capacity</span></div>
+              <div><h4>{{dam.name}}</h4><span ng-if="dam.weeklyChange > 0" class="cw-dam-change-up"><i class="fa fa-arrow-up"></i> {{dam.weeklyChange}}% this week</span><span ng-if="dam.weeklyChange < 0" class="cw-dam-change-down"><i class="fa fa-arrow-down"></i> {{-dam.weeklyChange}}% this week</span><span ng-if="dam.weeklyChange === 0">No weekly change</span><span ng-if="dam.percentage !== null && dam.weeklyChange === null">Observed {{dam.observedAt}} AEST</span><span ng-if="dam.percentage === null">Current public level unavailable</span><div class="cw-dam-algae-detail" ng-if="dam.algaeAlert"><span class="cw-algae-chip cw-algae-{{dam.algaeAlert.status | lowercase}}">{{dam.algaeAlert.status}} algae alert</span><strong>Published algae:</strong> {{dam.algaeAlert.types || 'Species not published'}}<small>{{dam.algaeAlert.siteCount}} nearby WaterNSW monitoring site<span ng-if="dam.algaeAlert.siteCount != 1">s</span></small></div><div class="cw-dam-history" ng-if="dam.lastOfficialReport"><strong>Historical:</strong> {{dam.lastOfficialReport.percentage}}% and {{dam.lastOfficialReport.trend}} on {{dam.lastOfficialReport.reportedAt | date:'dd MMM yyyy HH:mm'}}. <a ng-href="{{dam.lastOfficialReport.link}}" target="_blank" rel="noopener">Council notice</a></div><small ng-if="dam.operator">{{dam.operator}}</small><br ng-if="dam.operator"><a ng-href="{{dam.link}}" target="_blank" rel="noopener">Official details</a></div>
+              <div class="cw-dam-flow-estimate cw-flow-{{dam.flowEstimate.state}}" ng-if="dam.flowEstimate"><span class="cw-flow-label">Unofficial flow indicator</span><strong>{{dam.flowEstimate.label}}</strong><span>Upstream {{dam.flowEstimate.upstream}} ML/day · downstream {{dam.flowEstimate.downstream}} ML/day</span><small>Observed {{dam.flowEstimate.observedAt}} AEST. This indicates river behaviour, not storage percentage or confirmed spill status.</small></div>
+            </article>
+          </div>
+          <h4 class="cw-gauge-heading"><i class="fa fa-chart-line"></i> Rylstone river telemetry</h4>
+          <div class="cw-gauge-grid">
+            <article class="cw-gauge-card" ng-repeat="gauge in waterGauges | filter:{featured:true}">
+              <div><strong>{{gauge.name}}</strong><small>{{gauge.position}} · Site {{gauge.siteId}}</small></div>
+              <span ng-if="gauge.readings.StreamWaterLevel"><b>{{gauge.readings.StreamWaterLevel.value}}</b> m level</span>
+              <span ng-if="gauge.readings.FlowRate"><b>{{gauge.readings.FlowRate.value}}</b> ML/day</span>
+              <small>Observed {{gauge.observedAt}} AEST</small>
+            </article>
+          </div>
+          <p class="cw-bom-attribution">Source: <a ng-href="{{waterSourceUrl}}" target="_blank" rel="noopener">WaterNSW</a>. Updated {{waterFetchedAt | date:'dd MMM HH:mm'}}. A storage result above 100% is treated as a possible spill or release, not confirmation. Verify conditions through WaterNSW and the Early Warning Network.</p>
+        </div>
+
+        <% if (login) { %>
+        <div class="cw-panel cw-radio" ng-show="dashboardView == 'radio'">
+          <div class="cw-radio-header">
+            <div><strong><i class="fa fa-broadcast-tower"></i> Recent radio traffic</strong><span>NSW PSN calls received by Rdio Scanner</span></div>
+            <button class="btn btn-default btn-sm" ng-click="refreshRadio()" ng-disabled="radioLoading"><i class="fa fa-refresh" ng-class="{'fa-spin': radioLoading}"></i> Refresh</button>
+          </div>
+          <div class="cw-empty" ng-if="radioLoading && !radioCalls.length">Loading recent radio calls…</div>
+          <div class="cw-empty" ng-if="radioError">{{radioError}}</div>
+          <div class="cw-empty" ng-if="!radioLoading && !radioError && !radioCalls.length">No recent radio calls are available.</div>
+          <article class="cw-radio-call" ng-repeat="call in radioCalls track by call.id">
+            <div class="cw-radio-call-main">
+              <div class="cw-radio-call-title"><strong>{{call.talkgroupLabel || ('Talkgroup ' + call.talkgroup)}}</strong><span>{{call.timestamp * 1000 | date:'dd MMM HH:mm:ss'}}</span></div>
+              <div class="cw-radio-call-meta">
+                <span class="cw-radio-agency cw-radio-agency-{{call.agencyCode}}" ng-if="call.agencyName">{{call.agencyName}}</span>
+                <span>{{call.systemLabel || ('System ' + call.system)}}</span>
+                <span>{{call.frequency / 1000000 | number:4}} MHz</span>
+                <span>{{call.sourceLabel || ('Radio ID ' + call.source)}}</span>
+              </div>
+            </div>
+            <audio class="cw-radio-player" controls preload="none" ng-src="{{call.audioUrl}}">Your browser does not support audio playback.</audio>
+          </article>
+          <p class="cw-radio-note"><i class="fa fa-lock"></i> Radio history and audio are available only to logged-in PageMon users. Playback is manual and does not interrupt the pager feed.</p>
+        </div>
+        <% } %>
+      </section>
+
+      <% if (searchLocation === 'top') { %>
+        <div class="row">
+          <div class="col-xs-offset-1 col-xs-10">
+          <form action="/" method="get">
+            <div class="input-group">
+              <input id="query" type="text" class="form-control" name="q" placeholder="Search" ng-model="query">
+              <span class="input-group-btn">
+                <button type="submit" class="btn btn-default" ng-disabled="!query" ng-class="{disabledLink: !query}"><i class="fa fa-fw fa-search"></i></button>
+                <button ng-if="!hasQuery" ng-click="clearSearch()" class="btn btn-default" ng-class="{disabledLink: !query}" ng-disabled="!query"><i class="fa fa-fw fa-times"></i></button>
+                <a ng-href="/" ng-if="hasQuery" class="btn btn-default"><i class="fa fa-fw fa-times"></i></a>
+              </span>
+            </div>
+          </form>
+          </div>
+        </div>
+      <% } %>
+      <table ng-show="dashboardView == 'feed'" class="table table-condensed table-hover table-striped valign">
+        <thead class="thead-default">
+          <tr>
+            <th colspan="2">
+                <div class="btn-group" data-toggle="buttons">
+                  <button type="button" class="btn btn-default btn-sm" ng-click="updateData();" aria-label="Refresh" title="Refresh Messages"><i class="fa fa-refresh {{spinner}}" aria-hidden="true"></i></button>
+                  <button type="button" ng-if="notificationSupport == true" class="btn btn-default btn-sm" ng-class="{active: notificationEnabled == 'true'}" ng-click="toggleNotifications();" aria-label="Notifications" title="Toggle Browser Notifications">
+                    <i class="fa fa-bell" aria-hidden="true"></i></button>
+                <span class="dropdown">
+                  <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" title="Message Limit">{{init.limit}} <span class="caret"></span></button>
+                  <ul class="dropdown-menu" role="menu" style="margin-top: 9px;">
+                    <li ng-class="{disabled:init.limit == 10}"><a href="#" ng-click="setCookie('messageLimit', 10);">10</a></li>
+                    <li ng-class="{disabled:init.limit == 20}"><a href="#" ng-click="setCookie('messageLimit', 20);">20</a></li>
+                    <li ng-class="{disabled:init.limit == 50}"><a href="#" ng-click="setCookie('messageLimit', 50);">50</a></li>
+                    <li ng-class="{disabled:init.limit == 100}"><a href="#" ng-click="setCookie('messageLimit', 100);">100</a></li>
+                  </ul>
+                </span>
+                </div>
+            </th>
+            <% if (!hidesource || (login && user.role == 'admin')) { %>
+              <th class="noMobile noSmall" style="text-align: center;">Src</th>
+            <% } %>
+            <% if (!hidecapcode || (login && user.role == 'admin')) { %>
+              <th class="noMobile" style="text-align: center;">Capcode</th>
+            <% } %>
+            <th class="noMobile noSmall"></th>
+            <th class="noMobile noSmall"></th>
+            <th style="text-align: center;">Message
+              <span ng-if="filter || hasQuery" class="pull-left" style="vertical-align: middle; padding-right: 10px;">
+                  <strong>Filter:</strong> <a ng-href="/" style="margin-bottom: 3px;" class="btn btn-primary btn-xs">{{filter || origQuery}} <i class="fa fa-fw fa-times"></i></a>
+              </span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="message in messages | filter: search" class="cw-priority-{{message.cwPriority}}">
+            <td class="shrink noMobile noSmall">{{message.date}}</td>
+            <td class="shrink">{{message.timestamp}}</td>
+            <% if (!hidesource || (login && user.role == 'admin')) { %>
+              <td class="shrink noMobile noSmall clickable-td" uib-popover-template="'templates/popover.html'" popover-append-to-body=true ng-click="popoverEl = 'source'" popover-trigger="'outsideClick'" style="background-color: {{message.color || 'grey'}}; text-align: center;">
+                <span class="small" style="color: white; font-family: monospace;"><strong>{{message.source}}</strong></span>
+              </td>
+            <% } %>
+            <% if (!hidecapcode || (login && user.role == 'admin')) { %>
+              <td class="shrink noMobile noSmall clickable-td" uib-popover-template="'templates/popover.html'" popover-append-to-body=true ng-click="popoverEl = 'address'" popover-trigger="'outsideClick'" style="background-color: {{message.color || 'grey'}}; text-align: center;">
+                <span class="small" style="color: white; font-family: monospace;"><strong>{{message.address}}</strong></span>
+              </td>
+            <% } %>
+            <td class="shrink clickable-td" ng-if="message.agency" uib-popover-template="'templates/popover.html'" popover-append-to-body=true ng-click="popoverEl = 'agency'" popover-trigger="'outsideClick'">
+              <img ng-if="message.agency == 'NSW RFS'" class="agency-logo agency-logo-rfs" src="/images/agencies/rfs.png" alt="NSW RFS">
+              <img ng-if="message.agency == 'NSW SES'" class="agency-logo agency-logo-ses" src="/images/agencies/ses.svg" alt="NSW SES">
+              <img ng-if="message.agency == 'NSW VRA'" class="agency-logo agency-logo-vra" src="/images/agencies/vra.png" alt="NSW VRA">
+              <% if (iconsize == 'small') { %>
+              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA'" class="fa-stack fa-fw" style="color: {{message.color || 'grey'}};">
+              <% } else { %>
+              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA'" class="fa-stack fa-lg fa-fw" style="color: {{message.color || 'grey'}};">
+              <% } %>
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i ng-if="message.icon" class="fa fa-{{message.icon}} fa-stack-1x fa-inverse"></i>
+                <i ng-if="!message.icon" class="fa fa-question fa-stack-1x fa-inverse"></i>
+              </span>
+              <strong style="vertical-align: middle;">{{message.agency || ''}}</strong>
+            </td>
+            <td class="shrink" ng-if="!message.agency">
+              <% if (iconsize == 'small') { %>
+              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA'" class="fa-stack fa-fw" style="color: {{message.color || 'grey'}};">
+              <% } else { %>
+              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA'" class="fa-stack fa-lg fa-fw" style="color: {{message.color || 'grey'}};">
+              <% } %>
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i ng-if="message.icon" class="fa fa-{{message.icon}} fa-stack-1x fa-inverse"></i>
+                <i ng-if="!message.icon" class="fa fa-question fa-stack-1x fa-inverse"></i>
+              </span>
+              <strong style="vertical-align: middle;"></strong>
+            </td>
+            <td class="shrink noMobile clickable-td" ng-if="user"
+                uib-popover-template="'templates/popover.html'" popover-append-to-body=true
+                ng-click="popoverEl = 'alias'" popover-trigger="'outsideClick'">
+              <span style="color: Maroon;">{{message.alias || 'Unknown'}}</span>
+            </td>
+            <td class="shrink noMobile" ng-if="!user">
+              <span>{{message.alias || ''}}</span>
+            </td>
+            <td class="expand">
+                <span ng-if="message.cwPriority != 'routine'" class="cw-priority-label">{{message.cwPriority}}</span>
+                <div highlight="message.message" replacement="init.replaceText" class="pagerMessage"></div>
+            </td>
+        </tbody>
+      </table>
+    </div>
+  <div class="row" ng-if="messages.length == 0">
+    <div class="col-sm-8 col-sm-offset-2" style="text-align: center; vertical-align: middle;">
+      <h4>No messages found!</h4>
+      <div ng-if="hasQuery"><p>Consider broadening your search terms and try again.</p></div>
+      <div ng-if="!hasQuery"><p>Have you loaded any message data yet?</p>
+        <p>If you believe you reached this message by error, <a href="https://github.com/pagermon/pagermon/issues"
+                                                                target="_blank">log an issue.</a></p>
+      </div>
+      </div>
+    </div>
+    <% if (searchLocation === 'bottom' || typeof searchLocation == 'undefined') { %>
+      <div class="row">
+        <div class="col-xs-offset-1 col-xs-10">
+        <form action="/" method="get">
+          <div class="input-group">
+            <input id="query" type="text" class="form-control" name="q" placeholder="Search" ng-model="query">
+            <span class="input-group-btn">
+              <button type="submit" class="btn btn-default" ng-disabled="!query" ng-class="{disabledLink: !query}"><i class="fa fa-fw fa-search"></i></button>
+              <button ng-if="!hasQuery" ng-click="clearSeaarch()" class="btn btn-default" ng-class="{disabledLink: !query}" ng-disabled="!query"><i class="fa fa-fw fa-times"></i></button>
+              <a ng-href="/" ng-if="hasQuery" class="btn btn-default"><i class="fa fa-fw fa-times"></i></a>
+            </span>
+          </div>
+        </form>
+        </div>
+      </div>
+    <% } %>
+    <%- include('global/pagination.ejs') %>
+
+  </div>
+  </script>
+
+  <script type="text/ng-template" id="/messageDetails.html">
+    <h1>{{ message.address }}</h1>
+    note: <textarea>{{ message.message }}</textarea>
+  </script>
+
+  <script>
+    var app = angular.module('app', ['ngRoute', 'ngResource', 'ngCookies', 'angular-highlight', 'ui.bootstrap'])
+
+            .factory('socket', function ($rootScope) {
+
+              var socket = io({transports: ['websocket'], upgrade: false});
+              return {
+                open: function () {
+                  if (socket.disconnected) socket.open();
+                },
+                on: function (eventName, callback) {
+                  socket.on(eventName, function () {
+                    var args = arguments;
+                    $rootScope.$apply(function () {
+                      callback.apply(socket, args);
+                    });
+                  });
+                },
+                emit: function (eventName, data, callback) {
+                  socket.emit(eventName, data, function () {
+                    var args = arguments;
+                    $rootScope.$apply(function () {
+                      if (callback) {
+                        callback.apply(socket, args);
+                      }
+                    });
+                  })
+                },
+                close: function () {
+                  socket.close();
+                }
+              };
+            })
+
+
+            .factory('adminSocket', function ($rootScope) {
+
+              var adminSocket = io('/adminio', {transports: ['websocket'], upgrade: false});
+              return {
+                open: function () {
+                  if (adminSocket.disconnected) adminSocket.open();
+                },
+                on: function (eventName, callback) {
+                  adminSocket.on(eventName, function () {
+                    var args = arguments;
+                    $rootScope.$apply(function () {
+                      callback.apply(adminSocket, args);
+                    });
+                  });
+                },
+                emit: function (eventName, data, callback) {
+                  adminSocket.emit(eventName, data, function () {
+                    var args = arguments;
+                    $rootScope.$apply(function () {
+                      if (callback) {
+                        callback.apply(adminSocket, args);
+                      }
+                    });
+                  })
+                },
+                close: function () {
+                  adminSocket.close();
+                }
+              };
+            })
+
+            .factory('Api', ['$resource',
+              function ($resource) {
+                return {
+                  Messages: $resource('/api/messages/'),
+                  NewMessage: $resource('/api/messages/:id', {id: '@id'}),
+                  MessageSearch: $resource('/api/messageSearch/'),
+                  Agencies: $resource('/api/capcodes/agency'),
+                  Dashboard: $resource('/api/central-west/dashboard'),
+                  DashboardConfig: $resource('/api/central-west/dashboard-config'),
+                  BomWarnings: $resource('/api/central-west/bom-warnings'),
+                  WaterNswDams: $resource('/api/central-west/waternsw-dams'),
+                  WaterNswRylstoneGauges: $resource('/api/central-west/waternsw-rylstone-gauges'),
+                  WaterNswAlgaeAlerts: $resource('/api/central-west/waternsw-algae-alerts'),
+                  RfsIncidents: $resource('/api/central-west/rfs-incidents'),
+                  Aircraft: $resource('/api/central-west/aircraft'),
+                  WeatherRadar: $resource('/api/central-west/weather-radar'),
+                  RadioCalls: $resource('/api/central-west/radio-calls')
+                };
+              }])
+
+
+            .run(function ($anchorScroll, $window) {
+              // hack to scroll to top when navigating to new URLS but not back/forward
+              var wrap = function (method) {
+                var orig = $window.window.history[method];
+                $window.window.history[method] = function () {
+                  var retval = orig.apply(this, Array.prototype.slice.call(arguments));
+                  $anchorScroll();
+          return retval;
+        };
+      };
+      wrap('pushState');
+      wrap('replaceState');
+    })
+    
+    // Controller
+    // TODO: optimise this whole section, consider popping this entire controller out to a separate file
+    .controller('MessageController', ['$scope', '$routeParams', 'Api', 'socket', 'adminSocket', '$cookies', '$location', '$window', '$interval', function ($scope, $routeParams, Api, socket, adminSocket, $cookies, $location, $window, $interval) {
+      // I hate ejs
+      <% if(typeof user != 'undefined'){ %>
+        $scope.user="<%=user%>";
+        $scope.role="<%=user.role%>"
+      <% }else{ %>
+        $scope.user="";
+      <% } %>
+      $scope.dashboardView = 'feed';
+      $scope.integrationFeatures = {bom: false, waterNsw: false, radio: false, piaware: false, weatherRadar: false};
+      $scope.darkMode = localStorage.getItem('cw-dark-mode') === 'true';
+      document.body.classList.toggle('cw-dark', $scope.darkMode);
+      $scope.health = { state: 'loading', label: 'Checking receiver', lastSeen: 'Unknown', uptime: 'Unknown' };
+      $scope.receivers = [];
+      $scope.incidents = [];
+      $scope.unknownCapcodes = [];
+      $scope.bomWarnings = [];
+      $scope.bomStatewideCount = 0;
+      $scope.bomLoading = true;
+      $scope.rfsIncidents = [];
+      $scope.aircraft = [];
+      $scope.dams = [];
+      $scope.damAlerts = [];
+      $scope.damLoading = true;
+      $scope.waterGauges = [];
+      $scope.algaeSites = [];
+      $scope.algaeAlerts = [];
+      $scope.algaeCounts = {};
+      $scope.algaeLoading = true;
+      $scope.radioCalls = [];
+      $scope.radioLoading = false;
+      $scope.radioError = '';
+      $scope.operationsMode = false;
+      $scope.radarEnabled = false;
+      $scope.radarConfig = null;
+
+      Api.DashboardConfig.get().$promise.then(function (config) {
+        $scope.integrationFeatures = {
+          bom: config.bomEnabled !== false,
+          waterNsw: config.waterNswEnabled !== false,
+          radio: config.radioEnabled !== false,
+          piaware: config.piawareEnabled !== false,
+          weatherRadar: config.weatherRadarEnabled !== false
+        };
+        window.CentralWestMapFeatures = angular.copy($scope.integrationFeatures);
+        if ($scope.integrationFeatures.piaware) {
+          refreshAircraft();
+          aircraftPoll = $interval(refreshAircraft, Math.max(Number(config.piawarePollSeconds) || 10, 5) * 1000);
+        } else {
+          $scope.aircraft = [];
+        }
+        if ($scope.integrationFeatures.weatherRadar) {
+          var storedRadarPreference = localStorage.getItem('cw-radar-enabled');
+          $scope.radarEnabled = storedRadarPreference === null ? config.weatherRadarDefaultVisible === true : storedRadarPreference === 'true';
+          refreshWeatherRadar();
+        } else {
+          $scope.radarEnabled = false;
+          $scope.radarConfig = null;
+          CentralWestAlerts.setRadar('cw-incident-map', null, false);
+        }
+        if (($scope.dashboardView === 'warnings' && !$scope.integrationFeatures.bom) ||
+            ($scope.dashboardView === 'water' && !$scope.integrationFeatures.waterNsw) ||
+            ($scope.dashboardView === 'radio' && !$scope.integrationFeatures.radio)) {
+          $scope.dashboardView = 'feed';
+        }
+      });
+
+      function correlateDamAlgae() {
+        var ranks = {Green: 1, Amber: 2, Red: 3};
+        angular.forEach($scope.dams, function (dam) {
+          dam.algaeAlert = null;
+          if (!angular.isNumber(dam.latitude) || !angular.isNumber(dam.longitude)) return;
+          var nearby = ($scope.algaeSites || []).filter(function (site) {
+            var dy = (site.latitude - dam.latitude) * 111;
+            var dx = (site.longitude - dam.longitude) * 111 * Math.cos(dam.latitude * Math.PI / 180);
+            return Math.sqrt(dx * dx + dy * dy) <= 22;
+          });
+          if (!nearby.length) return;
+          var highest = nearby.slice().sort(function (a, b) { return (ranks[b.status] || 0) - (ranks[a.status] || 0); })[0];
+          var types = [];
+          angular.forEach(nearby, function (site) { if (site.dominantToxicSpecies && types.indexOf(site.dominantToxicSpecies) < 0) types.push(site.dominantToxicSpecies); });
+          dam.algaeAlert = {
+            status: highest.status,
+            types: types.join(', '),
+            siteCount: nearby.length,
+            sites: nearby.map(function (site) {
+              return {name: site.name, siteCode: site.siteCode, status: site.status, species: site.dominantToxicSpecies || '', comments: site.comments || ''};
+            })
+          };
+        });
+      }
+
+      function correlateDamFlow() {
+        var upstream = null;
+        var downstream = null;
+        angular.forEach($scope.waterGauges || [], function (gauge) {
+          if (String(gauge.siteId) === '421184') upstream = gauge;
+          if (String(gauge.siteId) === '421903') downstream = gauge;
+        });
+        angular.forEach($scope.dams || [], function (dam) {
+          dam.flowEstimate = null;
+          if (dam.name !== 'Rylstone Dam' || !upstream || !downstream) return;
+          var upReading = upstream.readings && upstream.readings.FlowRate;
+          var downReading = downstream.readings && downstream.readings.FlowRate;
+          if (!upReading || !downReading) return;
+          var up = Number(upReading.value);
+          var down = Number(downReading.value);
+          if (!isFinite(up) || !isFinite(down)) return;
+          var state = 'normal';
+          var label = 'Downstream flow detected';
+          if (down <= 1) { state = 'low'; label = 'Little or no downstream flow'; }
+          else if ((up <= 1 && down > 3) || down - up > Math.max(5, up * 0.25)) { state = 'elevated'; label = 'Possible release or spill contribution'; }
+          else if (up > 1 && down >= up * 0.7) { state = 'passing'; label = 'River flow appears to be passing through'; }
+          else if (up > down * 1.5) { state = 'retaining'; label = 'Inflow currently exceeds downstream flow'; }
+          dam.flowEstimate = {state: state, label: label, upstream: up.toFixed(1), downstream: down.toFixed(1), observedAt: downstream.observedAt || upstream.observedAt};
+        });
+      }
+
+      $scope.toggleDarkMode = function () {
+        $scope.darkMode = !$scope.darkMode;
+        localStorage.setItem('cw-dark-mode', $scope.darkMode);
+        document.body.classList.toggle('cw-dark', $scope.darkMode);
+      };
+
+      $scope.toggleOperationsMode = function () {
+        $scope.operationsMode = !$scope.operationsMode;
+        if ($scope.operationsMode) $scope.setDashboardView('map');
+        document.body.classList.toggle('cw-operations', $scope.operationsMode);
+        window.setTimeout(function () { CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites); }, 100);
+      };
+      $scope.toggleRadar = function () {
+        if (!$scope.integrationFeatures.weatherRadar) return;
+        $scope.radarEnabled = !$scope.radarEnabled;
+        localStorage.setItem('cw-radar-enabled', $scope.radarEnabled);
+        CentralWestAlerts.setRadar('cw-incident-map', $scope.radarConfig, $scope.radarEnabled);
+      };
+      function operationsEscape(event) {
+        if (event.key === 'Escape' && $scope.operationsMode) $scope.$apply($scope.toggleOperationsMode);
+      }
+      $window.addEventListener('keydown', operationsEscape);
+
+      $scope.setDashboardView = function (view) {
+        $scope.dashboardView = view;
+        // A standalone iOS PWA may have been suspended long enough to miss
+        // websocket events. Opening Feed must therefore perform a real fetch.
+        if (view === 'feed' && angular.isFunction($scope.updateData)) {
+          $scope.updateData(1);
+          $scope.refreshDashboard();
+        }
+        if (view === 'map') {
+          window.setTimeout(function () {
+            CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+            CentralWestAlerts.setRadar('cw-incident-map', $scope.radarConfig, $scope.radarEnabled && $scope.integrationFeatures.weatherRadar);
+          }, 50);
+        }
+      };
+
+      $scope.refreshDashboard = function () {
+        Api.Dashboard.get({limit: 500}).$promise.then(function (data) {
+          var now = Number(data.serverTime);
+          var age = data.latestTimestamp ? now - Number(data.latestTimestamp) : null;
+          $scope.health = CentralWestAlerts.health(age, Number(data.uptime));
+          $scope.receivers = (data.receivers || []).map(CentralWestAlerts.receiverHealth);
+          angular.forEach(data.messages, CentralWestAlerts.decorateMessage);
+          $scope.incidents = CentralWestAlerts.groupIncidents(data.messages);
+          CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
+          $scope.unknownCapcodes = CentralWestAlerts.unknownCapcodes(data.messages);
+          if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+        }, function () {
+          $scope.health = {state: 'offline', label: 'Dashboard API offline', lastSeen: 'Unknown', uptime: 'Unknown'};
+        });
+      };
+      $scope.refreshDashboard();
+      Api.BomWarnings.get().$promise.then(function (data) {
+        $scope.bomWarnings = data.localWarnings || [];
+        $scope.bomStatewideCount = data.statewideCount || 0;
+        $scope.bomFetchedAt = Number(data.fetchedAt) * 1000;
+        $scope.bomLoading = false;
+      }, function () {
+        $scope.bomError = 'The BOM warning feed is temporarily unavailable.';
+        $scope.bomLoading = false;
+      });
+      Api.RfsIncidents.get().$promise.then(function (data) {
+        $scope.rfsIncidents = data.incidents || [];
+        CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
+        if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+      });
+      function refreshWeatherRadar() {
+        if (!$scope.integrationFeatures.weatherRadar) return;
+        Api.WeatherRadar.get().$promise.then(function (data) {
+          if (data.disabled) return;
+          $scope.radarConfig = data;
+          $scope.radarTime = Number(data.frameTime) * 1000;
+          CentralWestAlerts.setRadar('cw-incident-map', data, $scope.radarEnabled);
+        });
+      }
+      Api.WaterNswDams.get().$promise.then(function (data) {
+        $scope.dams = data.dams || [];
+        $scope.damAlerts = data.alerts || [];
+        correlateDamAlgae();
+        correlateDamFlow();
+        $scope.waterFetchedAt = Number(data.fetchedAt) * 1000;
+        $scope.waterSourceUrl = data.sourceUrl;
+        $scope.damLoading = false;
+        if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+        if ($scope.damAlerts.length && $scope.notificationEnabled == 'true' && window.Notification && Notification.permission === 'granted') {
+          var alertKey = 'cw-dam-alert-' + $scope.damAlerts.map(function (item) { return item.dam; }).join('-');
+          if (localStorage.getItem('cw-last-dam-alert') !== alertKey) {
+            new Notification('Central West Alerts: possible dam spill', {body: $scope.damAlerts.map(function (item) { return item.title; }).join(', ')});
+            localStorage.setItem('cw-last-dam-alert', alertKey);
+          }
+        }
+      }, function () {
+        $scope.damError = 'WaterNSW dam levels are temporarily unavailable.';
+        $scope.damLoading = false;
+      });
+      function refreshWaterGauges() {
+        Api.WaterNswRylstoneGauges.get().$promise.then(function (data) {
+          $scope.waterGauges = data.gauges || [];
+          correlateDamFlow();
+          if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+        });
+      }
+      refreshWaterGauges();
+      var waterGaugePoll = $interval(refreshWaterGauges, 60 * 60 * 1000);
+      function refreshAlgaeAlerts() {
+        Api.WaterNswAlgaeAlerts.get().$promise.then(function (data) {
+          $scope.algaeSites = data.sites || [];
+          $scope.algaeAlerts = data.alerts || [];
+          $scope.algaeCounts = {};
+          angular.forEach($scope.algaeSites, function (site) { $scope.algaeCounts[site.status] = ($scope.algaeCounts[site.status] || 0) + 1; });
+          correlateDamAlgae();
+          $scope.algaeFetchedAt = Number(data.fetchedAt) * 1000;
+          $scope.algaeLoading = false;
+          if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+        }, function () {
+          $scope.algaeError = 'WaterNSW algae alerts are temporarily unavailable.';
+          $scope.algaeLoading = false;
+        });
+      }
+      refreshAlgaeAlerts();
+      var algaePoll = $interval(refreshAlgaeAlerts, 60 * 60 * 1000);
+      function refreshAircraft() {
+        if (!$scope.integrationFeatures.piaware) return;
+        Api.Aircraft.get().$promise.then(function (data) {
+          $scope.aircraft = data.aircraft || [];
+          if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+        });
+      }
+      var aircraftPoll;
+      var radioPoll;
+      $scope.refreshRadio = function () {
+        if (!$scope.integrationFeatures.radio) return;
+        $scope.radioLoading = true;
+        $scope.radioError = '';
+        Api.RadioCalls.get({limit: 25}).$promise.then(function (data) {
+          $scope.radioCalls = data.calls || [];
+          $scope.radioLoading = false;
+        }, function () {
+          $scope.radioError = 'Recent radio traffic is temporarily unavailable.';
+          $scope.radioLoading = false;
+        });
+      };
+      <% if (login) { %>
+      $scope.refreshRadio();
+      radioPoll = $interval($scope.refreshRadio, 15000);
+      <% } %>
+      var activeSocketMode = socket;
+      // get new message on socket event
+      $scope.$on('$viewContentLoaded', function() {
+      
+    // register a new socket when scope changes and set Socket Typle
+
+  //Manage the sockets
+  //This is messy as hell, but it works
+  //for some reason, socket opens both sockets, so the adminSocket is required to be closed after opening to prevent leaking data
+  <% if (!apisecurity) { %>
+    <% if (hidecapcode) { %>
+      <% if ((login && user.role == 'admin')) { %>
+        activeSocketMode = adminSocket
+        adminSocket.open();
+      <% } else { %>
+        activeSocketMode = socket
+        socket.open();
+        adminSocket.close()
+        <% } %>
+    <%} else { %>
+      <% if (pdwmode) { %>
+        <% if ((login && user.role == 'admin')) { %>
+          activeSocketMode = adminSocket
+          adminSocket.open();
+        <% } else { %>
+          activeSocketMode = socket
+          socket.open();
+          adminSocket.close()
+        <% } %>
+      <% } else { %>
+        activeSocketMode = socket
+        socket.open();
+        adminSocket.close()
+      <% } %>
+    <% } %>	
+  <% } else { %>
+    <% if ((login && user.role == 'admin')) { %>
+      activeSocketMode = adminSocket
+      adminSocket.open();
+    <% } else if (login) { %>
+      activeSocketMode = socket
+      socket.open();
+      adminSocket.close()
+    <% } else { %>
+      activeSocketMode = socket
+      socket.close();
+      adminSocket.close();
+      <% } %>
+  <% } %>
+  
+    activeSocketMode.on('messagePost', function(message) {
+        // Send Browser Notifications  
+    <% if (apisecurity) { %>
+      <% if (login) { %>
+        if ($scope.notificationEnabled == 'true') {
+        if (!message.agency) {
+          //Not showing messages for things that we don't know
+        } else {
+        
+          notify("PagerMon - " +message.agency + " - " + message.alias,message.message);
+        }
+        }
+        <% } %>
+      <% } else { %>
+        if ($scope.notificationEnabled == 'true') {
+        if (!message.agency) {
+          //Not showing messages for things that we don't know
+        } else {
+        
+          notify("PagerMon - " +message.agency + " - " + message.alias,message.message);
+        }
+        }
+       <% } %>
+      
+      
+    
+          // only bother getting the new message if we're on page 1
+          if ($scope.init.currentPage === 1) {
+            console.log('New Message ID: '+message.id + ' currentPage: '+$scope.init.currentPage);
+            var datetime = moment.unix(message.timestamp);
+            message.date = datetime.format("YYYY-MM-DD");
+            message.timestamp = datetime.format("HH:mm");
+          //  result.padAddress = $scope.padDigits(result.address,7);
+          //  result.aliasMatch = result['MAX(capcodes.address)'];
+            if ($routeParams.q || $routeParams.agency || $routeParams.address) {
+              if ($routeParams.q) {
+                var patt = new RegExp($routeParams.q, 'i');
+                if (patt.test(message.message) || patt.test(message.agency) || patt.test(message.address) || patt.test(message.alias) || patt.test(message.source)) {
+                  $scope.messages.unshift(message);
+                  $scope.messages.pop();
+                }
+              }
+              if ($routeParams.agency) {
+                var patt = new RegExp($routeParams.agency, 'i');
+                if (patt.test(message.agency)) {
+                  $scope.messages.unshift(message);
+                  $scope.messages.pop();
+                }
+              }
+              if ($routeParams.address) {
+                var patt = new RegExp($routeParams.address, 'i');
+                if (patt.test(message.address) || patt.test(message.alias) || patt.test(message.source)) {
+                  $scope.messages.unshift(message);
+                  $scope.messages.pop();
+                }
+              }
+                    } else {
+                      $scope.messages.unshift(message);
+                      $scope.messages.pop();
+                    }
+                  }
+                });
+              });
+
+              // this should be popped out into a separate file
+              $scope.updateData = function (page, query) {
+                // check if browser supports notifications
+                if ("Notification" in window) {
+                  $scope.notificationSupport = true;
+                }
+                // spinner start
+                $scope.spinner = 'fa-spin';
+                $scope.loading = true;
+                $scope.popoverEl = '';
+                // get limit from cookiestore
+                var curPage = page || $routeParams.page || '1';
+                var limit = $cookies.get('messageLimit') || '';
+                $scope.notificationEnabled = $cookies.get('notificationEnabled') || 'true';
+
+                var queryObj = {};
+                queryObj.page = curPage;
+                queryObj.limit = limit;
+                // Prevent WebKit and intermediate proxies from reusing an old
+                // API response when the PWA is resumed or manually refreshed.
+                queryObj._ts = Date.now();
+
+                if ($routeParams.q || query) {
+                  $scope.query = query || $routeParams.q;
+                  $scope.origQuery = query || $routeParams.q;
+                  $scope.hasQuery = true;
+                  queryObj.q = query || $routeParams.q;
+                } else {
+                  $scope.query = '';
+                  $scope.hasQuery = false;
+                }
+
+                if ($routeParams.agency || $routeParams.address || $routeParams.alias) {
+                  $scope.filter = $routeParams.agency || $routeParams.address || $routeParams.alias;
+                  $scope.hasQuery = true;
+                  if ($routeParams.agency)
+                    queryObj.agency = $routeParams.agency;
+                  if ($routeParams.address)
+                    queryObj.address = $routeParams.address;
+                  if ($routeParams.alias)
+                    queryObj.alias = $routeParams.alias;
+                }
+
+                if (page) {
+                  // if page then we have been passed a page var directly to the updateData func, which means we clicked on a page change button
+                  // encoding everything prevents issues with some special chars
+                  var qArray = [];
+                  if (queryObj.q)
+                    qArray.push('q=' + encodeURIComponent(queryObj.q));
+                  if (queryObj.address)
+                    qArray.push('address=' + encodeURIComponent(queryObj.address));
+                  if (queryObj.agency)
+                    qArray.push('agency=' + encodeURIComponent(queryObj.agency));
+                  if (queryObj.alias)
+                    qArray.push('alias=' + encodeURIComponent(queryObj.alias));
+                  if (queryObj.page > 1)
+                    qArray.push('page=' + encodeURIComponent(queryObj.page));
+
+                  // default query string is "/" - this prevents the state from not passing on firefox
+                  var qString = '/';
+                  if (qArray.length > 0) {
+                    qString = '?' + qArray.join('&');
+                  }
+                  window.history.pushState('', '', qString);
+                }
+
+                if (queryObj.q || queryObj.agency || queryObj.address || queryObj.alias) {
+                  Api.MessageSearch.get(queryObj).$promise.then(function (results) {
+                    //console.log(results);
+                    results.init.currentPage++;
+                    var startPage, endPage;
+                    if (results.init.pageCount <= 10) {
+                      // less than 10 total pages so show all
+                      startPage = 1;
+                      endPage = results.init.pageCount;
+                    } else {
+                      // more than 10 total pages so calculate start and end pages
+                      if (results.init.currentPage <= 6) {
+                        startPage = 1;
+                        endPage = 10;
+                      } else if (results.init.currentPage + 4 >= results.init.pageCount) {
+                        startPage = results.init.pageCount - 9;
+                        endPage = results.init.pageCount;
+                      } else {
+                        startPage = results.init.currentPage - 5;
+                        endPage = results.init.currentPage + 4;
+                      }
+                    }
+                    var pages = $scope.range(startPage, endPage);
+                    results.init.pages = pages;
+                    $scope.init = results.init;
+                    angular.forEach(results.messages, function (result) {
+                      var datetime = moment.unix(result.timestamp);
+                      result.date = datetime.format("YYYY-MM-DD");
+                      result.timestamp = datetime.format("HH:mm");
+                      result.message = $scope.htmlEntities(result.message);
+                      CentralWestAlerts.decorateMessage(result);
+                      //  result.padAddress = $scope.padDigits(result.address,7);
+                      //    result.aliasMatch = result['MAX(capcodes.address)'];
+                    });
+                    $scope.spinner = '';
+                    $scope.loading = false;
+                    $scope.messages = results.messages;
+                    // spinner end
+                  }, function (error) {
+                    console.log('Error on Api.MessageSearch.query!', error);
+                    $scope.spinner = '';
+                    $scope.loading = false;
+                  });
+                } else {
+                  Api.Messages.get({page: curPage, limit: limit}).$promise.then(function (results) {
+                    //console.log(results);
+                    results.init.currentPage++;
+                    var startPage, endPage;
+                    if (results.init.pageCount <= 10) {
+                      // less than 10 total pages so show all
+                      startPage = 1;
+                      endPage = results.init.pageCount;
+                    } else {
+                      // more than 10 total pages so calculate start and end pages
+                      if (results.init.currentPage <= 6) {
+                        startPage = 1;
+                        endPage = 10;
+                      } else if (results.init.currentPage + 4 >= results.init.pageCount) {
+                        startPage = results.init.pageCount - 9;
+                        endPage = results.init.pageCount;
+                      } else {
+                        startPage = results.init.currentPage - 5;
+                        endPage = results.init.currentPage + 4;
+                      }
+                    }
+                    var pages = $scope.range(startPage, endPage);
+                    results.init.pages = pages;
+                    $scope.init = results.init;
+                    angular.forEach(results.messages, function (result) {
+                      var datetime = moment.unix(result.timestamp);
+                      result.date = datetime.format("YYYY-MM-DD");
+                      result.timestamp = datetime.format("HH:mm");
+                      result.message = $scope.htmlEntities(result.message);
+                      CentralWestAlerts.decorateMessage(result);
+                      //  result.padAddress = $scope.padDigits(result.address,7);
+                      //  result.aliasMatch = result['MAX(capcodes.address)'];
+                    });
+                    $scope.spinner = '';
+                    $scope.loading = false;
+                    $scope.messages = results.messages;
+                    // spinner end
+                  }, function (error) {
+                    console.log('Error on Api.Messages.query!', error);
+                    $scope.spinner = '';
+                    $scope.loading = false;
+                  });
+                }
+              };
+              // run the updateData function on load
+              $scope.updateData();
+
+              function refreshAfterResume() {
+                if (document.visibilityState && document.visibilityState !== 'visible') return;
+                $scope.$evalAsync(function () {
+                  activeSocketMode.open();
+                  $scope.updateData(1);
+                  $scope.refreshDashboard();
+                });
+              }
+
+              // iOS freezes standalone PWAs in the background. These events
+              // cover app switching, lock/unlock, bfcache restores and network
+              // recovery without relying solely on the websocket connection.
+              document.addEventListener('visibilitychange', refreshAfterResume);
+              $window.addEventListener('pageshow', refreshAfterResume);
+              $window.addEventListener('online', refreshAfterResume);
+
+              // helper functions below
+              $scope.range = function (min, max, step) {
+                step = step || 1;
+                var input = [];
+                for (var i = min; i <= max; i += step) {
+                  input.push(i);
+                }
+                return input;
+              };
+
+              $scope.htmlEntities = function (str) {
+                return String(str).replace(/&/g, '&amp;').replace(/</g, ' ').replace(/>/g, ' ').replace(/"/g, '&quot;');
+              }
+
+              $scope.padDigits = function (number, digits) {
+                return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
+              }
+
+              $scope.setCookie = function (cookie, value) {
+                var expireDate = new Date();
+                expireDate.setDate(expireDate.getDate() + 30);
+                $cookies.put(cookie, value, { 'expires': expireDate });
+                $scope.updateData($scope.init.currentPage);
+              };
+
+              $scope.toggleNotifications = function () {
+                if ($scope.notificationEnabled == 'true') {
+                  $scope.setCookie('notificationEnabled', 'false');
+                } else {
+                  $scope.setCookie('notificationEnabled', 'true');
+                  Notification.requestPermission(function (permission) {
+                    if (!('permission' in Notification)) {
+                      Notification.permission = permission;
+                }
+
+            });
+          }
+      };
+      
+      $scope.clearSearch = function(){
+        $scope.query = '';
+      };
+      
+      // destroy socket when we navigate away
+      $scope.$on('$destroy', function() {
+        $interval.cancel(aircraftPoll);
+        if (radioPoll) $interval.cancel(radioPoll);
+        if (waterGaugePoll) $interval.cancel(waterGaugePoll);
+        if (algaePoll) $interval.cancel(algaePoll);
+        $window.removeEventListener('keydown', operationsEscape);
+        document.removeEventListener('visibilitychange', refreshAfterResume);
+        $window.removeEventListener('pageshow', refreshAfterResume);
+        $window.removeEventListener('online', refreshAfterResume);
+        document.body.classList.remove('cw-operations');
+        socket.close();
+      });
+      
+    }])
+    
+    // Routes
+    .config(['$routeProvider', '$locationProvider', function ($routeProvider, $locationProvider) {
+    $routeProvider
+      .when('/', {
+        templateUrl: '/messages.html',
+        controller: 'MessageController'
+      })
+      .when('/:page', {
+        templateUrl: '/messages.html',
+        controller: 'MessageController'
+      })
+    $locationProvider.html5Mode({ enabled: true, requireBase: false, rewriteLinks: false });
+  }]);
+
+function notify(notifyTitle,notifyMessage) {
+    if (!("Notification" in window)) {
+        console.log("This browser does not support desktop notification");
+      } else if (Notification.permission === "granted") {
+        var options = {
+          body: notifyMessage,
+          icon: '/favicon.ico'
+        };
+        var notification = new Notification(notifyTitle, options);
+      }
+    else if (Notification.permission !== 'denied') {
+        Notification.requestPermission(function (permission) {
+            if (!('permission' in Notification)) {
+                Notification.permission = permission;
+            }
+
+            if (permission === "granted") {
+                var options = {
+                    body: notifyMessage,
+                    icon: '/favicon.ico',
+                };
+                var notification = new Notification(notifyTitle,options);
+            }
+        });
+    }
+}
+  </script>
+
+</div>
+
+<%- include('global/footer.ejs') %>

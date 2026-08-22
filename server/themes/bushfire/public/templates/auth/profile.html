@@ -1,0 +1,75 @@
+<div class="row" style="padding-top: 11px;">
+</div>
+<div ng-if="loading" class="loading"><i class="fa fa-spinner fa-spin"></i></div>
+<div class="alert {{alertMessage.type}} alert-dismissable alert-fixed fade in" ng-if="alertMessage.show">
+  <button type="button" class="close" data-dismiss="alert" aria-label="Close" ng-click="alertMessage.show = false">&times;</button>
+  <strong>{{alertMessage.text}}</strong>
+</div>
+<div class="row" style="padding-top: 10px">
+  <div class="col-sm-6 col-xs-12">
+          <h4 style="padding-left: 15px;"><a href="/auth/profile/">{{user.username }}</a></div>
+  <div class="col-xs-12">
+          <hr />
+          <form ng-submit="userSubmit()" class="form-horizontal" name="user">
+          <h5>User Details</h5>
+            <div class="form-group">
+              <label for="user.username" class="col-xs-4 col-sm-3 control-label">Username</label>
+              <div class="col-xs-8 col-sm-9">
+                <input class="form-control" type="text" name="user.username" ng-model="user.username" disabled>
+              </div>
+            </div>
+            <div class="form-group" ng-class="!user.givenname ? 'has-error' : 'has-success'">
+              <label for="user.givenname" class="col-xs-4 col-sm-3 control-label">Given Name</label>
+              <div class="col-xs-8 col-sm-9">
+              <input class="form-control" type="text" name="user.givenname" ng-model="user.givenname" required>
+              <span id="helpBlock" class="help-block">Required</span>
+              </div>
+            </div>
+            <div class="form-group" ng-class="">
+              <label for="user.surname" class="col-xs-4 col-sm-3 control-label">Surname</label>
+              <div class="col-xs-8 col-sm-9">
+              <input class="form-control" type="text" name="user.surname" ng-model="user.surname">
+              <span id="helpBlock" class="help-block"></span>
+              </div>
+            </div>
+            <div class="form-group has-feedback" ng-class="!user.email || existingEmail ? 'has-error' : 'has-success'">
+              <label for="user.email" class="col-xs-4 col-sm-3 control-label">Email Address</label>
+              <div class="col-xs-8 col-sm-9">
+                <input class="form-control" type="text" name="user.email" ng-model="user.email" ng-change="userdupeCheck()" ng-model-options="{updateOn: 'blur'}" required>
+                <span ng-if="userLoading" class="fa fa-refresh fa-spin fa-2x fa-fw form-control-feedback" aria-hidden="true"></span>
+                <span id="helpBlock" class="help-block">Required</span>
+                <span ng-if="existingEmail" class="text-danger pull-left">Email already exists! </span>
+              </div>
+            </div>
+            <div class="btn-group-vertical" id="buttons-aliasDetail">
+              <button type="submit" class="btn btn-success">Save</button>
+            </div>
+          </form>
+        </div>
+</div>
+
+<div class="row" style="padding-top: 20px">
+  <div class="col-xs-12">
+    <hr>
+    <h5><i class="fa fa-bell"></i> Pager push notifications</h5>
+    <div class="alert alert-warning" ng-if="!push.supported">This browser does not support Web Push. On iPhone, install this site using Add to Home Screen first.</div>
+    <div class="alert alert-info" ng-if="push.supported && !push.enabled">Push notifications are currently disabled by an administrator.</div>
+    <div ng-if="push.supported && push.enabled" class="form-horizontal">
+      <div class="form-group">
+        <label class="col-xs-4 col-sm-3 control-label">Capcode</label>
+        <div class="col-xs-8 col-sm-9">
+          <select class="form-control" ng-model="push.capcode">
+            <option value="">Select one capcode</option>
+            <option ng-repeat="item in push.capcodes" value="{{item.address}}">{{item.address}} — {{item.alias || 'Unknown'}}{{item.agency ? ' (' + item.agency + ')' : ''}}</option>
+          </select>
+          <span class="help-block">Your account can follow one capcode. The same choice applies to every subscribed device.</span>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-success" ng-click="enablePush()"><i class="fa fa-bell"></i> {{push.subscribed ? 'Save capcode' : 'Enable on this device'}}</button>
+        <button type="button" class="btn btn-default" ng-if="push.subscribed" ng-click="testPush()">Send test</button>
+        <button type="button" class="btn btn-danger" ng-if="push.subscribed" ng-click="disablePush()">Disable this device</button>
+      </div>
+    </div>
+  </div>
+</div>
