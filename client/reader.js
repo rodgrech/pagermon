@@ -62,7 +62,17 @@ function sendHeartbeat() {
   fetch(heartbeatUri, {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'User-Agent': 'PagerMon reader.js heartbeat', apikey: apikey},
-    body: JSON.stringify({id: receiverId, identifier: identifier, internalIp: internalIpv4()})
+    body: JSON.stringify({
+      id: receiverId,
+      identifier: identifier,
+      internalIp: internalIpv4(),
+      nodeName: os.hostname(),
+      platform: os.platform() + ' ' + os.arch(),
+      nodeUptime: Math.floor(os.uptime()),
+      loadAverage: Number(os.loadavg()[0].toFixed(2)),
+      totalMemory: os.totalmem(),
+      freeMemory: os.freemem()
+    })
   }).then(function(response) {
     if (!response.ok) throw new Error('HTTP ' + response.status);
   }).catch(function(error) {

@@ -147,6 +147,12 @@ function receiverStatusList(nowSeconds) {
       age: age,
       externalIp: net.isIP(String(heartbeat.externalIp || '')) ? heartbeat.externalIp : null,
       internalIp: net.isIP(String(heartbeat.internalIp || '')) ? heartbeat.internalIp : null
+      ,nodeName: String(heartbeat.nodeName || '').slice(0, 100)
+      ,platform: String(heartbeat.platform || '').slice(0, 100)
+      ,nodeUptime: Number(heartbeat.nodeUptime) || null
+      ,loadAverage: Number.isFinite(Number(heartbeat.loadAverage)) ? Number(heartbeat.loadAverage) : null
+      ,totalMemory: Number(heartbeat.totalMemory) || null
+      ,freeMemory: Number(heartbeat.freeMemory) || null
     };
   });
 }
@@ -1729,6 +1735,12 @@ router.route('/central-west/receiver-heartbeat')
       identifier: String(req.body.identifier || '').slice(0, 100),
       externalIp: net.isIP(externalIp) ? externalIp : (receiverHeartbeats[id] && receiverHeartbeats[id].externalIp) || '',
       internalIp: net.isIP(internalIp) ? internalIp : (receiverHeartbeats[id] && receiverHeartbeats[id].internalIp) || ''
+      ,nodeName: String(req.body.nodeName || '').slice(0, 100)
+      ,platform: String(req.body.platform || '').slice(0, 100)
+      ,nodeUptime: Math.max(0, Number(req.body.nodeUptime) || 0)
+      ,loadAverage: Math.max(0, Number(req.body.loadAverage) || 0)
+      ,totalMemory: Math.max(0, Number(req.body.totalMemory) || 0)
+      ,freeMemory: Math.max(0, Number(req.body.freeMemory) || 0)
     };
     try {
       fs.mkdirSync(path.dirname(receiverHeartbeatFile), { recursive: true });
@@ -1744,11 +1756,22 @@ router.route('/central-west/receiver-heartbeat')
 router.route('/central-west/receiver-status')
   .get(isSessionUser, function (req, res) {
     var nowSeconds = Math.floor(Date.now() / 1000);
+    var receiverRows = receiverStatusList(nowSeconds);
+    var memory = process.memoryUsage();
     return res.status(200).json({
       serverTime: nowSeconds,
       uptime: Math.floor(process.uptime()),
-      local: { id: 'pagermon', label: nconf.get('global:monitorName') || 'PagerMon', state: 'online' },
-      receivers: receiverStatusList(nowSeconds)
+      local: {
+        id: 'pagermon',
+        label: nconf.get('global:monitorName') || 'PagerMon',
+        state: 'online',
+        nodeVersion: process.version,
+        platform: process.platform + ' ' + process.arch,
+        memoryUsed: memory.rss,
+        receiverCount: receiverRows.length,
+        onlineReceiverCount: receiverRows.filter(function(receiver) { return receiver.state === 'online'; }).length
+      },
+      receivers: receiverRows
     });
   });
 
