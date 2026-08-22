@@ -1,5 +1,5 @@
 {
-  "version": "2026.08.22.2",
+  "version": "2026.08.22.3",
   "title": "What’s new",
   "changes": [
     "Added the Bushfire theme and theme-aware Operations Display.",
@@ -8,6 +8,7 @@
     "Made push notifications open the matching capcode feed.",
     "Added search to the push-notification capcode picker.",
     "Grouped push-notification controls into a clearer admin settings panel.",
-    "Added automatic local service health and admin-managed remote receivers."
+    "Added automatic local service health and admin-managed remote receivers.",
+    "Redesigned the admin dashboard and grouped all settings into consistent panels."
   ]
 }
