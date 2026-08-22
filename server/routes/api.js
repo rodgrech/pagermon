@@ -153,8 +153,55 @@ function receiverStatusList(nowSeconds) {
       ,loadAverage: Number.isFinite(Number(heartbeat.loadAverage)) ? Number(heartbeat.loadAverage) : null
       ,totalMemory: Number(heartbeat.totalMemory) || null
       ,freeMemory: Number(heartbeat.freeMemory) || null
+      ,nodeId: String(heartbeat.nodeId || heartbeat.nodeName || id).slice(0, 100)
+      ,usbReceivers: Array.isArray(heartbeat.usbReceivers) ? heartbeat.usbReceivers : []
+      ,channels: Array.isArray(heartbeat.channels) ? heartbeat.channels : []
+      ,decoders: Array.isArray(heartbeat.decoders) ? heartbeat.decoders : []
     };
   });
+}
+
+function receiverNodeList(receivers) {
+  var nodes = {};
+  receivers.forEach(function(receiver) {
+    var key = receiver.nodeId || receiver.nodeName || receiver.id;
+    if (!nodes[key]) {
+      nodes[key] = {
+        id: key,
+        label: receiver.location && receiver.location !== 'Remote receiver' ? receiver.location : (receiver.nodeName || receiver.label),
+        nodeName: receiver.nodeName,
+        platform: receiver.platform,
+        state: receiver.state,
+        age: receiver.age,
+        lastSeen: receiver.lastSeen,
+        externalIp: receiver.externalIp,
+        internalIp: receiver.internalIp,
+        nodeUptime: receiver.nodeUptime,
+        loadAverage: receiver.loadAverage,
+        totalMemory: receiver.totalMemory,
+        freeMemory: receiver.freeMemory,
+        usbReceivers: [],
+        channels: [],
+        decoders: [],
+        feeds: []
+      };
+    }
+    var node = nodes[key];
+    if (receiver.state === 'online' || (receiver.state === 'stale' && node.state === 'offline')) node.state = receiver.state;
+    if (receiver.age != null && (node.age == null || receiver.age < node.age)) {
+      ['age','lastSeen','externalIp','internalIp','nodeUptime','loadAverage','totalMemory','freeMemory','nodeName','platform'].forEach(function(field) { node[field] = receiver[field]; });
+    }
+    node.feeds.push({ id: receiver.id, label: receiver.label, frequency: receiver.frequency, state: receiver.state });
+    (receiver.usbReceivers || []).forEach(function(item) {
+      if (!node.usbReceivers.some(function(existing) { return existing.serial === item.serial && existing.usbPath === item.usbPath; })) node.usbReceivers.push(item);
+    });
+    (receiver.channels || []).forEach(function(item) {
+      var signature = [item.frequency, item.device, item.gain, item.sampleRate].join('|');
+      if (!node.channels.some(function(existing) { return [existing.frequency, existing.device, existing.gain, existing.sampleRate].join('|') === signature; })) node.channels.push(item);
+    });
+    (receiver.decoders || []).forEach(function(item) { if (!node.decoders.includes(item)) node.decoders.push(item); });
+  });
+  return Object.keys(nodes).map(function(key) { return nodes[key]; });
 }
 
 function configuredWaterSlot(timestamp, refreshHours) {
@@ -1741,6 +1788,14 @@ router.route('/central-west/receiver-heartbeat')
       ,loadAverage: Math.max(0, Number(req.body.loadAverage) || 0)
       ,totalMemory: Math.max(0, Number(req.body.totalMemory) || 0)
       ,freeMemory: Math.max(0, Number(req.body.freeMemory) || 0)
+      ,nodeId: String(req.body.nodeId || req.body.nodeName || id).slice(0, 100)
+      ,usbReceivers: (Array.isArray(req.body.usbReceivers) ? req.body.usbReceivers : []).slice(0, 16).map(function(receiver) {
+        return { serial: String(receiver.serial || '').slice(0, 100), product: String(receiver.product || 'RTL-SDR').slice(0, 100), usbPath: String(receiver.usbPath || '').slice(0, 100) };
+      })
+      ,channels: (Array.isArray(req.body.channels) ? req.body.channels : []).slice(0, 32).map(function(channel) {
+        return { frequency: String(channel.frequency || '').slice(0, 40), device: String(channel.device || '').slice(0, 100), gain: String(channel.gain || '').slice(0, 20), sampleRate: String(channel.sampleRate || '').slice(0, 40) };
+      })
+      ,decoders: (Array.isArray(req.body.decoders) ? req.body.decoders : []).slice(0, 16).map(function(decoder) { return String(decoder || '').slice(0, 40); })
     };
     try {
       fs.mkdirSync(path.dirname(receiverHeartbeatFile), { recursive: true });
@@ -1757,6 +1812,7 @@ router.route('/central-west/receiver-status')
   .get(isSessionUser, function (req, res) {
     var nowSeconds = Math.floor(Date.now() / 1000);
     var receiverRows = receiverStatusList(nowSeconds);
+    var nodeRows = receiverNodeList(receiverRows);
     var memory = process.memoryUsage();
     return res.status(200).json({
       serverTime: nowSeconds,
@@ -1771,6 +1827,7 @@ router.route('/central-west/receiver-status')
         receiverCount: receiverRows.length,
         onlineReceiverCount: receiverRows.filter(function(receiver) { return receiver.state === 'online'; }).length
       },
+      nodes: nodeRows,
       receivers: receiverRows
     });
   });

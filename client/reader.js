@@ -15,6 +15,7 @@
 // create config file if it does not exist, and set defaults
 var fs = require('fs');
 var os = require('os');
+var path = require('path');
 var conf_defaults = require('./config/default.json');
 var confFile = './config/config.json';
 if( ! fs.existsSync(confFile) ) {
@@ -57,8 +58,70 @@ function internalIpv4() {
   return addresses[0] || null;
 }
 
+function readText(file) {
+  try { return fs.readFileSync(file, 'utf8').trim(); } catch (error) { return ''; }
+}
+
+function nodeId() {
+  return readText('/etc/machine-id') || os.hostname();
+}
+
+function usbSdrInventory() {
+  if (os.platform() !== 'linux') return [];
+  var root = '/sys/bus/usb/devices';
+  try {
+    return fs.readdirSync(root).map(function (entry) {
+      var device = path.join(root, entry);
+      var vendor = readText(path.join(device, 'idVendor')).toLowerCase();
+      var product = readText(path.join(device, 'idProduct')).toLowerCase();
+      if (vendor !== '0bda' || !['2832', '2838'].includes(product)) return null;
+      return {
+        serial: readText(path.join(device, 'serial')) || 'Unknown',
+        product: readText(path.join(device, 'product')) || 'RTL-SDR',
+        usbPath: entry
+      };
+    }).filter(Boolean);
+  } catch (error) { return []; }
+}
+
+function processCommands() {
+  if (os.platform() !== 'linux') return [];
+  try {
+    return fs.readdirSync('/proc').filter(function (entry) { return /^\d+$/.test(entry); }).map(function (pid) {
+      return readText('/proc/' + pid + '/cmdline').replace(/\0/g, ' ').trim();
+    }).filter(Boolean);
+  } catch (error) { return []; }
+}
+
+function decoderInventory() {
+  var commands = processCommands();
+  var rtlCommands = commands.filter(function (command) { return /(^|\/)rtl_fm(?:\s|$)/.test(command); });
+  var multimonCommands = commands.filter(function (command) { return /(^|\/)multimon-ng(?:\s|$)/.test(command); });
+  var channels = [];
+  rtlCommands.forEach(function (command) {
+    var frequencies = [];
+    var match;
+    var frequencyPattern = /(?:^|\s)-f\s+([^\s]+)/g;
+    while ((match = frequencyPattern.exec(command)) !== null) frequencies.push(match[1]);
+    var device = (command.match(/(?:^|\s)-d\s+([^\s]+)/) || [])[1] || '';
+    var gain = (command.match(/(?:^|\s)-g\s+([^\s]+)/) || [])[1] || '';
+    var sampleRate = (command.match(/(?:^|\s)-s\s+([^\s]+)/) || [])[1] || '';
+    frequencies.forEach(function (frequency) {
+      channels.push({ frequency: frequency, device: device, gain: gain, sampleRate: sampleRate });
+    });
+  });
+  var decoders = [];
+  multimonCommands.forEach(function (command) {
+    var pattern = /(?:^|\s)-a\s+([^\s]+)/g;
+    var match;
+    while ((match = pattern.exec(command)) !== null) if (!decoders.includes(match[1])) decoders.push(match[1]);
+  });
+  return { channels: channels, decoders: decoders };
+}
+
 function sendHeartbeat() {
   if (!heartbeatEnabled || !/^[a-zA-Z0-9_-]{1,64}$/.test(String(receiverId || ''))) return;
+  var inventory = decoderInventory();
   fetch(heartbeatUri, {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'User-Agent': 'PagerMon reader.js heartbeat', apikey: apikey},
@@ -67,11 +130,15 @@ function sendHeartbeat() {
       identifier: identifier,
       internalIp: internalIpv4(),
       nodeName: os.hostname(),
+      nodeId: nodeId(),
       platform: os.platform() + ' ' + os.arch(),
       nodeUptime: Math.floor(os.uptime()),
       loadAverage: Number(os.loadavg()[0].toFixed(2)),
       totalMemory: os.totalmem(),
-      freeMemory: os.freemem()
+      freeMemory: os.freemem(),
+      usbReceivers: usbSdrInventory(),
+      channels: inventory.channels,
+      decoders: inventory.decoders
     })
   }).then(function(response) {
     if (!response.ok) throw new Error('HTTP ' + response.status);

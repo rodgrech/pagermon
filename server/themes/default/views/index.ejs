@@ -55,12 +55,12 @@
       <section class="cw-dashboard">
         <div class="cw-toolbar">
           <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'feed', 'btn-default': dashboardView != 'feed'}" ng-click="setDashboardView('feed')"><i class="fa fa-list"></i> Feed</button>
-          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'incidents', 'btn-default': dashboardView != 'incidents'}" ng-click="setDashboardView('incidents')"><i class="fa fa-layer-group"></i> Incidents <span class="badge">{{incidents.length}}</span></button>
-          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'map', 'btn-default': dashboardView != 'map'}" ng-click="setDashboardView('map')"><i class="fa fa-map-marker-alt"></i> Live map <span class="badge" ng-if="rfsIncidents.length || (integrationFeatures.piaware && aircraft.length)">{{rfsIncidents.length + (integrationFeatures.piaware ? aircraft.length : 0)}}</span></button>
+          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'incidents', 'btn-default': dashboardView != 'incidents'}" ng-click="setDashboardView('incidents')"><i class="fa fa-layer-group"></i> Incidents <span class="badge" ng-if="newViewCounts.incidents">{{newViewCounts.incidents}}</span></button>
+          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'map', 'btn-default': dashboardView != 'map'}" ng-click="setDashboardView('map')"><i class="fa fa-map-marker-alt"></i> Live map <span class="badge" ng-if="rfsIncidents.length">{{rfsIncidents.length}}</span></button>
           <% if (login && user.role == 'admin') { %><button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'discovery', 'btn-default': dashboardView != 'discovery'}" ng-click="setDashboardView('discovery')"><i class="fa fa-search"></i> Discovery <span class="badge">{{unknownCapcodes.length}}</span></button><% } %>
           <button ng-if="integrationFeatures.bom" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'warnings', 'btn-default': dashboardView != 'warnings', 'cw-warning-active': bomWarnings.length}" ng-click="setDashboardView('warnings')"><i class="fa fa-cloud-bolt"></i> BOM warnings <span class="badge" ng-if="bomWarnings.length">{{bomWarnings.length}}</span></button>
           <button ng-if="integrationFeatures.waterNsw" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'water', 'btn-default': dashboardView != 'water', 'cw-water-alert-active': damAlerts.length}" ng-click="setDashboardView('water')"><i class="fa fa-water"></i> WaterNSW <span class="badge" ng-if="damAlerts.length">{{damAlerts.length}}</span></button>
-          <% if (login) { %><button ng-if="integrationFeatures.radio" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'radio', 'btn-default': dashboardView != 'radio'}" ng-click="setDashboardView('radio')"><i class="fa fa-broadcast-tower"></i> Radio <span class="badge" ng-if="radioCalls.length">{{radioCalls.length}}</span></button><% } %>
+          <% if (login) { %><button ng-if="integrationFeatures.radio" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'radio', 'btn-default': dashboardView != 'radio'}" ng-click="setDashboardView('radio')"><i class="fa fa-broadcast-tower"></i> Radio <span class="badge" ng-if="newViewCounts.radio">{{newViewCounts.radio}}</span></button><% } %>
           <button class="btn btn-default btn-sm pull-right" ng-click="toggleDarkMode()" title="Toggle dark mode"><i class="fa" ng-class="darkMode ? 'fa-sun' : 'fa-moon'"></i></button>
           <button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()" title="Full-screen operations display"><i class="fa fa-expand"></i> Operations</button>
         </div>
@@ -445,6 +445,8 @@
       $scope.radioCalls = [];
       $scope.radioLoading = false;
       $scope.radioError = '';
+      $scope.newViewCounts = {incidents: 0, radio: 0};
+      var viewKeys = {incidents: [], radio: []};
       $scope.operationsMode = false;
       $scope.radarEnabled = false;
       $scope.radarConfig = null;
@@ -554,8 +556,43 @@
       }
       $window.addEventListener('keydown', operationsEscape);
 
+      function itemKey(item, fallback) {
+        return String(item.id || item.key || item.link || item.audioUrl || item.audio || fallback || '');
+      }
+      function incidentKeys() {
+        var keys = [];
+        angular.forEach($scope.incidents || [], function(incident) {
+          angular.forEach(incident.messages || [], function(message) { keys.push(itemKey(message, [message.timestamp, message.address].join('|'))); });
+        });
+        return keys.filter(Boolean);
+      }
+      function radioKeys() {
+        return ($scope.radioCalls || []).map(function(call) { return itemKey(call, [call.timestamp, call.source, call.talkgroup].join('|')); }).filter(Boolean);
+      }
+      function storedKeys(view) {
+        try { return JSON.parse(localStorage.getItem('cw-seen-' + view + '-keys') || 'null'); } catch (error) { return null; }
+      }
+      function markViewSeen(view) {
+        if (!viewKeys[view]) return;
+        localStorage.setItem('cw-seen-' + view + '-keys', JSON.stringify(viewKeys[view].slice(0, 1000)));
+        $scope.newViewCounts[view] = 0;
+      }
+      function updateViewBadge(view, keys) {
+        viewKeys[view] = keys;
+        var seen = storedKeys(view);
+        if (!Array.isArray(seen)) {
+          localStorage.setItem('cw-seen-' + view + '-keys', JSON.stringify(keys.slice(0, 1000)));
+          $scope.newViewCounts[view] = 0;
+        } else if ($scope.dashboardView === view) {
+          markViewSeen(view);
+        } else {
+          $scope.newViewCounts[view] = keys.filter(function(key) { return seen.indexOf(key) < 0; }).length;
+        }
+      }
+
       $scope.setDashboardView = function (view) {
         $scope.dashboardView = view;
+        markViewSeen(view);
         // A standalone iOS PWA may have been suspended long enough to miss
         // websocket events. Opening Feed must therefore perform a real fetch.
         if (view === 'feed' && angular.isFunction($scope.updateData)) {
@@ -578,6 +615,7 @@
           $scope.receivers = (data.receivers || []).map(CentralWestAlerts.receiverHealth);
           angular.forEach(data.messages, CentralWestAlerts.decorateMessage);
           $scope.incidents = CentralWestAlerts.groupIncidents(data.messages);
+          updateViewBadge('incidents', incidentKeys());
           CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
           $scope.unknownCapcodes = CentralWestAlerts.unknownCapcodes(data.messages);
           if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
@@ -670,6 +708,7 @@
         $scope.radioError = '';
         Api.RadioCalls.get({limit: 25}).$promise.then(function (data) {
           $scope.radioCalls = data.calls || [];
+          updateViewBadge('radio', radioKeys());
           $scope.radioLoading = false;
         }, function () {
           $scope.radioError = 'Recent radio traffic is temporarily unavailable.';

@@ -42,18 +42,27 @@
       .then(function (response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
       .then(function (data) {
         var receivers = data.receivers || [];
+        var nodes = data.nodes || [];
         var local = data.local || {label: 'PagerMon', state: 'online'};
         var localCard = '<article class="cw-status-card cw-health-online"><span class="cw-health-dot"></span><div><h3>' + escapeHtml(local.label) + '</h3><p>Local PagerMon server · ' + escapeHtml(local.platform || '') + ' · ' + escapeHtml(local.nodeVersion || '') + '</p><p><strong>Receivers:</strong> ' + Number(local.onlineReceiverCount || 0) + ' online / ' + Number(local.receiverCount || 0) + ' configured</p><p><strong>PagerMon memory:</strong> ' + memoryLabel(local.memoryUsed) + '</p></div><div class="cw-status-value"><strong>Online</strong><span>Uptime ' + uptimeLabel(data.uptime) + '</span></div></article>';
-        document.getElementById('receiver-status').innerHTML = localCard + receivers.map(function (receiver) {
+        document.getElementById('receiver-status').innerHTML = localCard + nodes.map(function (receiver) {
           var state = receiver.state || 'offline';
           var label = state === 'online' ? 'Online' : state === 'stale' ? 'Beacon delayed' : 'Offline';
+          var usb = receiver.usbReceivers || [];
+          var channels = receiver.channels || [];
+          var feeds = receiver.feeds || [];
+          var channelHtml = channels.length ? channels.map(function(channel) {
+            return '<li><strong>' + escapeHtml(channel.frequency) + '</strong>' + (channel.device ? ' · SDR ' + escapeHtml(channel.device) : '') + (channel.gain ? ' · gain ' + escapeHtml(channel.gain) : '') + (channel.sampleRate ? ' · ' + escapeHtml(channel.sampleRate) + ' samples/s' : '') + '</li>';
+          }).join('') : feeds.map(function(feed) { return '<li><strong>' + escapeHtml(feed.frequency || feed.label) + '</strong></li>'; }).join('');
           return '<article class="cw-status-card cw-health-' + escapeHtml(state) + '">' +
-            '<span class="cw-health-dot"></span><div><h3>' + escapeHtml(receiver.label) + '</h3>' +
-            '<p>' + escapeHtml(receiver.location) + ' · ' + escapeHtml(receiver.frequency) + '</p>' +
+            '<span class="cw-health-dot"></span><div><h3>' + escapeHtml(receiver.label || receiver.nodeName) + '</h3>' +
             '<p><strong>Internal IP:</strong> ' + escapeHtml(receiver.internalIp || 'Awaiting receiver report') + '</p>' +
             '<p><strong>External IP:</strong> ' + escapeHtml(receiver.externalIp || 'Awaiting receiver report') + '</p>' +
             '<p><strong>Node:</strong> ' + escapeHtml(receiver.nodeName || 'Awaiting receiver report') + ' · ' + escapeHtml(receiver.platform || '') + '</p>' +
-            '<p><strong>Node health:</strong> uptime ' + uptimeLabel(receiver.nodeUptime) + ' · load ' + escapeHtml(receiver.loadAverage == null ? '—' : receiver.loadAverage) + ' · memory ' + memoryLabel(receiver.totalMemory && receiver.freeMemory != null ? receiver.totalMemory - receiver.freeMemory : 0) + ' / ' + memoryLabel(receiver.totalMemory) + '</p></div>' +
+            '<p><strong>System health:</strong> uptime ' + uptimeLabel(receiver.nodeUptime) + ' · load ' + escapeHtml(receiver.loadAverage == null ? '—' : receiver.loadAverage) + ' · memory ' + memoryLabel(receiver.totalMemory && receiver.freeMemory != null ? receiver.totalMemory - receiver.freeMemory : 0) + ' / ' + memoryLabel(receiver.totalMemory) + '</p>' +
+            '<p><strong>USB receivers:</strong> ' + usb.length + (usb.length ? ' · ' + usb.map(function(item) { return escapeHtml(item.serial || item.product); }).join(', ') : '') + '</p>' +
+            '<p><strong>Monitored frequencies:</strong></p><ul>' + channelHtml + '</ul>' +
+            '<p><strong>Decoders:</strong> ' + escapeHtml((receiver.decoders || []).join(' · ') || 'Awaiting decoder inventory') + '</p></div>' +
             '<div class="cw-status-value"><strong>' + label + '</strong><span>Last check-in ' + ageLabel(receiver.age) + '</span></div></article>';
         }).join('');
         document.getElementById('server-status').innerHTML = '<strong>PageMon server online</strong> · Uptime ' + uptimeLabel(data.uptime) + ' · Last refreshed ' + new Date().toLocaleTimeString();
