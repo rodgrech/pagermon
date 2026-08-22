@@ -128,7 +128,6 @@
               <span class="cw-dam-trend cw-dam-trend-steady" ng-if="dam.dailyChange === 0" title="No change since yesterday"><i class="fa fa-minus"></i> 0.00</span>
               <div class="cw-dam-level"><strong ng-if="dam.percentage !== null">{{dam.percentage | number:2}}%</strong><strong ng-if="dam.percentage === null"><i class="fa fa-info-circle"></i></strong><span ng-if="dam.volumeMl !== null">{{dam.volumeMl | number:0}} ML</span><span ng-if="dam.volumeMl === null">{{dam.capacityMl | number:0}} ML capacity</span></div>
               <div class="cw-dam-details"><h4>{{dam.name}}</h4><span ng-if="dam.weeklyChange > 0" class="cw-dam-change-up"><i class="fa fa-arrow-up"></i> {{dam.weeklyChange}}% this week</span><span ng-if="dam.weeklyChange < 0" class="cw-dam-change-down"><i class="fa fa-arrow-down"></i> {{-dam.weeklyChange}}% this week</span><span ng-if="dam.weeklyChange === 0">No weekly change</span><span ng-if="dam.percentage !== null && dam.weeklyChange === null">Observed {{dam.observedAt}} AEST</span><span ng-if="dam.percentage === null">Current public level unavailable</span><div class="cw-dam-algae-detail" ng-if="dam.algaeAlert"><span class="cw-algae-chip cw-algae-{{dam.algaeAlert.status | lowercase}}">{{dam.algaeAlert.status}} algae alert</span><strong>Published algae:</strong> {{dam.algaeAlert.types || 'Species not published'}}<small>{{dam.algaeAlert.siteCount}} nearby WaterNSW monitoring site<span ng-if="dam.algaeAlert.siteCount != 1">s</span></small></div><div class="cw-dam-history" ng-if="dam.lastOfficialReport"><strong>Historical:</strong> {{dam.lastOfficialReport.percentage}}% and {{dam.lastOfficialReport.trend}} on {{dam.lastOfficialReport.reportedAt | date:'dd MMM yyyy HH:mm'}}. <a ng-href="{{dam.lastOfficialReport.link}}" target="_blank" rel="noopener">Council notice</a></div><small ng-if="dam.operator">{{dam.operator}}</small><br ng-if="dam.operator"><a ng-href="{{dam.link}}" target="_blank" rel="noopener">Official details</a></div>
-              <div class="cw-dam-flow-estimate cw-flow-{{dam.flowEstimate.state}}" ng-if="dam.flowEstimate"><span class="cw-flow-label">Unofficial flow indicator</span><strong>{{dam.flowEstimate.label}}</strong><span>Upstream {{dam.flowEstimate.upstream}} ML/day · downstream {{dam.flowEstimate.downstream}} ML/day</span><small>Observed {{dam.flowEstimate.observedAt}} AEST. This indicates river behaviour, not storage percentage or confirmed spill status.</small></div>
             </article>
           </div>
           <h4 class="cw-gauge-heading"><i class="fa fa-chart-line"></i> Rylstone river telemetry</h4>
@@ -507,31 +506,6 @@
         });
       }
 
-      function correlateDamFlow() {
-        var upstream = null;
-        var downstream = null;
-        angular.forEach($scope.waterGauges || [], function (gauge) {
-          if (String(gauge.siteId) === '421184') upstream = gauge;
-          if (String(gauge.siteId) === '421903') downstream = gauge;
-        });
-        angular.forEach($scope.dams || [], function (dam) {
-          dam.flowEstimate = null;
-          if (dam.name !== 'Rylstone Dam' || !upstream || !downstream) return;
-          var upReading = upstream.readings && upstream.readings.FlowRate;
-          var downReading = downstream.readings && downstream.readings.FlowRate;
-          if (!upReading || !downReading) return;
-          var up = Number(upReading.value);
-          var down = Number(downReading.value);
-          if (!isFinite(up) || !isFinite(down)) return;
-          var state = 'normal';
-          var label = 'Downstream flow detected';
-          if (down <= 1) { state = 'low'; label = 'Little or no downstream flow'; }
-          else if ((up <= 1 && down > 3) || down - up > Math.max(5, up * 0.25)) { state = 'elevated'; label = 'Possible release or spill contribution'; }
-          else if (up > 1 && down >= up * 0.7) { state = 'passing'; label = 'River flow appears to be passing through'; }
-          else if (up > down * 1.5) { state = 'retaining'; label = 'Inflow currently exceeds downstream flow'; }
-          dam.flowEstimate = {state: state, label: label, upstream: up.toFixed(1), downstream: down.toFixed(1), observedAt: downstream.observedAt || upstream.observedAt};
-        });
-      }
 
       $scope.toggleDarkMode = function () {
         $scope.darkMode = !$scope.darkMode;
@@ -651,7 +625,6 @@
         $scope.dams = data.dams || [];
         $scope.damAlerts = data.alerts || [];
         correlateDamAlgae();
-        correlateDamFlow();
         $scope.waterFetchedAt = Number(data.fetchedAt) * 1000;
         $scope.waterSourceUrl = data.sourceUrl;
         $scope.damLoading = false;
@@ -670,7 +643,6 @@
       function refreshWaterGauges() {
         Api.WaterNswRylstoneGauges.get().$promise.then(function (data) {
           $scope.waterGauges = data.gauges || [];
-          correlateDamFlow();
           if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
         });
       }
