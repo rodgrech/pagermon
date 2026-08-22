@@ -52,7 +52,7 @@ router.route('/login')
                                 pageTitle: 'User',
                                 loginPage: true,
                                 loginBackgroundEnabled: Boolean(String(nconf.get('global:loginBackgroundUrl') || '').trim()),
-                                loginBackgroundOpacity: Math.max(0, Math.min(100, Number(nconf.get('global:loginBackgroundOpacity')) || 18)),
+                                loginBackgroundOpacity: Math.max(0, Math.min(100, Number(nconf.get('global:loginBackgroundOpacity')) || 32)),
                         });
                 } else {
                         res.redirect('/');

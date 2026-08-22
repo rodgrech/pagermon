@@ -10,7 +10,7 @@
     "pwaIconTheme": "theme",
     "pwaIconVersion": 1,
     "loginBackgroundUrl": "",
-    "loginBackgroundOpacity": 18,
+    "loginBackgroundOpacity": 32,
     "monitorName": "PagerMon",
     "faKey": "changeme"
   },
