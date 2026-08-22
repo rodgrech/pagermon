@@ -95,8 +95,12 @@ function processCommands() {
 
 function decoderInventory() {
   var commands = processCommands();
-  var rtlCommands = commands.filter(function (command) { return /(^|\/)rtl_fm(?:\s|$)/.test(command); });
-  var multimonCommands = commands.filter(function (command) { return /(^|\/)multimon-ng(?:\s|$)/.test(command); });
+  function executableIs(command, name) {
+    var executable = String(command || '').split(/\s+/)[0];
+    return path.basename(executable) === name;
+  }
+  var rtlCommands = commands.filter(function (command) { return executableIs(command, 'rtl_fm'); });
+  var multimonCommands = commands.filter(function (command) { return executableIs(command, 'multimon-ng'); });
   var channels = [];
   rtlCommands.forEach(function (command) {
     var frequencies = [];
@@ -107,7 +111,9 @@ function decoderInventory() {
     var gain = (command.match(/(?:^|\s)-g\s+([^\s]+)/) || [])[1] || '';
     var sampleRate = (command.match(/(?:^|\s)-s\s+([^\s]+)/) || [])[1] || '';
     frequencies.forEach(function (frequency) {
-      channels.push({ frequency: frequency, device: device, gain: gain, sampleRate: sampleRate });
+      var channel = { frequency: frequency, device: device, gain: gain, sampleRate: sampleRate };
+      var signature = [frequency, device, gain, sampleRate].join('|');
+      if (!channels.some(function(existing) { return [existing.frequency, existing.device, existing.gain, existing.sampleRate].join('|') === signature; })) channels.push(channel);
     });
   });
   var decoders = [];
