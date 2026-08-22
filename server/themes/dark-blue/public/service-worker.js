@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-west-alerts-static-v15-theme-controls';
+const CACHE_NAME = 'central-west-alerts-static-v16-actionable-push';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/textAngular.css',
@@ -40,16 +40,20 @@ self.addEventListener('push', function(event) {
   try { data = event.data ? event.data.json() : {}; } catch (error) { data = {body: event.data.text()}; }
   event.waitUntil(self.registration.showNotification(data.title || 'Central West Alerts', {
     body: data.body || 'A new pager message was received.',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/pwa-icon-192.png',
+    badge: '/pwa-icon-192.png',
     tag: data.tag || 'central-west-alert',
-    data: {url: data.url || '/'}
+    renotify: true,
+    timestamp: data.timestamp || Date.now(),
+    actions: [{action: 'view', title: 'View alert'}, {action: 'feed', title: 'Open feed'}],
+    data: {url: data.url || '/', feedUrl: data.feedUrl || '/'}
   }));
 });
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  var target = event.notification.data && event.notification.data.url || '/';
+  var notificationData = event.notification.data || {};
+  var target = event.action === 'feed' ? (notificationData.feedUrl || '/') : (notificationData.url || '/');
   event.waitUntil(clients.matchAll({type: 'window', includeUncontrolled: true}).then(function(windows) {
     for (var i = 0; i < windows.length; i += 1) {
       if ('focus' in windows[i]) {

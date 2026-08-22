@@ -44,8 +44,11 @@ function sendForMessage(message) {
         title: message.alias || message.agency || ('Capcode ' + message.address),
         body: message.message,
         url: '/?address=' + encodeURIComponent(message.address),
+        feedUrl: '/',
+        messageId: message.id,
         capcode: String(message.address),
-        tag: 'capcode-' + message.address
+        tag: 'capcode-' + message.address,
+        timestamp: Number(message.timestamp) * 1000 || Date.now()
       });
     });
 }
