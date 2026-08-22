@@ -58,9 +58,9 @@
           <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'incidents', 'btn-default': dashboardView != 'incidents'}" ng-click="setDashboardView('incidents')"><i class="fa fa-layer-group"></i> Incidents <span class="badge">{{incidents.length}}</span></button>
           <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'map', 'btn-default': dashboardView != 'map'}" ng-click="setDashboardView('map')"><i class="fa fa-map-marker-alt"></i> Live map <span class="badge" ng-if="rfsIncidents.length || aircraft.length">{{rfsIncidents.length + aircraft.length}}</span></button>
           <% if (login && user.role == 'admin') { %><button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'discovery', 'btn-default': dashboardView != 'discovery'}" ng-click="setDashboardView('discovery')"><i class="fa fa-search"></i> Discovery <span class="badge">{{unknownCapcodes.length}}</span></button><% } %>
-          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'warnings', 'btn-default': dashboardView != 'warnings', 'cw-warning-active': bomWarnings.length}" ng-click="setDashboardView('warnings')"><i class="fa fa-cloud-bolt"></i> BOM warnings <span class="badge" ng-if="bomWarnings.length">{{bomWarnings.length}}</span></button>
-          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'water', 'btn-default': dashboardView != 'water', 'cw-water-alert-active': damAlerts.length}" ng-click="setDashboardView('water')"><i class="fa fa-water"></i> WaterNSW <span class="badge" ng-if="damAlerts.length">{{damAlerts.length}}</span></button>
-          <% if (login) { %><button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'radio', 'btn-default': dashboardView != 'radio'}" ng-click="setDashboardView('radio')"><i class="fa fa-broadcast-tower"></i> Radio <span class="badge" ng-if="radioCalls.length">{{radioCalls.length}}</span></button><% } %>
+          <button ng-if="integrationFeatures.bom" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'warnings', 'btn-default': dashboardView != 'warnings', 'cw-warning-active': bomWarnings.length}" ng-click="setDashboardView('warnings')"><i class="fa fa-cloud-bolt"></i> BOM warnings <span class="badge" ng-if="bomWarnings.length">{{bomWarnings.length}}</span></button>
+          <button ng-if="integrationFeatures.waterNsw" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'water', 'btn-default': dashboardView != 'water', 'cw-water-alert-active': damAlerts.length}" ng-click="setDashboardView('water')"><i class="fa fa-water"></i> WaterNSW <span class="badge" ng-if="damAlerts.length">{{damAlerts.length}}</span></button>
+          <% if (login) { %><button ng-if="integrationFeatures.radio" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'radio', 'btn-default': dashboardView != 'radio'}" ng-click="setDashboardView('radio')"><i class="fa fa-broadcast-tower"></i> Radio <span class="badge" ng-if="radioCalls.length">{{radioCalls.length}}</span></button><% } %>
           <button class="btn btn-default btn-sm pull-right" ng-click="toggleDarkMode()" title="Toggle dark mode"><i class="fa" ng-class="darkMode ? 'fa-sun' : 'fa-moon'"></i></button>
           <button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()" title="Full-screen operations display"><i class="fa fa-expand"></i> Operations</button>
         </div>
@@ -384,6 +384,7 @@
                   MessageSearch: $resource('/api/messageSearch/'),
                   Agencies: $resource('/api/capcodes/agency'),
                   Dashboard: $resource('/api/central-west/dashboard'),
+                  DashboardConfig: $resource('/api/central-west/dashboard-config'),
                   BomWarnings: $resource('/api/central-west/bom-warnings'),
                   WaterNswDams: $resource('/api/central-west/waternsw-dams'),
                   WaterNswRylstoneGauges: $resource('/api/central-west/waternsw-rylstone-gauges'),
@@ -421,6 +422,7 @@
         $scope.user="";
       <% } %>
       $scope.dashboardView = 'feed';
+      $scope.integrationFeatures = {bom: false, waterNsw: false, radio: false};
       $scope.darkMode = localStorage.getItem('cw-dark-mode') === 'true';
       document.body.classList.toggle('cw-dark', $scope.darkMode);
       $scope.health = { state: 'loading', label: 'Checking receiver', lastSeen: 'Unknown', uptime: 'Unknown' };
@@ -446,6 +448,19 @@
       $scope.operationsMode = false;
       $scope.radarEnabled = localStorage.getItem('cw-radar-enabled') === 'true';
       $scope.radarConfig = null;
+
+      Api.DashboardConfig.get().$promise.then(function (config) {
+        $scope.integrationFeatures = {
+          bom: config.bomEnabled !== false,
+          waterNsw: config.waterNswEnabled !== false,
+          radio: config.radioEnabled !== false
+        };
+        if (($scope.dashboardView === 'warnings' && !$scope.integrationFeatures.bom) ||
+            ($scope.dashboardView === 'water' && !$scope.integrationFeatures.waterNsw) ||
+            ($scope.dashboardView === 'radio' && !$scope.integrationFeatures.radio)) {
+          $scope.dashboardView = 'feed';
+        }
+      });
 
       function correlateDamAlgae() {
         var ranks = {Green: 1, Amber: 2, Red: 3};
@@ -624,6 +639,7 @@
       var aircraftPoll = $interval(refreshAircraft, 10000);
       var radioPoll;
       $scope.refreshRadio = function () {
+        if (!$scope.integrationFeatures.radio) return;
         $scope.radioLoading = true;
         $scope.radioError = '';
         Api.RadioCalls.get({limit: 25}).$promise.then(function (data) {
