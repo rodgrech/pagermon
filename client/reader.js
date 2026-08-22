@@ -14,6 +14,7 @@
 // CONFIG
 // create config file if it does not exist, and set defaults
 var fs = require('fs');
+var os = require('os');
 var conf_defaults = require('./config/default.json');
 var confFile = './config/config.json';
 if( ! fs.existsSync(confFile) ) {
@@ -28,7 +29,10 @@ var nconf = require('nconf');
 
 var hostname = nconf.get('hostname');
 var apikey = nconf.get('apikey');
-var identifier = nconf.get('identifier');
+var identifier = process.env.PAGERMON_IDENTIFIER || nconf.get('identifier');
+var receiverId = process.env.PAGERMON_RECEIVER_ID || nconf.get('receiverId') || identifier;
+var heartbeatEnabled = nconf.get('heartbeatEnabled') !== false;
+var heartbeatIntervalSeconds = Math.max(30, Number(nconf.get('heartbeatIntervalSeconds')) || 60);
 var sendFunctionCode = nconf.get('sendFunctionCode') || false;
 var useTimestamp = nconf.get('useTimestamp') || true;
 var EASOpts = nconf.get('EAS'); // Import EAS Config Object Ref Pull 435
@@ -37,8 +41,39 @@ var EASOpts = nconf.get('EAS'); // Import EAS Config Object Ref Pull 435
 //Check if hostname is in a valid format - currently only removes trailing slash - possibly expand to validate the whole URI? 
 if(hostname.substr(-1) === '/') {
   var uri = hostname.substr(0, hostname.length - 1)+'/api/messages';
+  var heartbeatUri = hostname.substr(0, hostname.length - 1)+'/api/central-west/receiver-heartbeat';
 } else {
   var uri = hostname+'/api/messages'
+  var heartbeatUri = hostname+'/api/central-west/receiver-heartbeat';
+}
+
+function internalIpv4() {
+  var addresses = [];
+  Object.keys(os.networkInterfaces()).forEach(function(name) {
+    (os.networkInterfaces()[name] || []).forEach(function(address) {
+      if (address.family === 'IPv4' && !address.internal) addresses.push(address.address);
+    });
+  });
+  return addresses[0] || null;
+}
+
+function sendHeartbeat() {
+  if (!heartbeatEnabled || !/^[a-zA-Z0-9_-]{1,64}$/.test(String(receiverId || ''))) return;
+  fetch(heartbeatUri, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'User-Agent': 'PagerMon reader.js heartbeat', apikey: apikey},
+    body: JSON.stringify({id: receiverId, identifier: identifier, internalIp: internalIpv4()})
+  }).then(function(response) {
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+  }).catch(function(error) {
+    console.log(colors.yellow('Receiver heartbeat failed: ' + error.message));
+  });
+}
+
+var heartbeatTimer = null;
+if (heartbeatEnabled) {
+  setTimeout(sendHeartbeat, 2000);
+  heartbeatTimer = setInterval(sendHeartbeat, heartbeatIntervalSeconds * 1000);
 }
 
 var moment = require('moment');
@@ -171,6 +206,7 @@ rl.on('line', (line) => {
     console.log(colors.red(time+': ')+colors.grey(line));
   }
 }).on('close', () => {
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
   console.log('Input died!');
 });
 

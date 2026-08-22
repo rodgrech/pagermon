@@ -1715,6 +1715,9 @@ router.route('/central-west/receiver-heartbeat')
       return res.status(400).json({ error: 'Unknown receiver id.' });
     }
     var externalIp = String(req.body.externalIp || '').trim();
+    if (!net.isIP(externalIp)) {
+      externalIp = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim().replace(/^::ffff:/, '');
+    }
     var internalIp = String(req.body.internalIp || '').trim();
     receiverHeartbeats[id] = {
       lastSeen: Math.floor(Date.now() / 1000),
