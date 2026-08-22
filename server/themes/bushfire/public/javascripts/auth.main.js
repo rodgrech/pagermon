@@ -30,6 +30,10 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                     'remove': {method: 'DELETE', isArray: false}
                 }),
                 PushTest: $resource('/api/push/test')
+                ,TwoFactor: $resource('/auth/two-factor', null, {'verify': {method: 'POST'}})
+                ,TwoFactorEnrol: $resource('/auth/two-factor/enrol', null, {'start': {method: 'POST'}})
+                ,TwoFactorConfirm: $resource('/auth/two-factor/confirm', null, {'confirm': {method: 'POST'}})
+                ,TwoFactorDisable: $resource('/auth/two-factor/disable', null, {'disable': {method: 'POST'}})
             };
         }])
 
@@ -43,6 +47,8 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                 console.log(response);
                 $scope.loading = false;
                 if (response.status == 'ok') {
+                    $window.location.href = response.redirect
+                } else if (response.status == 'two-factor') {
                     $window.location.href = response.redirect
                 } else {
                     $scope.loginMessage.text = 'Login Error: ' + response.data.error;
@@ -61,6 +67,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         };
 
     }])
+    .controller('TwoFactorController', ['$scope', 'Api', '$window', function($scope, Api, $window) { $scope.verify = function() { $scope.loading = true; $scope.message = ''; Api.TwoFactor.verify({}, $scope.twoFactor).$promise.then(function(response) { $window.location.href = response.redirect; }, function(response) { $scope.loading = false; $scope.message = response.data.error || 'Verification failed.'; }); }; }])
 
     .controller('RegisterController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', '$window', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout, $window) {
         $scope.userLoading = false;
@@ -269,6 +276,9 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         $scope.testPush = function() {
             Api.PushTest.save().$promise.then(function() { pushMessage('Test notification sent.', 'alert-success'); }, function(response) { pushMessage(response.data.error || 'Test failed.', 'alert-danger'); });
         };
+        $scope.startTwoFactor = function() { Api.TwoFactorEnrol.start({}).$promise.then(function(result) { $scope.twoFactor = {setup:true, secret:result.secret, uri:result.uri}; }, function(response) { pushMessage(response.data.error || 'Unable to start 2FA enrolment.', 'alert-danger'); }); };
+        $scope.confirmTwoFactor = function() { Api.TwoFactorConfirm.confirm({}, {code:$scope.twoFactor.code}).$promise.then(function(result) { $scope.user.totp_enabled=true; $scope.twoFactor.recoveryCodes=result.recoveryCodes; pushMessage('Two-factor authentication enabled. Save the recovery codes now.', 'alert-success'); }, function(response) { pushMessage(response.data.error || 'Unable to confirm code.', 'alert-danger'); }); };
+        $scope.disableTwoFactor = function() { Api.TwoFactorDisable.disable({}, {password:$scope.twoFactorDisablePassword}).$promise.then(function() { $scope.user.totp_enabled=false; $scope.twoFactor={}; $scope.twoFactorDisablePassword=''; pushMessage('Two-factor authentication disabled.', 'alert-success'); }, function(response) { pushMessage(response.data.error || 'Unable to disable 2FA.', 'alert-danger'); }); };
         refreshPushState();
         $scope.userSubmit = function () {
             $scope.loading = true;
@@ -322,6 +332,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                 templateUrl: '/templates/auth/profile.html',
                 controller: 'ProfileController'
             })
+            .when('/two-factor', { templateUrl:'/templates/auth/two-factor.html', controller:'TwoFactorController' })
             .when('/register', {
                 templateUrl: '/templates/auth/register.html',
                 controller: 'RegisterController'

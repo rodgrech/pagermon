@@ -158,6 +158,14 @@ sudo systemctl status pagermon-server
 
 Adjust the service name to match your installation.
 
+## Administrator two-factor authentication
+
+Each administrator can enrol a standard TOTP authenticator from **My Profile → Administrator two-factor authentication**. The setup works with common authenticator apps and provides ten one-use recovery codes.
+
+After every administrator has enrolled, an administrator may enable **Require admin 2FA** under **Admin → Settings → Accounts and access**. Trusted devices can be remembered for a configurable number of days. Another administrator can revoke an account's 2FA, recovery codes and remembered devices from **Admin → Users**.
+
+Passwords remain bcrypt-hashed. TOTP seeds are encrypted at rest using AES-256-GCM with a key derived from `global.sessionSecret`; recovery codes and remembered-device tokens are stored as one-way hashes. Back up `global.sessionSecret` securely—changing it invalidates enrolled TOTP seeds.
+
 ## Receiver/client installation
 
 Install the decoder dependencies on the receiver host:

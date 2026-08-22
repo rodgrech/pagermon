@@ -33,6 +33,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         UserDetail: $resource('/api/user/:id', {id: '@id'}, {
           'post': { method:'POST', isArray: false }
         }),
+        UserTwoFactorReset: $resource('/api/user/:id/two-factor-reset', {id: '@id'}, {'reset': {method:'POST'}}),
         UsernameCheck: $resource('/api/userCheck/username/:id', {id: '@id'}, {
           'post': { method:'POST', isArray: false }
         }),
@@ -644,6 +645,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
           $scope.loading = false;
         });
       }
+      $scope.twoFactorReset = function() { if (!window.confirm('Reset two-factor authentication for this administrator?')) return; Api.UserTwoFactorReset.reset({id:$routeParams.id}, {}).$promise.then(function() { $scope.user.totp_enabled=false; $scope.alertMessage={show:true,type:'alert-success',text:'Two-factor authentication reset.'}; }, function(response) { $scope.alertMessage={show:true,type:'alert-danger',text:response.data.error || 'Unable to reset two-factor authentication.'}; }); };
       
       var ConfirmController = function($scope, $uibModalInstance) {
         $scope.confirmDelete = function() {

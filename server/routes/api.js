@@ -1558,7 +1558,7 @@ router.route('/user/:id')
       res.json(defaults);
     } else {
       db.from('users')
-        .select('id','givenname','surname','username','email','role','status','approvalpending','lastlogondate')
+        .select('id','givenname','surname','username','email','role','status','approvalpending','lastlogondate','totp_enabled','totp_enrolled_at')
         .where('id', id)
         .then(function (row) {
           if (row.length > 0) {
@@ -1743,6 +1743,19 @@ router.route('/central-west/receiver-status')
       receivers: receiverStatusList(nowSeconds)
     });
   });
+
+router.post('/user/:id/two-factor-reset', authHelper.isAdmin, function(req, res) {
+  var id = Number(req.params.id);
+  if (!id) return res.status(400).send({error: 'Invalid user.'});
+  db.transaction(function(trx) {
+    return trx('two_factor_devices').where('user_id', id).del().then(function() {
+      return trx('users').where('id', id).update({totp_enabled: false, totp_secret: null, totp_recovery_codes: null, totp_enrolled_at: null});
+    });
+  }).then(function() {
+    logger.auth.info(`Administrator ${req.user.username} reset two-factor authentication for user ${id}`);
+    res.send({status: 'ok'});
+  }).catch(function(err) { logger.main.error(err); res.status(500).send({error: 'Unable to reset two-factor authentication.'}); });
+});
 
 router.route('/central-west/dashboard-config')
   .get(authHelper.isLoggedInMessages, function (req, res) {

@@ -86,6 +86,7 @@
             <div class="btn-group-vertical" id="buttons-aliasDetail">
               <button type="button" ng-if="!isNew" ng-click="userDelete()" class="btn btn-danger">Delete</button>
               <button type="button" ng-if="!isNew" ng-click="userReset()" class="btn btn-warning ">Reset Password</button>
+              <button type="button" ng-if="!isNew && user.totp_enabled" ng-click="twoFactorReset()" class="btn btn-danger">Reset Two-factor Authentication</button>
               <button type="submit" class="btn btn-success">Save</button>
             </div>
           </form>

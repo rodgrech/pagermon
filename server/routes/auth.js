@@ -16,6 +16,7 @@ const db = require('../knex/knex.js');
 const logger = require('../log');
 const passport = require('../auth/local');
 const authHelper = require('../middleware/authhelper')
+const twoFactor = require('../lib/twoFactor');
 
 const lockoutCallback = function(req, res) {
         res.status(429).send({ status: 'lockedout', error: 'Too many attempts, please try again later' });
@@ -38,6 +39,35 @@ const loginLimiter = rateLimit({
         skipSuccessfulRequests: true,
         handler: lockoutCallback,
 });
+
+const twoFactorLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        limit: 8,
+        standardHeaders: true,
+        legacyHeaders: false,
+        handler: lockoutCallback,
+});
+
+function loginComplete(req, res, user, remember) {
+        return new Promise(function(resolve, reject) {
+                req.logIn(user, function(err) { if (err) return reject(err); resolve(); });
+        }).then(function() {
+                const currentDatetime = moment().format('YYYY-MM-DD HH:mm:ss');
+                return db('users').where('id', user.id).update({lastlogondate: currentDatetime});
+        }).then(function() {
+                delete req.session.pendingTwoFactorUserId;
+                if (!remember) return null;
+                const raw = require('crypto').randomBytes(32).toString('hex');
+                const days = Math.max(1, Math.min(365, Number(nconf.get('auth:twoFactorRememberDays')) || 30));
+                const expires = moment().add(days, 'days');
+                return db('two_factor_devices').insert({user_id: user.id, token_hash: twoFactor.hash(raw), created_at: moment().format('YYYY-MM-DD HH:mm:ss'), expires_at: expires.format('YYYY-MM-DD HH:mm:ss')}).then(function() {
+                        res.cookie('pagermon_2fa', raw, {httpOnly: true, sameSite: 'lax', secure: req.secure || req.get('x-forwarded-proto') === 'https', maxAge: days * 86400000});
+                });
+        }).then(function() {
+                res.status(200).send({status: 'ok', redirect: user.role === 'admin' ? '/admin' : '/'});
+                logger.auth.info(`Successful login: ${user.username}`);
+        });
+}
 
 // End Bruteforce
 
@@ -75,6 +105,15 @@ router.route('/login')
                                         });
                                         logger.auth.info(`Pending account login blocked: ${user.username}`);
                                 } else if (user.status !== 'disabled') {
+                                        if (user.role === 'admin' && user.totp_enabled) {
+                                                const trusted = req.cookies.pagermon_2fa;
+                                                const trustedQuery = trusted ? db('two_factor_devices').where({user_id: user.id, token_hash: twoFactor.hash(trusted)}).where('expires_at', '>', moment().format('YYYY-MM-DD HH:mm:ss')).first() : Promise.resolve(null);
+                                                return trustedQuery.then(function(device) {
+                                                        if (device) return loginComplete(req, res, user, false);
+                                                        req.session.pendingTwoFactorUserId = user.id;
+                                                        res.status(200).send({status: 'two-factor', redirect: '/auth/two-factor'});
+                                                }).catch(next);
+                                        }
                                         req.logIn(user, function(err) {
                                                 if (err) {
                                                         res.status(401).send({
@@ -129,6 +168,29 @@ router.route('/login')
                 })(req, res, next);
         });
 
+router.get('/two-factor', function(req, res) {
+        if (!req.session.pendingTwoFactorUserId) return res.redirect('/auth/login');
+        res.render('auth', {pageTitle: 'Two-factor authentication', twoFactorPage: true});
+});
+
+router.post('/two-factor', twoFactorLimiter, function(req, res, next) {
+        const userId = req.session.pendingTwoFactorUserId;
+        if (!userId) return res.status(401).send({error: 'Your login session expired. Please sign in again.'});
+        db('users').where('id', userId).first().then(function(user) {
+                if (!user || !user.totp_enabled) throw new Error('Two-factor authentication is unavailable.');
+                const code = String(req.body.code || '').trim().toUpperCase();
+                let valid = twoFactor.verify(twoFactor.decrypt(user.totp_secret), code);
+                let recovery = [];
+                try { recovery = JSON.parse(user.totp_recovery_codes || '[]'); } catch (ignore) {}
+                const recoveryHash = twoFactor.hash(code);
+                const recoveryIndex = recovery.indexOf(recoveryHash);
+                if (recoveryIndex >= 0) { valid = true; recovery.splice(recoveryIndex, 1); }
+                if (!valid) return res.status(401).send({error: 'Invalid authentication or recovery code.'});
+                const update = recoveryIndex >= 0 ? db('users').where('id', user.id).update({totp_recovery_codes: JSON.stringify(recovery)}) : Promise.resolve();
+                return update.then(function() { return loginComplete(req, res, user, Boolean(req.body.remember)); });
+        }).catch(next);
+});
+
 router.route('/logout').get(authHelper.isLoggedIn, function(req, res, next) {
         const username = req.user.username;
         req.logout(function(err) {
@@ -148,7 +210,7 @@ router.route('/profile/:id')
         .get(authHelper.isLoggedIn, function(req, res, next) {
                 const { username } = req.user;
                 db.from('users')
-                        .select('id', 'givenname', 'surname', 'username', 'email', 'lastlogondate')
+                        .select('id', 'givenname', 'surname', 'username', 'email', 'lastlogondate', 'role', 'totp_enabled', 'totp_enrolled_at')
                         .where('username', username)
                         .then(function(row) {
                                 if (row.length > 0) {
@@ -196,6 +258,35 @@ router.route('/profile/:id')
                         logger.auth.error('Possible attempt to compromise security POST:/auth/profile');
                 }
         });
+
+router.post('/two-factor/enrol', authHelper.isLoggedIn, function(req, res) {
+        if (req.user.role !== 'admin') return res.status(403).send({error: 'Two-factor authentication is currently available for administrators.'});
+        const secret = twoFactor.newSecret();
+        req.session.pendingTotpSecret = secret;
+        const issuer = String(nconf.get('global:monitorName') || 'PagerMon');
+        const uri = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(req.user.username)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&digits=6&period=30`;
+        res.send({status: 'ok', secret: secret, uri: uri});
+});
+
+router.post('/two-factor/confirm', authHelper.isLoggedIn, twoFactorLimiter, function(req, res) {
+        const secret = req.session.pendingTotpSecret;
+        if (req.user.role !== 'admin' || !secret) return res.status(400).send({error: 'Start enrolment again.'});
+        if (!twoFactor.verify(secret, req.body.code)) return res.status(400).send({error: 'That code is not valid. Check the device clock and try again.'});
+        const codes = twoFactor.recoveryCodes();
+        db('users').where('id', req.user.id).update({totp_enabled: true, totp_secret: twoFactor.encrypt(secret), totp_recovery_codes: JSON.stringify(codes.map(twoFactor.hash)), totp_enrolled_at: moment().format('YYYY-MM-DD HH:mm:ss')}).then(function() {
+                delete req.session.pendingTotpSecret;
+                res.send({status: 'ok', recoveryCodes: codes});
+        }).catch(function(err) { logger.auth.error(err); res.status(500).send({error: 'Unable to enable two-factor authentication.'}); });
+});
+
+router.post('/two-factor/disable', authHelper.isLoggedIn, twoFactorLimiter, function(req, res) {
+        if (req.user.role !== 'admin' || !authHelper.comparePass(req.body.password || '', req.user.password)) return res.status(401).send({error: 'Password incorrect.'});
+        db.transaction(function(trx) {
+                return trx('two_factor_devices').where('user_id', req.user.id).del().then(function() {
+                        return trx('users').where('id', req.user.id).update({totp_enabled: false, totp_secret: null, totp_recovery_codes: null, totp_enrolled_at: null});
+                });
+        }).then(function() { res.clearCookie('pagermon_2fa'); res.send({status: 'ok'}); }).catch(function(err) { logger.auth.error(err); res.status(500).send({error: 'Unable to disable two-factor authentication.'}); });
+});
 
 router.route('/register')
         .get(function(req, res) {

@@ -47,6 +47,7 @@ function isLoggedInMessages (req, res, next) {
 
 function isAdminGUI (req, res, next) {
     if (req.isAuthenticated() && req.user.role == 'admin') {
+      if (nconf.get('auth:requireAdminTwoFactor') && !req.user.totp_enabled) return res.redirect('/auth/profile');
       //if the user is authenticated and the user's role is admin carry on
       return next();
     } else {
@@ -57,6 +58,7 @@ function isAdminGUI (req, res, next) {
 function isAdmin (req, res, next) {
     const passport = require('../auth/local');
     if (req.isAuthenticated() && req.user.role == 'admin') {
+      if (nconf.get('auth:requireAdminTwoFactor') && !req.user.totp_enabled) return res.status(403).json({error: 'Administrator two-factor enrolment is required.'});
       //if the user is authenticated and the user's role is admin carry on
       return next();
     } else {

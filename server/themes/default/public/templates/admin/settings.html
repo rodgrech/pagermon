@@ -578,6 +578,8 @@
                 <span class="help-block">Pending members appear under Admin → Users. Change their status to Active and save to approve them.</span>
               </div>
             </div>
+            <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Require admin 2FA</label><div class="col-xs-8 col-sm-9"><label><input type="checkbox" ng-model="settings.auth.requireAdminTwoFactor"> Require administrators to enrol and use two-factor authentication.</label><span class="help-block">Turn this on after all administrators have enrolled from My Profile.</span></div></div>
+            <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Remember device</label><div class="col-xs-8 col-sm-9"><input type="number" min="1" max="365" class="form-control" ng-model="settings.auth.twoFactorRememberDays"><span class="help-block">Trusted-device lifetime in days.</span></div></div>
               </div>
             </div>
             <h5>Push notifications</h5>

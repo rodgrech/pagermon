@@ -39,6 +39,7 @@ router.route('/settingsData')
         });
         settings.notifications = Object.assign({}, defaultConfig.notifications, settings.notifications || {});
         settings.notifications.webPush = Object.assign({}, defaultConfig.notifications.webPush, settings.notifications.webPush || {});
+        settings.auth = Object.assign({}, defaultConfig.auth, settings.auth || {});
         settings.monitoring = Object.assign({}, defaultConfig.monitoring, settings.monitoring || {});
         settings.monitoring.receiverMonitoring = Object.assign({}, defaultConfig.monitoring.receiverMonitoring, settings.monitoring.receiverMonitoring || {});
         if (!Array.isArray(settings.monitoring.receiverMonitoring.remotes)) settings.monitoring.receiverMonitoring.remotes = [];
