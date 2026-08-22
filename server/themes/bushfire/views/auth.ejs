@@ -7,8 +7,9 @@
 
 <script src="/javascripts/auth.main.js"></script>
 
-<body id="admin-body">
+<body id="admin-body"<% if (typeof loginPage !== 'undefined' && loginPage && loginBackgroundEnabled) { %> class="login-background-enabled" style="--login-background-opacity: <%= loginBackgroundOpacity / 100 %>"<% } %>>
   <%- include('global/menu.ejs') %>
+  <% if (typeof loginPage !== 'undefined' && loginPage && loginBackgroundEnabled) { %><div class="login-background-watermark" aria-hidden="true"></div><% } %>
   <div id="content" class="container" ng-cloak>
     <ng-view></ng-view>
   </div>

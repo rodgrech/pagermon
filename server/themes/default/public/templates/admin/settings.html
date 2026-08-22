@@ -44,6 +44,24 @@
             </div>
 
             <div class="form-group">
+              <label for="global.loginBackgroundUrl" class="col-xs-4 col-sm-3 control-label">Login background</label>
+              <div class="col-xs-8 col-sm-9">
+                <input class="form-control" type="url" name="global.loginBackgroundUrl" ng-model="settings.global.loginBackgroundUrl" placeholder="https://example.com/background.jpg">
+                <span class="help-block">Optional image URL used only on the login screen. Leave blank for the normal background.</span>
+              </div>
+            </div>
+            <div class="form-group" ng-if="settings.global.loginBackgroundUrl">
+              <label for="global.loginBackgroundOpacity" class="col-xs-4 col-sm-3 control-label">Watermark strength</label>
+              <div class="col-xs-8 col-sm-9">
+                <div class="input-group">
+                  <input class="form-control" type="number" min="0" max="100" step="1" name="global.loginBackgroundOpacity" ng-model="settings.global.loginBackgroundOpacity">
+                  <span class="input-group-addon">%</span>
+                </div>
+                <span class="help-block">18% is subtle; increase it if you want the image to be more prominent.</span>
+              </div>
+            </div>
+
+            <div class="form-group">
               <label for="global.faKey" class="col-xs-4 col-sm-3 control-label">Font Awesome Kit ID</label>
               <div class="col-xs-8 col-sm-9">
                   <input class="form-control" type="text" name="global.faKey" ng-model="settings.global.faKey">

@@ -394,6 +394,12 @@ table .expand {
     margin: 0 auto;
 }
 
+/* Optional login-only watermarked background */
+.login-background-watermark { position: fixed; inset: 64px 0 52px; z-index: 0; background: url('/login-background') center center / cover no-repeat; opacity: var(--login-background-opacity, .18); pointer-events: none; }
+body.login-background-enabled #content { position: relative; z-index: 1; background: transparent; }
+body.login-background-enabled .login-panel { padding: 22px 28px 30px; color: #dce6ef; background: rgba(20,40,61,.9); border: 1px solid rgba(132,171,205,.3); border-radius: 6px; box-shadow: 0 8px 28px rgba(0,0,0,.3); backdrop-filter: blur(3px); }
+body.login-background-enabled .login-panel-row { max-width: 980px; margin: 28px auto 0; }
+
 /* Menu triangles */
 
 .triangle-right {

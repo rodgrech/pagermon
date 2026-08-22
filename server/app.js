@@ -159,6 +159,15 @@ app.get('/pwa-icon-192.png', sendPwaAsset('android-chrome-192x192.png', 'png'));
 app.get('/pwa-icon-512.png', sendPwaAsset('android-chrome-512x512.png', 'png'));
 app.get('/pwa-apple-touch-icon.png', sendPwaAsset('apple-touch-icon.png', 'png'));
 app.get('/pwa-favicon.ico', sendPwaAsset('favicon.ico', 'ico'));
+app.get('/login-background', function (req, res) {
+  nconf.load();
+  var imageUrl = String(nconf.get('global:loginBackgroundUrl') || '').trim();
+  if (!/^https?:\/\//i.test(imageUrl) && !/^\/(?!\/|login-background(?:\?|$))/.test(imageUrl)) {
+    return res.status(404).end();
+  }
+  res.set('Cache-Control', 'no-cache, must-revalidate');
+  res.redirect(302, imageUrl);
+});
 app.get('/pwa-manifest.json', function (req, res, next) {
   var manifestPath = path.join(__dirname, 'themes', selectedPwaTheme(), 'public', 'manifest.json');
   try {
