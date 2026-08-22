@@ -126,6 +126,10 @@ function receiverDefinitions() {
   return definitions;
 }
 
+function isPrivateReceiverAddress(address) {
+  return /^(?:127\.|10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.|::1$|f[cd][0-9a-f]{2}:|fe80:)/i.test(String(address || ''));
+}
+
 function receiverStatusList(nowSeconds) {
   var definitions = receiverDefinitions();
   return Object.keys(definitions).map(function (id) {
@@ -1716,7 +1720,8 @@ router.route('/central-west/receiver-heartbeat')
     }
     var externalIp = String(req.body.externalIp || '').trim();
     if (!net.isIP(externalIp)) {
-      externalIp = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim().replace(/^::ffff:/, '');
+      var reportedAddress = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim().replace(/^::ffff:/, '');
+      externalIp = net.isIP(reportedAddress) && !isPrivateReceiverAddress(reportedAddress) ? reportedAddress : '';
     }
     var internalIp = String(req.body.internalIp || '').trim();
     receiverHeartbeats[id] = {
