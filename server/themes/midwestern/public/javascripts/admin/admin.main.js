@@ -43,6 +43,21 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
     .controller('AliasController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', 'FileSaver', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout, FileSaver) {
       $scope.loading = true;
       $scope.alertMessage = {};
+      $scope.aliasPage = 1;
+      $scope.aliasPageSize = 100;
+      $scope.aliasPageCount = function () {
+        var filtered = $filter('filter')($scope.aliases || [], $scope.search);
+        return Math.max(1, Math.ceil(filtered.length / $scope.aliasPageSize));
+      };
+      $scope.aliasPreviousPage = function () {
+        $scope.aliasPage = Math.max(1, $scope.aliasPage - 1);
+      };
+      $scope.aliasNextPage = function () {
+        $scope.aliasPage = Math.min($scope.aliasPageCount(), $scope.aliasPage + 1);
+      };
+      $scope.$watch('search', function () {
+        $scope.aliasPage = 1;
+      });
       Api.Aliases.query(null, function(results) {
         $scope.aliases = results;
         $scope.page = 'aliases';
@@ -161,7 +176,8 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                 $scope.loading = false;
                 $scope.results = response.results
                 var resultModalHtml = '<div class="modal-header"><h5 class="modal-title" id="modal-title">Import Results</h5></div>';
-                resultModalHtml += `<div class="modal-body">  
+                resultModalHtml += `<div class="modal-body">
+                    <p>Import processed {{results.length}} rows. Showing the first 100 results.</p>
                     <table class="table table-striped">
                        <thead>
                        <tr>
@@ -171,7 +187,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                         </tr>
                         </thead>
                         <tbody>
-                        <tr ng-repeat="result in results">
+                        <tr ng-repeat="result in results | limitTo: 100">
                           <td>{{ result.address }}</td>
                           <td>{{ result.alias }}</td>
                           <td>{{ result.result }}</td>

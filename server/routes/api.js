@@ -108,7 +108,27 @@ try {
 } catch (gaugeCacheError) {
   // A successful API request will create the persistent cache.
 }
-var rdioDatabasePath = path.resolve('/home/rodgrech/Applications/rdio-scanner.db');
+function integrationConfig(name, defaults) {
+  nconf.load();
+  return Object.assign({}, defaults || {}, nconf.get('integrations:' + name) || {});
+}
+
+function configuredWaterSlot(timestamp, refreshHours) {
+  var parts = sydneyDayParts(timestamp);
+  var hours = String(refreshHours || '0,12').split(',').map(function (hour) {
+    return parseInt(hour.trim(), 10);
+  }).filter(function (hour) { return Number.isInteger(hour) && hour >= 0 && hour <= 23; }).sort(function (a, b) { return a - b; });
+  if (!hours.length) hours = [0, 12];
+  var selected = hours[0];
+  hours.forEach(function (hour) { if (hour <= parts.hour) selected = hour; });
+  return parts.key + '-' + String(selected).padStart(2, '0');
+}
+
+function keywordPattern(value) {
+  var terms = String(value || '').split(',').map(function (term) { return term.trim(); }).filter(Boolean);
+  if (!terms.length) return /$a/;
+  return new RegExp(terms.map(function (term) { return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|'), 'i');
+}
 
 function isSessionUser(req, res, next) {
   if (req.isAuthenticated()) return next();
@@ -1717,14 +1737,32 @@ router.route('/central-west/receiver-status')
     return res.status(200).json({ serverTime: nowSeconds, uptime: Math.floor(process.uptime()), receivers: receivers });
   });
 
+router.route('/central-west/dashboard-config')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var waterConfig = integrationConfig('waterNsw', { enabled: true });
+    var bomConfig = integrationConfig('bom', { enabled: true });
+    var radioConfig = integrationConfig('radio', { enabled: true });
+    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 180 });
+    res.set('Cache-Control', 'private, no-store');
+    res.status(200).json({
+      waterNswEnabled: waterConfig.enabled !== false,
+      bomEnabled: bomConfig.enabled !== false,
+      radioEnabled: radioConfig.enabled !== false,
+      wheelPxPerZoomLevel: Math.min(Math.max(parseInt(mapConfig.wheelPxPerZoomLevel, 10) || 180, 60), 600)
+    });
+  });
+
 router.route('/central-west/bom-warnings')
   .get(authHelper.isLoggedInMessages, function (req, res) {
+    var bomConfig = integrationConfig('bom', { enabled: true, warningsUrl: 'https://www.bom.gov.au/fwo/IDZ00061.warnings_land_nsw.xml', cacheMinutes: 10 });
+    if (bomConfig.enabled === false) return res.status(200).json({ disabled: true, fetchedAt: Math.floor(Date.now() / 1000), localWarnings: [], statewideCount: 0 });
     var now = Date.now();
-    if (bomWarningCache.data && now - bomWarningCache.fetchedAt < 10 * 60 * 1000) {
+    var bomCacheMilliseconds = Math.min(Math.max(parseInt(bomConfig.cacheMinutes, 10) || 10, 1), 1440) * 60 * 1000;
+    if (bomWarningCache.data && now - bomWarningCache.fetchedAt < bomCacheMilliseconds) {
       return res.status(200).json(bomWarningCache.data);
     }
 
-    axios.get('https://www.bom.gov.au/fwo/IDZ00061.warnings_land_nsw.xml', {
+    axios.get(bomConfig.warningsUrl, {
       timeout: 12000,
       headers: { 'User-Agent': 'CentralWestAlerts/1.0 PageMon weather warning panel' },
       responseType: 'text'
@@ -1741,7 +1779,7 @@ router.route('/central-west/bom-warnings')
         var title = field(match[1], 'title');
         var description = field(match[1], 'description');
         var combined = title + ' ' + description;
-        var local = /central west|central tablelands|central western slopes|mudgee|mid-western|gulgong|rylstone|kandos|wellington|dubbo|orange|bathurst|lithgow|oberon|cudgegong|macquarie river|castlereagh river/i.test(combined);
+        var local = keywordPattern(bomConfig.localKeywords).test(combined);
         items.push({
           title: title,
           description: description,
@@ -1818,18 +1856,18 @@ router.route('/central-west/rfs-incidents')
 
 router.route('/central-west/waternsw-dams')
   .get(authHelper.isLoggedInMessages, function (req, res) {
+    var waterConfig = integrationConfig('waterNsw', { enabled: true, apiUrl: 'https://api.waternsw.com.au/water/surface-water-data-api', refreshHours: '0,12' });
+    if (waterConfig.enabled === false) return res.status(200).json({ disabled: true, fetchedAt: Math.floor(Date.now() / 1000), dams: [], alerts: [] });
     var now = Date.now();
-    var currentSydneyDay = sydneyDayParts(now);
-    var currentSlot = currentSydneyDay.key + (currentSydneyDay.hour >= 12 ? '-12' : '-00');
+    var currentSlot = configuredWaterSlot(now, waterConfig.refreshHours);
     if (waterNswCache.data) {
-      var cachedSydneyDay = sydneyDayParts(waterNswCache.fetchedAt || Number(waterNswCache.data.fetchedAt || 0) * 1000);
-      var cachedSlot = cachedSydneyDay.key + (cachedSydneyDay.hour >= 12 ? '-12' : '-00');
+      var cachedSlot = configuredWaterSlot(waterNswCache.fetchedAt || Number(waterNswCache.data.fetchedAt || 0) * 1000, waterConfig.refreshHours);
       if (cachedSlot === currentSlot || waterNswAttemptSlot === currentSlot) return res.status(200).json(waterNswCache.data);
     }
     waterNswAttemptSlot = currentSlot;
-    var subscriptionKey = process.env.WATERNSW_DATA_KEY || process.env.WATERNSW_SUBSCRIPTION_KEY;
+    var subscriptionKey = waterConfig.subscriptionKey || process.env.WATERNSW_DATA_KEY || process.env.WATERNSW_SUBSCRIPTION_KEY;
     if (!subscriptionKey) return res.status(503).json({ error: 'WaterNSW API subscription is not configured' });
-    var sourceUrl = 'https://api.waternsw.com.au/water/surface-water-data-api';
+    var sourceUrl = waterConfig.apiUrl;
     var localDams = {
       '421148': { name: 'Windamere Dam', latitude: -32.7259, longitude: 149.7675 },
       '421078': { name: 'Burrendong Dam', latitude: -32.6673, longitude: 149.1115 },
@@ -1916,20 +1954,19 @@ router.route('/central-west/waternsw-dams')
 
 router.route('/central-west/waternsw-rylstone-gauges')
   .get(authHelper.isLoggedInMessages, function (req, res) {
+    var waterConfig = integrationConfig('waterNsw', { enabled: true, apiUrl: 'https://api.waternsw.com.au/water/surface-water-data-api', refreshHours: '0,12' });
+    if (waterConfig.enabled === false) return res.status(200).json({ disabled: true, fetchedAt: Math.floor(Date.now() / 1000), gauges: [] });
     var now = Date.now();
     if (waterNswGaugeCache.data) {
-      var currentSydneyDay = sydneyDayParts(now);
-      var cachedSydneyDay = sydneyDayParts(waterNswGaugeCache.fetchedAt || Number(waterNswGaugeCache.data.fetchedAt || 0) * 1000);
-      var currentSlot = currentSydneyDay.key + (currentSydneyDay.hour >= 12 ? '-12' : '-00');
-      var cachedSlot = cachedSydneyDay.key + (cachedSydneyDay.hour >= 12 ? '-12' : '-00');
+      var currentSlot = configuredWaterSlot(now, waterConfig.refreshHours);
+      var cachedSlot = configuredWaterSlot(waterNswGaugeCache.fetchedAt || Number(waterNswGaugeCache.data.fetchedAt || 0) * 1000, waterConfig.refreshHours);
       if (cachedSlot === currentSlot || waterNswGaugeAttemptSlot === currentSlot) return res.status(200).json(waterNswGaugeCache.data);
       waterNswGaugeAttemptSlot = currentSlot;
     }
     if (!waterNswGaugeCache.data) {
-      var uncachedSydneyDay = sydneyDayParts(now);
-      waterNswGaugeAttemptSlot = uncachedSydneyDay.key + (uncachedSydneyDay.hour >= 12 ? '-12' : '-00');
+      waterNswGaugeAttemptSlot = configuredWaterSlot(now, waterConfig.refreshHours);
     }
-    var subscriptionKey = process.env.WATERNSW_DATA_KEY || process.env.WATERNSW_SUBSCRIPTION_KEY;
+    var subscriptionKey = waterConfig.subscriptionKey || process.env.WATERNSW_DATA_KEY || process.env.WATERNSW_SUBSCRIPTION_KEY;
     if (!subscriptionKey) return res.status(503).json({ error: 'WaterNSW API subscription is not configured' });
     var sites = {};
     (centralWestGaugeMetadata.sites || []).forEach(function (site) {
@@ -1946,7 +1983,7 @@ router.route('/central-west/waternsw-rylstone-gauges')
     var batches = [];
     for (var i = 0; i < siteIds.length; i += 20) batches.push(siteIds.slice(i, i + 20));
     var requests = batches.map(function (batch) {
-      return axios.get('https://api.waternsw.com.au/water/surface-water-data-api', {
+      return axios.get(waterConfig.apiUrl, {
         timeout: 20000,
         params: { siteId: batch.join(','), frequency: 'Latest', pageNumber: 1 },
         headers: { 'Ocp-Apim-Subscription-Key': subscriptionKey, 'Accept': 'application/json', 'User-Agent': 'CentralWestAlerts/1.0 WaterNSW gauge map' }
@@ -1991,6 +2028,8 @@ router.route('/central-west/waternsw-rylstone-gauges')
 
 router.route('/central-west/waternsw-algae-alerts')
   .get(authHelper.isLoggedInMessages, function (req, res) {
+    var waterConfig = integrationConfig('waterNsw', { enabled: true });
+    if (waterConfig.enabled === false) return res.status(200).json({ disabled: true, fetchedAt: Math.floor(Date.now() / 1000), sites: [], alerts: [] });
     var now = Date.now();
     if (waterNswAlgaeCache.data && now - waterNswAlgaeCache.fetchedAt < 60 * 60 * 1000) {
       return res.status(200).json(waterNswAlgaeCache.data);
@@ -2074,7 +2113,15 @@ router.route('/central-west/aircraft')
 // metadata or audio.
 router.route('/central-west/radio-calls')
   .get(isSessionUser, function (req, res) {
-    var limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 25, 1), 50);
+    var radioConfig = integrationConfig('radio', { enabled: true, databasePath: '/home/rodgrech/Applications/rdio-scanner.db', maximumCalls: 50 });
+    if (radioConfig.enabled === false) return res.status(200).json({ disabled: true, calls: [], fetchedAt: Math.floor(Date.now() / 1000) });
+    var maximumCalls = Math.min(Math.max(parseInt(radioConfig.maximumCalls, 10) || 50, 1), 100);
+    var limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 25, 1), maximumCalls);
+    var rdioDatabasePath = path.resolve(radioConfig.databasePath);
+    if (!fs.existsSync(rdioDatabasePath)) {
+      res.set('Cache-Control', 'private, no-store');
+      return res.status(200).json({ calls: [], available: false, fetchedAt: Math.floor(Date.now() / 1000) });
+    }
     var radioDb = new sqlite3.Database(rdioDatabasePath, sqlite3.OPEN_READONLY, function (openError) {
       if (openError) {
         logger.main.error('Unable to open Rdio Scanner database: ' + openError.message);
@@ -2120,6 +2167,10 @@ router.route('/central-west/radio-calls')
 
 router.route('/central-west/radio-calls/:id/audio')
   .get(isSessionUser, function (req, res) {
+    var radioConfig = integrationConfig('radio', { enabled: true, databasePath: '/home/rodgrech/Applications/rdio-scanner.db' });
+    if (radioConfig.enabled === false) return res.status(404).json({ error: 'Radio integration is disabled.' });
+    var rdioDatabasePath = path.resolve(radioConfig.databasePath);
+    if (!fs.existsSync(rdioDatabasePath)) return res.status(404).json({ error: 'Radio integration is not configured on this server.' });
     var id = parseInt(req.params.id, 10);
     if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'Invalid radio call ID.' });
 

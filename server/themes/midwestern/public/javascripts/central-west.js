@@ -26,6 +26,17 @@
   var map;
   var radarLayer;
   var layerGroups;
+  var mapWheelPxPerZoomLevel = 180;
+
+  if (window.fetch) {
+    window.fetch('/api/central-west/dashboard-config', {credentials: 'same-origin'})
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .then(function (config) {
+        if (!config) return;
+        mapWheelPxPerZoomLevel = Number(config.wheelPxPerZoomLevel) || 180;
+        if (map) map.options.wheelPxPerZoomLevel = mapWheelPxPerZoomLevel;
+      }).catch(function () {});
+  }
 
   function layerEnabled(name) {
     try { return JSON.parse(localStorage.getItem('cw-map-layers') || '{}')[name] !== false; }
@@ -176,7 +187,7 @@
     var element = document.getElementById(id);
     if (!element) return;
     if (!map) {
-      map = L.map(id).setView([-32.65, 149.58], 8);
+      map = L.map(id, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel}).setView([-32.65, 149.58], 8);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
       layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });

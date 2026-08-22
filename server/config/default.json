@@ -73,5 +73,27 @@
       "privateKey": ""
     }
   },
+  "integrations": {
+    "waterNsw": {
+      "enabled": true,
+      "subscriptionKey": "",
+      "apiUrl": "https://api.waternsw.com.au/water/surface-water-data-api",
+      "refreshHours": "0,12"
+    },
+    "bom": {
+      "enabled": true,
+      "warningsUrl": "https://www.bom.gov.au/fwo/IDZ00061.warnings_land_nsw.xml",
+      "localKeywords": "central west,central tablelands,central western slopes,mudgee,mid-western,gulgong,rylstone,kandos,wellington,dubbo,orange,bathurst,lithgow,oberon,cudgegong,macquarie river,castlereagh river",
+      "cacheMinutes": 10
+    },
+    "radio": {
+      "enabled": true,
+      "databasePath": "/home/rodgrech/Applications/rdio-scanner.db",
+      "maximumCalls": 50
+    },
+    "liveMap": {
+      "wheelPxPerZoomLevel": 180
+    }
+  },
   "plugins": {}
 }

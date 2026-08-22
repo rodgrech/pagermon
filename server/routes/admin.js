@@ -18,6 +18,7 @@ router.use(function (req, res, next) {
 var nconf = require('nconf');
 var confFile = './config/config.json';
 var conf_backup = './config/backup.json';
+var integrationDefaults = require('../config/default.json').integrations;
 
 nconf.file({ file: confFile });
 nconf.load();
@@ -31,6 +32,10 @@ router.route('/settingsData')
     .get(authHelper.isAdmin, function (req, res, next) {
         nconf.load();
         let settings = nconf.get();
+        settings.integrations = Object.assign({}, integrationDefaults, settings.integrations || {});
+        Object.keys(integrationDefaults).forEach(function (name) {
+            settings.integrations[name] = Object.assign({}, integrationDefaults[name], settings.integrations[name] || {});
+        });
         // logger.main.debug(util.format('Config:\n\n%o',settings));
         let plugins = [];
         fs.readdirSync('./plugins').forEach(file => {
