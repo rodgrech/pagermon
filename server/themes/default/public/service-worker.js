@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-west-alerts-static-v14-web-push';
+const CACHE_NAME = 'central-west-alerts-static-v15-theme-controls';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/textAngular.css',
@@ -31,7 +31,7 @@ self.addEventListener('fetch', function (event) {
       if (response.ok) caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, response.clone()); });
       return response;
     });
-    return cached || network;
+    return network.catch(function () { return cached; });
   }));
 });
 

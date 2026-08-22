@@ -563,7 +563,10 @@
           $scope.refreshDashboard();
         }
         if (view === 'map') {
-          window.setTimeout(function () { CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites); }, 50);
+          window.setTimeout(function () {
+            CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+            CentralWestAlerts.setRadar('cw-incident-map', $scope.radarConfig, $scope.radarEnabled && $scope.integrationFeatures.weatherRadar);
+          }, 50);
         }
       };
 

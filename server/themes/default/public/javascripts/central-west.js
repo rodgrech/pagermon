@@ -252,7 +252,8 @@
       var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + (emergency ? ' cw-plane-emergency' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
       L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: 500}).addTo(layerGroups.aircraft).bindPopup('<strong>' + escapeHtml(label) + '</strong><br>Class: ' + escapeHtml(kind) + '<br>ICAO type: ' + escapeHtml(plane.aircraftType || 'Unknown') + '<br>Altitude: ' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '<br>Ground speed: ' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '<br>Track: ' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '<br>Seen: ' + escapeHtml(plane.seen) + ' sec ago');
     });
-    map.invalidateSize();
+    map.invalidateSize(true);
+    window.setTimeout(function () { if (map) map.invalidateSize(true); }, 180);
   }
 
   function setRadar(id, config, enabled) {
@@ -261,8 +262,7 @@
       layerGroups.radar.removeLayer(radarLayer);
       radarLayer = null;
     }
-    if (!config || !config.tileUrl || !enabled) return;
-    if (!map) renderMap(id, [], [], [], [], [], []);
+    if (!config || !config.tileUrl || !enabled || !map) return;
     radarLayer = L.tileLayer(config.tileUrl, {opacity: Number(config.opacity) || 0.62, maxNativeZoom: 7, maxZoom: 18, zIndex: 250, attribution: '<a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>'});
     radarLayer.addTo(layerGroups.radar);
   }
