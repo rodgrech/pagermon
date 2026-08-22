@@ -6,6 +6,7 @@
   <div class="alert alert-success" ng-if="user.totp_enabled">Enabled. Your password and an authenticator code are required on untrusted devices.</div>
   <div ng-if="!user.totp_enabled && !twoFactor.setup"><p>Protect this administrator account with any TOTP authenticator app.</p><button class="btn btn-primary" ng-click="startTwoFactor()">Set up authenticator</button></div>
   <div class="panel panel-default" ng-if="twoFactor.setup && !user.totp_enabled"><div class="panel-body">
+    <div class="text-center" ng-if="twoFactor.qrCode"><p><strong>Scan with your authenticator app</strong></p><img ng-src="{{twoFactor.qrCode}}" alt="Authenticator setup QR code" width="280" height="280" style="max-width:100%;background:#fff;padding:8px;border-radius:4px"></div>
     <ol><li>Add an account manually in your authenticator app.</li><li>Account key: <code style="font-size:16px;user-select:all">{{twoFactor.secret}}</code></li><li>Choose time-based, six-digit codes.</li></ol>
     <div class="form-inline"><input class="form-control" ng-model="twoFactor.code" autocomplete="one-time-code" placeholder="6-digit code"><button class="btn btn-success" ng-click="confirmTwoFactor()">Confirm and enable</button></div>
   </div></div>

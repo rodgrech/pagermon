@@ -17,6 +17,7 @@ const logger = require('../log');
 const passport = require('../auth/local');
 const authHelper = require('../middleware/authhelper')
 const twoFactor = require('../lib/twoFactor');
+const QRCode = require('qrcode');
 
 const lockoutCallback = function(req, res) {
         res.status(429).send({ status: 'lockedout', error: 'Too many attempts, please try again later' });
@@ -265,7 +266,12 @@ router.post('/two-factor/enrol', authHelper.isLoggedIn, function(req, res) {
         req.session.pendingTotpSecret = secret;
         const issuer = String(nconf.get('global:monitorName') || 'PagerMon');
         const uri = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(req.user.username)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&digits=6&period=30`;
-        res.send({status: 'ok', secret: secret, uri: uri});
+        QRCode.toDataURL(uri, {errorCorrectionLevel: 'M', margin: 2, width: 280}).then(function(qrCode) {
+                res.send({status: 'ok', secret: secret, uri: uri, qrCode: qrCode});
+        }).catch(function(err) {
+                logger.auth.error(err);
+                res.status(500).send({error: 'Unable to generate the authenticator QR code.'});
+        });
 });
 
 router.post('/two-factor/confirm', authHelper.isLoggedIn, twoFactorLimiter, function(req, res) {

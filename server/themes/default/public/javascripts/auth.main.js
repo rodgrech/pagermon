@@ -288,7 +288,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         };
         $scope.startTwoFactor = function() {
             Api.TwoFactorEnrol.start({}).$promise.then(function(result) {
-                $scope.twoFactor = {setup: true, secret: result.secret, uri: result.uri};
+                $scope.twoFactor = {setup: true, secret: result.secret, uri: result.uri, qrCode: result.qrCode};
             }, function(response) { pushMessage(response.data.error || 'Unable to start 2FA enrolment.', 'alert-danger'); });
         };
         $scope.confirmTwoFactor = function() {
