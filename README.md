@@ -1,267 +1,183 @@
-# [PagerMon](https://hrng.io/)
-![Discord](https://img.shields.io/discord/533900375066017812.svg?style=plastic)
-![GitHub issues](https://img.shields.io/github/issues-raw/pagermon/pagermon.svg?style=plastic)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/pagermon/pagermon.svg?style=plastic)
-![GitHub](https://img.shields.io/github/license/pagermon/pagermon.svg?style=plastic)
-![GitHub stars](https://img.shields.io/github/stars/pagermon/pagermon.svg?style=plastic)
-![GitHub forks](https://img.shields.io/github/forks/pagermon/pagermon.svg?style=plastic)
-![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/pagermon/pagermon.svg?label=release&style=plastic)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/m/pagermon/pagermon.svg?style=plastic)
-![GitHub contributors](https://img.shields.io/github/contributors/pagermon/pagermon.svg?style=plastic)
-![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/pagermon/pagermon/server.js.yml?branch=master&label=Build%20master)
-![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/pagermon/pagermon/server.js.yml?branch=develop&label=Build%20develop)
+# PagerMon maintained fork
 
-PagerMon is an API driven client/server framework for parsing and displaying pager messages from multimon-ng.
+A maintained PagerMon client/server platform for receiving, decoding and presenting pager traffic. It accepts decoded POCSAG, FLEX and EAS messages from one or more local or remote receivers and provides aliases, searching, incident tools, maps, notifications and integrations through a browser-based interface.
 
-It is built around POCSAG messages, but should easily support other message types as required.
+This fork preserves the original PagerMon workflow while modernising its dependencies, Docker deployment, themes, mobile experience and administration tools.
 
-The UI is built around a Node/Express/Angular/Bootstrap stack, while the client scripts are Node scripts that receive piped input.
+> PagerMon is a monitoring aid. It must not be relied upon for emergency warnings, dispatch decisions or personal safety decisions. Always use official agency information.
 
-## Features
+## Screenshots
 
-* Capcode aliasing with colors and [FontAwesome](https://fontawesome.io/icons/) icons
-* API driven extensible architecture
-* Multi-user support
-* SQLite or MySQL database backing
-* Configurable via UI
-* Pagination and searching
-* Filtering by capcode or agency
-* Duplicate message filtering
-* Native POCSAG / FLEX / EAS Client Support
-* Keyword highlighting
-* WebSockets support - messages are delivered to clients in near realtime
-* Pretty HTML5
-* Native browser notifications
-* Plugin Support - Current Plugins:
-    * [Pushover](https://pushover.net/) near realtime muti-device notification service
-    * [Prowl](https://prowlapp.com) near realtime iOS notification service with Apple Watch support
-    * [Telegram](https://telegram.org/) near realtime cloud based multi-device messaging
-    * [Discord](https://discordapp.com/) near realtime cloud based messaging service
-    * [Gotify](https://gotify.net/) Self-Hosted messaging service
-    * [Twitter](https://www.twitter.com/)
-    * [Microsoft Teams](https://products.office.com/en-us/microsoft-teams/group-chat-software) Team colaboration platform
-    * [Slack](https://slack.com/) Team colabortation platform
-    * SMTP Email Support for conventional SMTP email notifications 
-    * Regex Filters - Filter incoming messages via regex
-    * Regex Replace - Modify incoming messages via regex
-    * Message Repeat - Repeat incoming messages to another pagermon server
-* May or may not contain cute puppies
+### Administration dashboard
 
-### Planned Features
+![PagerMon administration dashboard](docs/images/admin-dashboard.png)
 
-* Horizontal scaling
-* Enhanced message filtering
-* Bootstrap 4 + Angular 2 support
-* Enhanced alias control
-* Graphing
+### Self-hosted integrations and third-party APIs
 
-### Screenshots
+![PagerMon integration settings](docs/images/integration-settings.png)
 
-![main view](http://i.imgur.com/QWKoJjb.jpeg)
+## Highlights
 
-![desktop view](http://i.imgur.com/Zik74Dl.jpeg)
+- POCSAG, FLEX and EAS ingestion through `multimon-ng`
+- Multiple local or remote receiver sources
+- Capcode aliases, agencies, colours and icons
+- CSV alias import/export and alias templates
+- Duplicate filtering, text highlighting and regex replacement
+- Optional Australian phone-number redaction
+- Incident grouping, discovery queue and locality detection
+- Live map with optional RFS, BOM, WaterNSW, PiAware and weather-radar data
+- Rdio Scanner call-feed integration
+- Browser/PWA support with selectable icons and installable themes
+- Default, Dark Blue and Bushfire themes
+- Per-member Web Push notifications for a selected capcode
+- Optional administrator approval for new accounts
+- Local service health plus configurable remote-receiver heartbeats
+- Simple and Advanced HTTP webhooks
+- Additional delivery plugins including Gotify, Pushover, Telegram, Discord, SMTP, Slack and Microsoft Teams
+- SQLite, MySQL/MariaDB and Oracle database support
 
-![alias edit](http://i.imgur.com/gus8QTe.jpeg)
+## Requirements
 
-## Getting Started
+### Server
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+- A current Linux distribution
+- Node.js 20 or newer for a bare-metal installation, or Docker with Compose
+- SQLite for the default database
+- A reverse proxy with HTTPS when exposing PagerMon externally
 
-### Prerequisites
+### Radio receiver
 
-* [nodejs](https://nodejs.org/) 12.x or higher
-* sqlite3
-* Probably some other stuff
+- An RTL2832U-compatible SDR or another receiver capable of providing discriminator/baseband audio
+- `rtl_fm` from rtl-sdr
+- `multimon-ng`
+- The PagerMon client from this repository
 
-#### Recommended
+Reception and decoding laws vary by location. Only monitor services you are legally permitted to receive.
 
-* [nvm](https://github.com/creationix/nvm#installation)
-* nginx or some kind of reverse proxy for SSL offloading
+## Quick start with Docker Compose
 
-## Running the server
+Docker Compose is the recommended server installation.
 
-### Local setup
-
-1) Copy server/process-default.json to server/process.json and modify according to your environment
-2) Launch the app from the Terminal:
-
-```
-    $ sudo apt-get install npm sqlite3
-    $ npm install npm@latest -g
-    $ npm install pm2 -g
-    $ cd server
-    $ npm install
-    $ export NODE_ENV=production
-    $ pm2 start process.json
-```
-3) To start on boot, let pm2 handle it:
-```
-    $ sudo pm2 startup
-    $ pm2 save
-```
-4) You probably want to rotate logs, too:
-```
-    $ pm2 install pm2-logrotate
-    $ sudo pm2 logrotate -u user
-```
-5) Now login via the website, default port is 3000, default credentials are 'admin' / 'changeme'
-6) Head to /admin, change your password, and generate some API keys
-6) Grab your API keys and drop them in the PagerMon client, then you're good to go!
-
-Alternatively a production ready setup guide is available here
-https://github.com/pagermon/pagermon/wiki/Tutorial---Production-Ready-Ubuntu,-PM2,-Nginx-Reverse-Proxy,-Let's-Encrypt-SSL,-Pagermon-server
-
-### Docker
-
-#### Manual build
-
-You can use image already built for you or you can build it yourself:
-
-``` bash
-# For PC
-docker build -t pagermon/pagermon .
-
-# For Raspberry Pi
-docker build -t pagermon/pagermon:latest-armhf -f Dockerfile.armhf .
+```bash
+git clone https://github.com/rodgrech/pagermon.git
+cd pagermon
+docker compose up -d --build
 ```
 
-#### Running
+Open:
 
-``` bash
-docker create \
-  --name=pagermon \
-  -e APP_NAME=pagermon \
-  -p 3000:3000 \
-  -e TZ=Europe/London \
-  -v </path/to/config-mount>:/config \
-  --restart unless-stopped \
-  pagermon/pagermon:<VERSION>
-docker start pagermon
+```text
+http://SERVER-IP:3000
 ```
 
-### docker-compose
+The initial login is:
 
-``` yaml
-version: "2"
-services:
-  pagermon:
-    #build: ./server # To build localy
-    image: pagermon/pagermon:<VERSION>
-    container_name: pagermon
-    environment:
-      - APP_NAME=pagermon
-      - PUID=1000 # Not required since node user inside docker has UID 1000
-      - PGID=1000 # Not required since node user inside docker has GID 1000
-      - TZ=Europe/London
-    ports:
-      - "3000:3000"
-    volumes:
-      - </path/to/config-mount>:/config
-    restart: unless-stopped
+```text
+Username: admin
+Password: changeme
 ```
 
-Then run:
+Change that password immediately under **My Profile**.
 
-``` bash
-# Building with compose file
-docker-compose build
+Persistent configuration, the SQLite database and generated Web Push keys are stored in:
 
-# Running from compose file in foreground
-docker-compose up
-
-# Running from compose file in background
-docker-compose up -d
+```text
+./data
 ```
 
-#### Parameters
+The supplied Compose configuration:
 
-|Parameter|Function|
-|:-------:|:-------|
-| `-e APP_NAME=<name>` | Application name |
-| `-e HOSTNAME=<hostname>` | Hostname |
-| `-e USE_COOKIE_HOST=true` | Use cookie host. |
-| `-e NO_CHOWN=true`| Disable fixing permissions. |
-| `-e PUID=1000` | for UserID |
-| `-e PGID=1000` | for GroupID |
-| `-e SKIP_APP=true` | Don't start app, useful for development. |
-| `-e TZ=Europe/London` | Specify a timezone to use eg. Europe/London. |
-| `-v <path>:/config` | Mount config diretory, so config persist during container restarts (option 1) |
-| `-v <volumename>:/config` | Create named volume for config diretory, so config persist during container restarts (option 2)|
-| `-v /config` | Create unnamed volume for config diretory, so config persist during container restarts (option 3)|
-| `-p 3000:3000` | Expose container port |
+- builds the maintained server from `server/Dockerfile`
+- publishes port `3000`
+- stores persistent state in `./data:/config`
+- uses the `Australia/Sydney` timezone by default
+- restarts automatically
+- provides a Docker health check
+- permits the supervised Admin → Restart PagerMon action
 
-**Note:**
+### Optional Compose environment variables
 
-- Configuration is stored in `/config` inside container and it is owned by *node* user with UID/GID 1000. To fix config directory ownership use `-e PUID=<UID>` and `-e PGID=<GID>`. (Here are database and config file stored)
-- The local port `3000` will be forwarded to the docker container to port `3000` (by `-p 3000:3000`)
-- In case you would like to follow the logfile, run `docker logs -f pagermon` (by `--name pagermon`)
-- To shutdown and remove the container (if using compose), run `docker-compose down`
-- If you make changes to the app for testing, you will need to re-build the image, run `docker-compose down && docker-compose up --build`
-- To run on *Raspberry Pi* use **armhf** variant (add `-armhf` at the end of version), but **be aware** that OracleDB does not work there.
+Create a `.env` file beside `docker-compose.yml` when overrides are required:
 
-See [additional parameters](https://github.com/SloCompTech/docker-baseimage).
-
-**Tip:** You probably want to setup docker log rotation before, more can be found [here](https://success.docker.com/article/how-to-setup-log-rotation-post-installation).
-
-## Running the client
-
-### Local setup
-
-
-#### Prerequisites
-These programs/libraries are required for Pagermon Client to work
-
-* [RTL-SDR](https://www.rtl-sdr.com/rtl-sdr-quick-start-guide/) - RTL-SDR tools/libraries to access RTL-SDR dongle
-* [RTL-SDR dongle](https://www.rtl-sdr.com/buy-rtl-sdr-dvb-t-dongles/)  - You can get these from Ebay, Amazon or other stores (Has to have RTL2832U chip)
-* [nodejs](https://nodejs.org/en/) - JavaScript Programming Language (Only if installing separate from server)
-* [npm](https://www.npmjs.com/) - Javascript Package Manager (Only if installing separate from server)
-* [Git Client](https://git-scm.com/) - Github.com client for getting source code (Only if installing separate from server) 
-
-To install the Prerequisites run
-`sudo apt install nodejs npm git rtl-sdr`
-
-#### Installing Pagermon Client
-Run the following commands from Terminal:
+```dotenv
+TZ=Australia/Sydney
+PAGERMON_HOSTNAME=alerts.example.com
+USE_COOKIE_HOST=false
+APP_NAME=pagermon
+PAGERMON_ALLOW_WEB_RESTART=true
 ```
-git clone https://github.com/pagermon/pagermon.git
+
+After changing source files or pulling an update:
+
+```bash
+git pull
+docker compose up -d --build pagermon
+docker compose ps
+```
+
+View logs with:
+
+```bash
+docker compose logs -f --tail=200 pagermon
+```
+
+## Bare-metal server installation
+
+The following example is suitable for current Debian/Ubuntu systems after Node.js 20 has been installed:
+
+```bash
+sudo apt update
+sudo apt install -y git sqlite3 build-essential
+git clone https://github.com/rodgrech/pagermon.git
+cd pagermon/server
+npm ci --omit=optional
+cp config/default.json config/config.json
+NODE_ENV=production npm start
+```
+
+Open `http://SERVER-IP:3000`, sign in with `admin / changeme`, then change the password and create an API key.
+
+For a permanent installation, run PagerMon with systemd or another service supervisor. The service account must be able to write:
+
+- `server/config/config.json`
+- the configured SQLite database
+- the receiver heartbeat cache beside the active configuration file
+
+Do not run the web application as root.
+
+### Updating bare metal
+
+```bash
+cd /path/to/pagermon
+git pull
+cd server
+npm ci --omit=optional
+sudo systemctl restart pagermon-server
+sudo systemctl status pagermon-server
+```
+
+Adjust the service name to match your installation.
+
+## Receiver/client installation
+
+Install the decoder dependencies on the receiver host:
+
+```bash
+sudo apt update
+sudo apt install -y rtl-sdr multimon-ng nodejs npm git
+git clone https://github.com/rodgrech/pagermon.git
 cd pagermon/client
 npm install
-```
-edit `reader.sh` and edit frequency and rtl_device number, Edit Multimon-ng command
-```Bash
-rtl_fm -d 0 -E dc -F 0 -A fast -f 148.5875M -s22050 - |
-multimon-ng -q -b1 -c -a POCSAG512 -f alpha -t raw /dev/stdin |
-node reader.js
-```
-`-d 0` - change this to your rtl_device number using rtl_test
-
-`-f 148.5875M` - change this to the frequency you are decoding
-
-#### Multimon-ng Command examples
-##### POCSAG
-> multimon-ng -q -b1 -c -a POCSAG512 -f alpha -t raw /dev/stdin
-
-##### FLEX
->  multimon-ng -a FLEX -t raw /dev/stdin
-
-##### EAS
-> multimon-ng -a EAS -t raw /dev/stdin
-
-
-#### Configuring Pagermon Client
-Before running Pagermon Client you have to configure it to send the decoded info to the pagermon server.
-
-copy default.json to config.json 
-```
-cp config/default.json config/config.json 
+cp config/default.json config/config.json
 ```
 
-Edit config.json with your favorite editor
-```
+Create an API key in **Admin → Settings → API keys**, then edit `client/config/config.json`:
+
+```json
 {
-  "apikey": "changeme",
-  "hostname": "http://127.0.0.1:3000",
-  "identifier": "TEST",
+  "apikey": "YOUR_PAGERMON_API_KEY",
+  "hostname": "https://alerts.example.com",
+  "identifier": "Receiver1",
   "sendFunctionCode": false,
   "useTimestamp": true,
   "EAS": {
@@ -270,68 +186,173 @@ Edit config.json with your favorite editor
     "addressAddType": true
   }
 }
-
 ```
 
-#### Pager Options
+- `apikey`: API key generated by the destination PagerMon server
+- `hostname`: destination PagerMon URL
+- `identifier`: source name shown with received messages
+- `sendFunctionCode`: append the POCSAG function code to the address
+- `useTimestamp`: use the decoder-provided timestamp
 
-**apikey:**  This is the API key generate on the Pagermon Server http://serverip/admin/settings
+### RTL-SDR POCSAG example
 
-**hostname:** The host name or IP of the Pagermon server (If you run Pagermon Server and Client on same PC then you can put this as `http://127.0.0.1:3000`
+Confirm the SDR index or serial first:
 
-**identifier:** This will show up in the source column on the server web page good for when you have multiple sources and want to know which one the pager message is coming from
+```bash
+rtl_test -t
+```
 
-**sendFunctionCode:** This will appand the function code to the address of the message **true** or **false**
+Example decoder pipeline:
 
-**useTimestamp:** This will use the time in the message **true** or **false**
+```bash
+rtl_fm -d 0 -f 148.5875M -M fm -s 22050 -g 30 -E dc -A fast - \
+  | multimon-ng -q -b 1 -c \
+      -a POCSAG512 -a POCSAG1200 -a POCSAG2400 \
+      -f alpha -t raw /dev/stdin \
+  | node reader.js
+```
 
-#### EAS Options
-**excludeEvents:** Allows a list of [Events](https://github.com/MaxwellDPS/jsame#event-codes) to exclude ie `["RWT","RMT","SVA"]`
+Replace the frequency, device selector and gain with values appropriate for your legal receive target and RF environment. A higher gain is not always better; strong local signals can overload the tuner.
 
-**includeFIPS:** Allows you to filter on a list of FIPS to alert on ie `["031109", "031000"]`
+If numeric/no-alpha messages must also be retained, test without `-f alpha` and confirm the resulting output format against `reader.js`.
 
-**addressAddType:** Will append the event code to the address so `KOAX-WXR` would become KOAX-WXR-W for `ZCZC-WXR-TOR-031109+0015-3650000-KOAX/NWS -` **true** or **false**
+## Remote receivers and service status
 
+PagerMon always reports its own application health automatically.
 
-## PagermonPi - Raspberry Pi Image
-Check out our Raspberry Pi Image for Pi3 & Pi4 which has Pagermon pre-loaded on it.
+To add a separate receiver node:
 
-Check out the following links:
+1. Open **Admin → Settings**.
+2. Find **Monitoring and diagnostics → Service status**.
+3. Select **Add remote receiver**.
+4. Enter a stable Receiver ID, display name, location and frequency.
+5. Save the settings.
+6. Configure the remote heartbeat script to send the exact same Receiver ID.
 
-[Releases](https://github.com/pagermon/pagermon/releases) for the latest version
-[Wiki](https://github.com/pagermon/pagermon/wiki/PagermonPi-Image-For-Raspberry-Pi) for PagermonPi support
+New installations do not contain placeholder remote receivers. Heartbeat state is stored beside the active persistent configuration, making the feature portable between Docker and bare-metal installations.
 
-## Support
+The Service Status page is available to signed-in users from the account menu.
 
-General PagerMon support can be requested in the #support channel of the PagerMon discord server.
+## Web Push notifications
 
-[Click Here](https://discord.gg/3VK7gSD) to join
+1. Enable Web Push under **Admin → Settings → Push notifications**.
+2. Restart PagerMon if the panel reports that service keys will be created after restart.
+3. Each member opens **My Profile**.
+4. The member selects one capcode and enables notifications on that device.
 
-Bugs and Feature requests can be logged via the GitHub issues page. 
+When Web Push is first enabled, PagerMon securely generates and persists its VAPID key pair. Do not delete or regenerate those keys casually; existing browser subscriptions depend on them.
+
+On iOS, install PagerMon to the Home Screen before enabling Web Push. Notification actions vary by operating system, but selecting a notification opens the matching capcode feed.
+
+## Administration
+
+The reorganised admin interface contains:
+
+- **General appearance and behaviour** — theme, PWA icon, monitor name, login image and visitor modal
+- **Self-hosted integrations and third-party APIs** — WaterNSW, BOM, PiAware, Rdio Scanner, weather radar and webhooks
+- **Live map** — interaction settings
+- **Database** — database type and connection settings
+- **Messages, privacy and alias tools** — filtering, redaction, visibility, regex rules and templates
+- **Accounts and access** — registration and member approval
+- **Push notifications** — Web Push state and key readiness
+- **API keys** — decoder and integration credentials
+- **Monitoring and diagnostics** — local service status, remote receivers and analytics
+- **Message processing and delivery plugins** — remaining PagerMon plugins
+
+Settings are shared by all installed themes.
+
+## Themes and PWA
+
+Available themes:
+
+- Default
+- Dark Blue
+- Bushfire
+
+The active theme and PWA icon set are selected under **Admin → Settings**. Theme changes require an application restart. The icon manifest is versioned when the icon set changes, although iOS may still require removing and re-adding an older Home Screen installation.
+
+Administrators can also configure a login-only background image and watermark strength.
+
+## Optional integrations
+
+All integrations can be disabled. Disabled dashboard tabs and map assets are hidden.
+
+- **WaterNSW** — dam, river-gauge and algae information using a WaterNSW subscription key
+- **BOM warnings** — official warning feed with configurable local keywords
+- **PiAware** — aircraft data from a local SkyAware `aircraft.json` feed
+- **Rdio Scanner** — authenticated access to recent local scanner calls
+- **Weather radar** — optional RainViewer overlay
+- **Simple/Advanced Webhook** — HTTP delivery to another service
+
+API availability, licensing and quotas remain the responsibility of the operator.
+
+## Reverse proxy and security
+
+For Internet-facing installations:
+
+- use HTTPS
+- place PagerMon behind a maintained reverse proxy
+- enable sensible rate limits
+- use a strong admin password and session secret
+- require administrator approval for registrations when appropriate
+- keep API keys private
+- back up the persistent `data` or configuration directory
+- keep Node.js, Docker and the host operating system updated
+
+Do not publish the raw PagerMon port directly to the Internet when a reverse proxy can be used.
+
+## Troubleshooting
+
+### Docker container is unhealthy
+
+```bash
+docker compose ps
+docker compose logs --tail=200 pagermon
+curl -I http://127.0.0.1:3000/
+```
+
+### SDR is busy
+
+```bash
+pgrep -af 'rtl_test|rtl_fm|multimon-ng'
+```
+
+Only one process can normally claim an RTL-SDR at a time. Stop the old decoder or test process before starting another.
+
+### No pager messages
+
+- verify the correct SDR index/serial
+- verify the receive frequency and antenna
+- confirm `rtl_fm` is producing samples
+- monitor `multimon-ng` output before piping it to `reader.js`
+- test all expected POCSAG baud rates
+- confirm the client API key validates against the intended server
+- check clock synchronisation on the receiver and server
+- remember that quiet periods can be normal
+
+## Updating the “What’s new” notice
+
+Release notes shown to signed-in users are stored in:
+
+```text
+server/config/whats-new.json
+```
+
+Increment `version` and update `changes` for each release. The modal appears once per signed-in user/browser for that release.
+
+## Project history and acknowledgement
+
+This repository is a maintained fork of the original [PagerMon project](https://github.com/pagermon/pagermon). Thanks to the original maintainers and contributors, and to:
+
+- [multimon-ng](https://github.com/EliasOenal/multimon-ng)
+- [jSAME](https://github.com/MaxwellDPS/jsame)
 
 ## Contributing
 
-All are welcome to contribute. Contributors should submit a pull request with the requested changes.
+Issues and pull requests are welcome at [rodgrech/pagermon](https://github.com/rodgrech/pagermon).
 
-CHANGELOG.md is to be updated on each pull request.
-
-If a pull request is the first pull request since a [release](https://github.com/pagermon/pagermon/releases), then the version number should be bumped in `CHANGELOG.md`, `server/app.js`, and `server/package.json`.
-
-If a database schema change is required, this must be done using KnexJS Migration files. **Insert Instructions for this here**
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/pagermon/pagermon/tags).
-
-## Authors
-
-See the list of [contributors](https://github.com/pagermon/pagermon/contributors) who participated in this project.
+Please avoid committing live API keys, private URLs, receiver IP addresses, pager content or user data.
 
 ## License
 
-This project is licensed under The Unlicense - because fuck licenses. Do what you want with it. :>
-
-## Acknowledgments
-
-* [multimon-ng](https://github.com/EliasOenal/multimon-ng)
-* [jSAME](https://github.com/MaxwellDPS/jsame)
+PagerMon is released under The Unlicense. See [LICENSE](LICENSE).
