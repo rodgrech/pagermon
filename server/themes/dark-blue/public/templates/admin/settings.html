@@ -188,6 +188,23 @@
               </div>
             </div>
 
+            <div class="panel panel-default" ng-repeat="plugin in plugins" ng-if="plugin.name == 'SimpleWebhook'">
+              <div class="panel-heading"><strong><i class="fa fa-exchange-alt"></i> Simple Webhook</strong></div>
+              <div class="panel-body">
+                <p class="help-block" ng-bind-html="plugin.description"></p>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable webhook</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.plugins[plugin.name].enable"> Send PagerMon messages to a generic HTTP endpoint</label></div></div></div>
+                <div class="form-group" ng-repeat="configItem in plugin.config" ng-show="settings.plugins[plugin.name].enable">
+                  <label class="col-xs-4 col-sm-3 control-label">{{configItem.label}}</label>
+                  <div class="col-xs-8 col-sm-9">
+                    <label ng-if="configItem.type == 'checkbox'" class="checkbox-inline"><input type="checkbox" ng-model="settings.plugins[plugin.name][configItem.name]"> {{configItem.description}}</label>
+                    <select ng-if="configItem.type == 'select'" ng-model="settings.plugins[plugin.name][configItem.name]" class="form-control" ng-options="obj.text for obj in configItem.options track by obj.value" ng-required="settings.plugins[plugin.name].enable && configItem.required"></select>
+                    <input ng-if="configItem.type != 'checkbox' && configItem.type != 'select'" type="{{configItem.type}}" class="form-control" ng-model="settings.plugins[plugin.name][configItem.name]" ng-required="settings.plugins[plugin.name].enable && configItem.required">
+                    <span ng-if="configItem.type != 'checkbox'" class="help-block">{{configItem.description}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <h5>Live map</h5>
             <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Scroll sensitivity</label><div class="col-xs-8 col-sm-9"><input type="number" min="60" max="600" step="10" class="form-control" ng-model="settings.integrations.liveMap.wheelPxPerZoomLevel"><span class="help-block">Higher values make mouse-wheel and trackpad zoom less sensitive. Recommended: 180.</span></div></div>
 
@@ -678,7 +695,7 @@
 
 
             <h4>Plugins</h4>
-            <div class="plugin-group" ng-repeat="plugin in plugins">
+            <div class="plugin-group" ng-repeat="plugin in plugins" ng-if="plugin.name != 'SimpleWebhook'">
               <hr />
               <div class="row">
                 <div class="col-xs-12 col-sm-6"><h5>{{plugin.name}}</h5><p><em ng-bind-html="plugin.description"></em></p></div>
