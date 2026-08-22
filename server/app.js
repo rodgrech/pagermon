@@ -49,6 +49,20 @@ if (!theme) {
   nconf.save();
   var theme = nconf.get('global:theme')
 }
+// Midwestern was renamed to Dark Blue. Migrate existing installations without
+// requiring users to edit their config before the server can start.
+if (theme === 'midwestern') {
+  theme = 'dark-blue';
+  nconf.set('global:theme', theme);
+  nconf.save();
+}
+// A deleted or misspelled theme must not prevent PagerMon from starting.
+if (!fs.existsSync(path.join(__dirname, 'themes', theme))) {
+  logger.main.warn('Configured theme "' + theme + '" was not found; using default');
+  theme = 'default';
+  nconf.set('global:theme', theme);
+  nconf.save();
+}
 
 var dbtype = nconf.get('database:type');
 // Set the database port if none found, for backwards compatibility

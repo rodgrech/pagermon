@@ -43,12 +43,27 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
     .controller('AliasController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', 'FileSaver', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout, FileSaver) {
       $scope.loading = true;
       $scope.alertMessage = {};
+      $scope.aliasPage = 1;
+      $scope.aliasPageSize = 100;
+      $scope.aliasPageCount = function () {
+        var filtered = $filter('filter')($scope.aliases || [], $scope.search);
+        return Math.max(1, Math.ceil(filtered.length / $scope.aliasPageSize));
+      };
+      $scope.aliasPreviousPage = function () {
+        $scope.aliasPage = Math.max(1, $scope.aliasPage - 1);
+      };
+      $scope.aliasNextPage = function () {
+        $scope.aliasPage = Math.min($scope.aliasPageCount(), $scope.aliasPage + 1);
+      };
+      $scope.$watch('search', function () {
+        $scope.aliasPage = 1;
+      });
       Api.Aliases.query(null, function(results) {
         $scope.aliases = results;
         $scope.page = 'aliases';
         $scope.loading = false;
       });
-      Api.Settings.get(null, function(results) {
+      Api.Settings.get({ _: Date.now() }, function(results) {
         if (results) {
           if (results.settings.database && results.settings.database.aliasRefreshRequired == 1) {
             $scope.aliasRefreshRequired = 1;
@@ -161,7 +176,8 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                 $scope.loading = false;
                 $scope.results = response.results
                 var resultModalHtml = '<div class="modal-header"><h5 class="modal-title" id="modal-title">Import Results</h5></div>';
-                resultModalHtml += `<div class="modal-body">  
+                resultModalHtml += `<div class="modal-body">
+                    <p>Import processed {{results.length}} rows. Showing the first 100 results.</p>
                     <table class="table table-striped">
                        <thead>
                        <tr>
@@ -171,7 +187,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                         </tr>
                         </thead>
                         <tbody>
-                        <tr ng-repeat="result in results">
+                        <tr ng-repeat="result in results | limitTo: 100">
                           <td>{{ result.address }}</td>
                           <td>{{ result.alias }}</td>
                           <td>{{ result.result }}</td>
@@ -871,8 +887,11 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
           $uibModalInstance.dismiss('cancel');
         };
       };
-      // get data on load
-      Api.Settings.get(null, function(results) {
+      // Avoid an AngularJS 1.6/$resource dead-end when the browser revalidates
+      // this request and receives HTTP 304. The alias form is only loaded
+      // from the success callback, so a cached response previously left the
+      // entire detail view blank.
+      Api.Settings.get({ _: Date.now() }, function(results) {
         if (results) {
           if (results.database && results.database.aliasRefreshRequired == 1) {
             $scope.aliasRefreshRequired = 1;
@@ -881,6 +900,12 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
           $scope.plugins = results.plugins;
           $scope.themes = results.themes;
         }
+        $scope.aliasLoad();
+      }, function() {
+        // Still render the basic alias form if optional settings cannot load.
+        $scope.settings = $scope.settings || { plugins: {}, aliases: { templates: [] } };
+        $scope.plugins = $scope.plugins || [];
+        $scope.themes = $scope.themes || [];
         $scope.aliasLoad();
       });
 	  //FontAwesome v5 Icons for Helper

@@ -1,16 +1,16 @@
-version: '3.3'
 services:
-    pagermon:
-        build: ./server
-        image: pagermon
-        container_name: pagermon
-        ports:
-            - 3000:3000
-        volumes:
-            - ./data:/config
-        environment:
-            - TZ=Europe/London
-            - NODE_ENV=production
-            - HOSTNAME=localhost
-            - USE_COOKIE_HOST=false
-            - APP_NAME=pagermon
+  pagermon:
+    build: ./server
+    image: pagermon
+    container_name: pagermon
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/config
+    environment:
+      - TZ=${TZ:-Australia/Sydney}
+      - NODE_ENV=production
+      - HOSTNAME=${PAGERMON_HOSTNAME:-localhost}
+      - USE_COOKIE_HOST=${USE_COOKIE_HOST:-false}
+      - APP_NAME=${APP_NAME:-pagermon}
+    restart: unless-stopped
