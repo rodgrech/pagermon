@@ -13,4 +13,5 @@ services:
       - HOSTNAME=${PAGERMON_HOSTNAME:-localhost}
       - USE_COOKIE_HOST=${USE_COOKIE_HOST:-false}
       - APP_NAME=${APP_NAME:-pagermon}
+      - PAGERMON_ALLOW_WEB_RESTART=${PAGERMON_ALLOW_WEB_RESTART:-true}
     restart: unless-stopped

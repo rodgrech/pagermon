@@ -134,6 +134,52 @@ io.sockets.on('connection', function (socket) {
 //        console.log('message', data);
 //    });
 });
+
+function selectedPwaTheme() {
+  nconf.load();
+  var selected = nconf.get('global:pwaIconTheme') || 'theme';
+  if (selected === 'theme') selected = theme;
+  if (!/^[a-zA-Z0-9_-]+$/.test(selected) || !fs.existsSync(path.join(__dirname, 'themes', selected, 'public'))) {
+    selected = theme;
+  }
+  return selected;
+}
+
+function sendPwaAsset(filename, contentType) {
+  return function (req, res, next) {
+    var asset = path.join(__dirname, 'themes', selectedPwaTheme(), 'public', filename);
+    if (!fs.existsSync(asset)) return next();
+    res.set('Cache-Control', 'no-cache, must-revalidate');
+    if (contentType) res.type(contentType);
+    res.sendFile(asset);
+  };
+}
+
+app.get('/pwa-icon-192.png', sendPwaAsset('android-chrome-192x192.png', 'png'));
+app.get('/pwa-icon-512.png', sendPwaAsset('android-chrome-512x512.png', 'png'));
+app.get('/pwa-apple-touch-icon.png', sendPwaAsset('apple-touch-icon.png', 'png'));
+app.get('/pwa-favicon.ico', sendPwaAsset('favicon.ico', 'ico'));
+app.get('/pwa-manifest.json', function (req, res, next) {
+  var manifestPath = path.join(__dirname, 'themes', selectedPwaTheme(), 'public', 'manifest.json');
+  try {
+    var manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    var version = nconf.get('global:pwaIconVersion') || 1;
+    manifest.icons = [
+      { src: '/pwa-icon-192.png?v=' + version, sizes: '192x192', type: 'image/png' },
+      { src: '/pwa-icon-512.png?v=' + version, sizes: '512x512', type: 'image/png' }
+    ];
+    res.set('Cache-Control', 'no-cache, must-revalidate');
+    res.type('application/manifest+json').send(JSON.stringify(manifest));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.use(function (req, res, next) {
+  nconf.load();
+  res.locals.pwaIconVersion = nconf.get('global:pwaIconVersion') || 1;
+  next();
+});
 //Admin Socket
 var adminio = io.of('/adminio');
 adminio.on('connection', function (socket) {

@@ -50,7 +50,7 @@ router.route('/settingsData')
             themes.push(file)
         });
         // logger.main.debug(util.format('Plugin Config:\n\n%o',plugins));
-        let data = { "settings": settings, "plugins": plugins, "themes": themes }
+        let data = { "settings": settings, "plugins": plugins, "themes": themes, "pwaIconThemes": themes }
         res.json(data);
     })
     .post(authHelper.isAdmin, function (req, res, next) {
@@ -60,10 +60,19 @@ router.route('/settingsData')
             var currentTheme = (currentConfig.global && currentConfig.global.theme) || 'default';
             var requestedTheme = (req.body.global && req.body.global.theme) || 'default';
             var requestedThemePath = './themes/' + requestedTheme;
+            var currentPwaIconTheme = (currentConfig.global && currentConfig.global.pwaIconTheme) || 'theme';
+            var requestedPwaIconTheme = (req.body.global && req.body.global.pwaIconTheme) || 'theme';
 
             if (!/^[a-zA-Z0-9_-]+$/.test(requestedTheme) || !fs.existsSync(requestedThemePath)) {
                 return res.status(400).send({ error: 'Selected theme is not installed.' });
             }
+            if (requestedPwaIconTheme !== 'theme' &&
+                (!/^[a-zA-Z0-9_-]+$/.test(requestedPwaIconTheme) || !fs.existsSync('./themes/' + requestedPwaIconTheme))) {
+                return res.status(400).send({ error: 'Selected PWA icon set is not installed.' });
+            }
+
+            var pwaIconChanged = currentPwaIconTheme !== requestedPwaIconTheme;
+            if (pwaIconChanged) req.body.global.pwaIconVersion = Date.now();
 
             fs.writeFileSync(conf_backup, JSON.stringify(currentConfig, null, 2));
             fs.writeFileSync(confFile, JSON.stringify(req.body, null, 2));
@@ -71,12 +80,21 @@ router.route('/settingsData')
             res.status(200).send({
                 status: 'ok',
                 restartRequired: currentTheme !== requestedTheme,
-                theme: requestedTheme
+                theme: requestedTheme,
+                pwaIconChanged: pwaIconChanged
             });
         } else {
             res.status(400).send({ error: 'request body empty' });
         }
     });
+
+router.post('/restart', authHelper.isAdmin, function (req, res) {
+    if (!/^(1|true|yes)$/i.test(String(process.env.PAGERMON_ALLOW_WEB_RESTART || ''))) {
+        return res.status(403).send({ error: 'Web restart is disabled by the server administrator.' });
+    }
+    res.status(202).send({ status: 'restarting' });
+    setTimeout(function () { process.exit(0); }, 750);
+});
 
 router.get('*', authHelper.isAdminGUI, function (req, res, next) {
     res.render('admin', { pageTitle: 'Admin' });

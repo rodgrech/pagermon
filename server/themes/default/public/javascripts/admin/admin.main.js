@@ -13,6 +13,9 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         Settings: $resource('/admin/settingsData', null, {
           'post': { method:'POST', isArray: false }
         }),
+        Restart: $resource('/admin/restart', null, {
+          'post': { method:'POST', isArray: false }
+        }),
         AliasDupeCheck: $resource('/api/capcodeCheck/:id', {id: '@id'}, {
           'post': { method:'POST', isArray: false }
         }),
@@ -927,6 +930,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         $scope.settings = results.settings;
         $scope.plugins = results.plugins;
         $scope.themes = results.themes;
+        $scope.pwaIconThemes = results.pwaIconThemes || results.themes;
       });
 
       $scope.settingsSubmit = function() {
@@ -940,6 +944,10 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
               : 'Settings saved!';
             $scope.alertMessage.type = response.restartRequired ? 'alert-warning' : 'alert-success';
             $scope.alertMessage.show = true;
+            $scope.restartRequired = response.restartRequired;
+            if (response.pwaIconChanged && !response.restartRequired) {
+              $scope.alertMessage.text = 'Settings saved. The PWA icon manifest has been updated.';
+            }
             if (!response.restartRequired) {
               $timeout(function () { $scope.alertMessage.show = false; }, 3000);
             }
@@ -961,6 +969,21 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
             $scope.alertMessage.show = false;
           }, 3000);
           $scope.loading = false;
+        });
+      };
+
+      $scope.restartPagerMon = function() {
+        $scope.loading = true;
+        Api.Restart.post().$promise.then(function() {
+          $scope.alertMessage.text = 'PagerMon is restarting. This page will reload shortly.';
+          $scope.alertMessage.type = 'alert-info';
+          $scope.alertMessage.show = true;
+          $timeout(function() { window.location.reload(); }, 5000);
+        }, function(response) {
+          $scope.loading = false;
+          $scope.alertMessage.text = 'Unable to restart PagerMon: ' + ((response.data && response.data.error) || response.statusText);
+          $scope.alertMessage.type = 'alert-danger';
+          $scope.alertMessage.show = true;
         });
       };
 

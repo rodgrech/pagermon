@@ -7,6 +7,8 @@
     "frontPopupContent": "",
     "searchLocation": "bottom",
     "theme": "default",
+    "pwaIconTheme": "theme",
+    "pwaIconVersion": 1,
     "monitorName": "PagerMon",
     "faKey": "changeme"
   },
