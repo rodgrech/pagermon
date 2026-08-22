@@ -935,10 +935,14 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
           console.log(response);
           $scope.loading = false;
           if (response.status == 'ok') {
-            $scope.alertMessage.text = 'Settings saved!';
-            $scope.alertMessage.type = 'alert-success';
+            $scope.alertMessage.text = response.restartRequired
+              ? 'Settings saved. Restart PagerMon to apply the ' + response.theme + ' theme.'
+              : 'Settings saved!';
+            $scope.alertMessage.type = response.restartRequired ? 'alert-warning' : 'alert-success';
             $scope.alertMessage.show = true;
-            $timeout(function () { $scope.alertMessage.show = false; }, 3000);
+            if (!response.restartRequired) {
+              $timeout(function () { $scope.alertMessage.show = false; }, 3000);
+            }
           } else {
             $scope.alertMessage.text = 'Error saving settings: ' + ((response.data && response.data.error) || response.statusText || 'Unknown server error');
             $scope.alertMessage.type = 'alert-danger';

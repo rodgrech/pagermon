@@ -56,12 +56,23 @@ router.route('/settingsData')
     .post(authHelper.isAdmin, function (req, res, next) {
         nconf.load();
         if (req.body) {
-            //console.log(req.body);
             var currentConfig = nconf.get();
+            var currentTheme = (currentConfig.global && currentConfig.global.theme) || 'default';
+            var requestedTheme = (req.body.global && req.body.global.theme) || 'default';
+            var requestedThemePath = './themes/' + requestedTheme;
+
+            if (!/^[a-zA-Z0-9_-]+$/.test(requestedTheme) || !fs.existsSync(requestedThemePath)) {
+                return res.status(400).send({ error: 'Selected theme is not installed.' });
+            }
+
             fs.writeFileSync(conf_backup, JSON.stringify(currentConfig, null, 2));
             fs.writeFileSync(confFile, JSON.stringify(req.body, null, 2));
             nconf.load();
-            res.status(200).send({ 'status': 'ok' });
+            res.status(200).send({
+                status: 'ok',
+                restartRequired: currentTheme !== requestedTheme,
+                theme: requestedTheme
+            });
         } else {
             res.status(400).send({ error: 'request body empty' });
         }
