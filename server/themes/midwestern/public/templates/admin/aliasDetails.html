@@ -14,7 +14,8 @@
         </div>
       </div>
       <div class="modal-body" style="overflow-y: auto;height: calc(100vh - 215px);" id="faHelperBody">
-	    <div ng-repeat="faIcon in faIcons | filter: faSearch" class="faHelperBlock" title="{{faIcon}}" onclick="setFaIcon(this);" onmouseover="showFaName(this);" onmouseleave="document.getElementById('faPreview').innerText = '';" data-dismiss="modal"><i class="faHelperIcon fas fa-{{faIcon}}"></i></div>
+        <p class="help-block" ng-if="faPickerOpen">Showing up to 150 icons. Type above to narrow the list.</p>
+	    <div ng-if="faPickerOpen" ng-repeat="faIcon in faIcons | filter: faSearch | limitTo: 150" class="faHelperBlock" title="{{faIcon}}" onclick="setFaIcon(this);" onmouseover="showFaName(this);" onmouseleave="document.getElementById('faPreview').innerText = '';" data-dismiss="modal"><i class="faHelperIcon fas fa-{{faIcon}}"></i></div>
       </div>
       <div class="modal-footer">
 		<span id="faPreview" style="font-size:16px;padding-right: 15px;" class="modal-title"></span>
@@ -129,7 +130,7 @@
                   </span>
                   <input id="aliasIcon" class="form-control" type="text" name="alias.icon" ng-model="alias.icon" required>
                   <span class="input-group-addon">
-                    <button type="button" class="btn btn-default" data-toggle="modal" data-target=".faHelperModal">PICK</button>
+                    <button type="button" class="btn btn-default" ng-click="faPickerOpen = true" data-toggle="modal" data-target=".faHelperModal">PICK</button>
                   </span>
                 </div>
               <span id="helpBlock" class="help-block">Fontawesome icon to display with the alias.</span>
