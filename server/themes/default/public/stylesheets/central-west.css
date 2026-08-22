@@ -4,6 +4,8 @@
   --mw-muted: #657786;
   --mw-panel: #ffffff;
   --mw-bg: #f5f5f5;
+  --ops-header: #337ab7; --ops-shell: #eef3f7; --ops-subtext: #e3f0fa; --ops-accent: #8fc7ee;
+  --ops-control-bg: rgba(255,255,255,.94); --ops-control-color: #263b4f;
 }
 /* Logged-in receiver status page */
 .cw-status-page { max-width: 920px; margin: 24px auto 50px; }
@@ -191,14 +193,14 @@ tr.cw-priority-critical > td:first-child, .cw-incident.cw-priority-critical { bo
 .cw-operations-header { display: none; }
 body.cw-operations { overflow: hidden; }
 body.cw-operations .navbar, body.cw-operations footer { display: none !important; }
-body.cw-operations .cw-panel:has(#cw-incident-map) { position: fixed; inset: 0; z-index: 10000; margin: 0; padding: 0; border: 0; border-radius: 0; background: #0f1d2b; }
-body.cw-operations .cw-operations-header { display: flex; height: 64px; padding: 10px 18px; align-items: center; justify-content: space-between; background: var(--mw-navy); color: #fff; }
+body.cw-operations .cw-panel:has(#cw-incident-map) { position: fixed; inset: 0; z-index: 10000; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--ops-shell); }
+body.cw-operations .cw-operations-header { display: flex; height: 64px; padding: 10px 18px; align-items: center; justify-content: space-between; background: var(--ops-header); color: #fff; border-bottom: 4px solid var(--ops-accent); }
 body.cw-operations .cw-operations-header strong { display: block; font-size: 20px; }
-body.cw-operations .cw-operations-header span { color: #afc2d4; font-size: 12px; }
+body.cw-operations .cw-operations-header span { color: var(--ops-subtext); font-size: 12px; }
 body.cw-operations .cw-operations-status { display: flex; gap: 8px; align-items: center; }
 body.cw-operations #cw-incident-map { height: calc(100vh - 116px); border-radius: 0; }
-body.cw-operations .cw-map-controls { position: absolute; z-index: 11000; top: 72px; right: 12px; padding: 6px; border-radius: 5px; background: rgba(255,255,255,.92); }
-body.cw-operations .cw-map-legend, body.cw-operations .cw-map-note { margin: 0; padding: 7px 16px; background: #fff; }
+body.cw-operations .cw-map-controls { position: absolute; z-index: 11000; top: 72px; right: 12px; padding: 6px; border-radius: 5px; color: var(--ops-control-color); background: var(--ops-control-bg); }
+body.cw-operations .cw-map-legend, body.cw-operations .cw-map-note { margin: 0; padding: 7px 16px; color: var(--ops-control-color); background: var(--ops-control-bg); }
 body.cw-dark .cw-agency-suggestion, body.cw-dark .cw-correlation { color: #b8cddd; }
 
 /* Remembered dark mode */
