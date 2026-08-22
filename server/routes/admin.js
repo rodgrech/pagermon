@@ -100,7 +100,9 @@ router.post('/restart', authHelper.isAdmin, function (req, res) {
         return res.status(403).send({ error: 'Web restart is disabled by the server administrator.' });
     }
     res.status(202).send({ status: 'restarting' });
-    setTimeout(function () { process.exit(0); }, 750);
+    // Exit non-zero so systemd units using Restart=on-failure also honour a
+    // restart requested from the web interface. Docker restart policies do too.
+    setTimeout(function () { process.exit(75); }, 750);
 });
 
 router.get('*', authHelper.isAdminGUI, function (req, res, next) {
