@@ -42,11 +42,6 @@
       </ul>
     </div>
   </div>
-  <div class="triangle-down triangle-right hidden-xs">
-    <p>
-      <i class="fa fa-chevron-down fa-2x isDown" id="toggle"></i>
-    </p>
-  </div>
 </nav>
 
 <script>
@@ -54,22 +49,6 @@
         $("#home-body a:contains('Home')").parent().addClass('active');
         $("#admin-body a:contains('Admin')").parent().addClass('active');
      });
-</script>
-
-<script>
-$("#toggle").click( function(event){
-    event.preventDefault();
-    if ($(this).hasClass("isDown") ) {
-        $( ".navbar-fixed-top" ).animate({ "margin-top": "-64px" }, "fast" );  
-        $( "#content" ).animate({ "margin-top": "-64px" }, "fast" );
-        $(this).removeClass("isDown");
-    } else {
-        $( ".navbar-fixed-top" ).animate({ "margin-top": "0px" }, "fast" );
-        $( "#content" ).animate({ "margin-top": "0px" }, "fast" );
-        $(this).addClass("isDown");
-    }
-    return false;
-});
 </script>
 
 <div id="wrap">
