@@ -1810,6 +1810,7 @@ router.route('/central-west/receiver-heartbeat')
 
 router.route('/central-west/receiver-status')
   .get(isSessionUser, function (req, res) {
+    res.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
     var nowSeconds = Math.floor(Date.now() / 1000);
     var receiverRows = receiverStatusList(nowSeconds);
     var nodeRows = receiverNodeList(receiverRows);

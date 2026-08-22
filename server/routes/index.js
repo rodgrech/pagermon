@@ -40,6 +40,11 @@ router.get('/', function (req, res, next) {
 
 /* Detailed receiver status is private account information. */
 router.get('/service-status', function (req, res) {
+    res.set({
+        'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    });
     if (!req.isAuthenticated()) {
         req.flash('loginMessage', 'You need to be logged in to view service status');
         return res.redirect('/auth/login');
