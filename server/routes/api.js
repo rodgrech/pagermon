@@ -84,8 +84,10 @@ var waterNswGaugeAttemptSlot = null;
 var waterNswAlgaeCache = { fetchedAt: 0, data: null };
 var receiverHeartbeatFile = path.join(path.dirname(fs.realpathSync(confFile)), 'receiver-heartbeats.json');
 var pagerGeocodeFile = path.join(path.dirname(fs.realpathSync(confFile)), 'pager-geocodes.json');
+var rfsLifecycleFile = path.join(path.dirname(fs.realpathSync(confFile)), 'rfs-incident-lifecycle.json');
 var receiverHeartbeats = {};
 var pagerGeocodes = {};
+var rfsLifecycle = {};
 var centralWestGaugeMetadata = require('./central-west-gauges.json');
 var waterNswCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-dams.json');
 var waterNswGaugeCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-gauges.json');
@@ -98,6 +100,11 @@ try {
   pagerGeocodes = JSON.parse(fs.readFileSync(pagerGeocodeFile, 'utf8')) || {};
 } catch (pagerGeocodeError) {
   pagerGeocodes = {};
+}
+try {
+  rfsLifecycle = JSON.parse(fs.readFileSync(rfsLifecycleFile, 'utf8')) || {};
+} catch (rfsLifecycleError) {
+  rfsLifecycle = {};
 }
 try {
   var persistedDamData = JSON.parse(fs.readFileSync(waterNswCacheFile, 'utf8'));
@@ -2008,7 +2015,9 @@ router.route('/central-west/rfs-incidents')
         // affect travel or response without filling the map with all of NSW.
         if (latitude < -34.5 || latitude > -30.8 || longitude < 147.3 || longitude > 151.0) return null;
         var properties = feature.properties || {};
+        var feedId = String(feature.id || properties.guid || properties.id || [properties.title, latitude.toFixed(4), longitude.toFixed(4)].join('|'));
         return {
+          feedId: feedId,
           title: properties.title || 'RFS incident',
           category: properties.category || 'Incident',
           description: String(properties.description || '').replace(/<br\s*\/?\s*>/gi, ' · ').replace(/<[^>]+>/g, ''),
@@ -2018,7 +2027,34 @@ router.route('/central-west/rfs-incidents')
           longitude: longitude
         };
       }).filter(Boolean);
-      var payload = { fetchedAt: Math.floor(now / 1000), incidents: incidents };
+      var currentIds = {};
+      incidents.forEach(function (incident) {
+        currentIds[incident.feedId] = true;
+        var publishedAt = Date.parse(incident.published || '');
+        var lifecycle = rfsLifecycle[incident.feedId] || {firstSeenAt: isNaN(publishedAt) ? Math.floor(now / 1000) : Math.floor(publishedAt / 1000)};
+        lifecycle.lastSeenAt = Math.floor(now / 1000);
+        lifecycle.removedAt = null;
+        lifecycle.incident = incident;
+        rfsLifecycle[incident.feedId] = lifecycle;
+        incident.firstSeenAt = lifecycle.firstSeenAt;
+      });
+      Object.keys(rfsLifecycle).forEach(function (feedId) {
+        var lifecycle = rfsLifecycle[feedId];
+        if (!currentIds[feedId] && !lifecycle.removedAt) lifecycle.removedAt = Math.floor(now / 1000);
+        if (lifecycle.removedAt && now / 1000 - lifecycle.removedAt > 30 * 86400) delete rfsLifecycle[feedId];
+      });
+      try {
+        fs.writeFileSync(rfsLifecycleFile + '.tmp', JSON.stringify(rfsLifecycle, null, 2) + '\n', {mode: 0o600});
+        fs.renameSync(rfsLifecycleFile + '.tmp', rfsLifecycleFile);
+      } catch (lifecycleWriteError) {
+        logger.main.warn('Unable to persist RFS lifecycle history: ' + lifecycleWriteError.message);
+      }
+      var removedIncidents = Object.keys(rfsLifecycle).map(function (feedId) {
+        var lifecycle = rfsLifecycle[feedId];
+        if (!lifecycle.removedAt || !lifecycle.incident) return null;
+        return Object.assign({}, lifecycle.incident, {firstSeenAt: lifecycle.firstSeenAt, removedAt: lifecycle.removedAt});
+      }).filter(Boolean);
+      var payload = { fetchedAt: Math.floor(now / 1000), incidents: incidents, removedIncidents: removedIncidents };
       rfsIncidentCache = { fetchedAt: now, data: payload };
       res.status(200).json(payload);
     }).catch(function (err) {

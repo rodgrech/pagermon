@@ -76,7 +76,7 @@
             <div class="cw-incident-meta">{{incident.agency || 'Unknown agency'}} · {{incident.lastSeen | date:'dd MMM HH:mm'}}</div>
             <div class="cw-correlation cw-correlation-combined" ng-if="incident.rfsMatch"><i class="fa fa-link"></i> <strong>Combined with official RFS incident:</strong> <a ng-href="{{incident.rfsMatch.link}}" target="_blank" rel="noopener">{{incident.rfsMatch.title}}</a> · {{incident.rfsMatch.category}} · approximately {{incident.rfsMatch.distanceKm}} km<div ng-if="incident.rfsMatch.description">{{incident.rfsMatch.description}}</div></div>
             <div class="cw-incident-message">{{incident.messages[0].message}}</div>
-            <details ng-if="incident.messages.length > 1"><summary>Show incident timeline</summary><div class="cw-timeline" ng-repeat="item in incident.messages">{{item.timestamp * 1000 | date:'HH:mm'}} — {{item.message}}</div></details>
+            <details ng-if="incident.timeline.length > 1"><summary>Show incident timeline</summary><div class="cw-timeline" ng-repeat="item in incident.timeline"><strong ng-if="item.kind == 'rss'"><i class="fa" ng-class="item.state == 'removed' ? 'fa-times-circle text-danger' : 'fa-rss text-success'"></i> {{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — {{item.label}}</strong><span ng-if="item.kind == 'pager'">{{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — {{item.message}}</span></div></details>
           </article>
         </div>
 
@@ -452,6 +452,7 @@
       $scope.radarConfig = null;
       $scope.pagerIncidentExpiryHours = 24;
       $scope.allIncidents = [];
+      $scope.removedRfsIncidents = [];
 
       Api.DashboardConfig.get().$promise.then(function (config) {
         $scope.pagerIncidentExpiryHours = Math.max(1, Number(config.pagerIncidentExpiryHours) || 24);
@@ -547,7 +548,12 @@
       }
       function applyPagerIncidentExpiry() {
         var incidents = ($scope.allIncidents || []).slice();
-        CentralWestAlerts.correlateIncidents(incidents, $scope.rfsIncidents || []);
+        CentralWestAlerts.correlateIncidents(incidents, $scope.rfsIncidents || [], $scope.removedRfsIncidents || []);
+        angular.forEach(incidents, function(incident) {
+          incident.timeline = (incident.messages || []).map(function(message) { return {kind: 'pager', timestamp: Number(message.timestamp), message: message.message}; })
+            .concat((incident.rfsLifecycle || []).map(function(event) { return {kind: 'rss', timestamp: Number(event.timestamp), label: event.label, state: event.state}; }))
+            .sort(function(a, b) { return a.timestamp - b.timestamp; });
+        });
         var cutoff = Date.now() - Math.max(1, Number($scope.pagerIncidentExpiryHours) || 24) * 60 * 60 * 1000;
         $scope.incidents = incidents.filter(function(incident) {
           return !!incident.rfsMatch || (incident.lastSeen && incident.lastSeen.getTime() >= cutoff);
@@ -639,6 +645,7 @@
       });
       Api.RfsIncidents.get().$promise.then(function (data) {
         $scope.rfsIncidents = data.incidents || [];
+        $scope.removedRfsIncidents = data.removedIncidents || [];
         applyPagerIncidentExpiry();
         if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
       });

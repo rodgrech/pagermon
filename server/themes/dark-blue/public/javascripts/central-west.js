@@ -194,23 +194,38 @@
     return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
   }
 
-  function correlateIncidents(incidents, rfsIncidents) {
+  function correlateIncidents(incidents, rfsIncidents, removedRfsIncidents) {
     (rfsIncidents || []).forEach(function (rfs) { rfs.pagerMatch = null; });
     (incidents || []).forEach(function (incident) {
       incident.rfsMatch = null;
+      incident.rfsLifecycle = [];
       if (String(incident.agency || '').toUpperCase().indexOf('RFS') === -1) return;
       if (!incident.coordinates) return;
       (rfsIncidents || []).forEach(function (rfs) {
         var km = distanceKm({lat: incident.coordinates.lat, lng: incident.coordinates.lng}, {lat: rfs.latitude, lng: rfs.longitude});
         var matchRadiusKm = incident.coordinateAccuracy === 'exact' ? 5 : 25;
         if (km <= matchRadiusKm && (!incident.rfsMatch || km < incident.rfsMatch.distanceKm)) {
-          incident.rfsMatch = {title: rfs.title, category: rfs.category, description: rfs.description, link: rfs.link, latitude: rfs.latitude, longitude: rfs.longitude, distanceKm: Math.round(km)};
+          incident.rfsMatch = {title: rfs.title, category: rfs.category, description: rfs.description, link: rfs.link, latitude: rfs.latitude, longitude: rfs.longitude, distanceKm: Math.round(km), firstSeenAt: rfs.firstSeenAt};
         }
       });
       if (incident.rfsMatch) {
+        if (incident.rfsMatch.firstSeenAt) incident.rfsLifecycle.push({timestamp: incident.rfsMatch.firstSeenAt, label: 'Loaded into public RSS/ICON', state: 'loaded'});
         (rfsIncidents || []).forEach(function (rfs) {
           if (rfs.link === incident.rfsMatch.link) rfs.pagerMatch = {location: incident.location, agency: incident.agency, pageCount: incident.messages.length, latestMessage: incident.messages[0] && incident.messages[0].message};
         });
+      } else {
+        var removedMatch = null;
+        (removedRfsIncidents || []).forEach(function (rfs) {
+          var km = distanceKm({lat: incident.coordinates.lat, lng: incident.coordinates.lng}, {lat: rfs.latitude, lng: rfs.longitude});
+          var matchRadiusKm = incident.coordinateAccuracy === 'exact' ? 5 : 25;
+          var pagerTime = incident.lastSeen ? incident.lastSeen.getTime() / 1000 : 0;
+          var inLifecycleWindow = pagerTime >= Number(rfs.firstSeenAt || 0) - 21600 && pagerTime <= Number(rfs.removedAt || 0) + 21600;
+          if (inLifecycleWindow && km <= matchRadiusKm && (!removedMatch || km < removedMatch.distanceKm)) removedMatch = Object.assign({}, rfs, {distanceKm: km});
+        });
+        if (removedMatch) {
+          incident.rfsLifecycle.push({timestamp: removedMatch.firstSeenAt, label: 'Loaded into public RSS/ICON', state: 'loaded'});
+          incident.rfsLifecycle.push({timestamp: removedMatch.removedAt, label: 'Removed from public RSS/ICON', state: 'removed'});
+        }
       }
     });
     return incidents;
