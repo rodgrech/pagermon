@@ -83,7 +83,9 @@ var waterNswGaugeCache = { fetchedAt: 0, data: null };
 var waterNswGaugeAttemptSlot = null;
 var waterNswAlgaeCache = { fetchedAt: 0, data: null };
 var receiverHeartbeatFile = path.join(path.dirname(fs.realpathSync(confFile)), 'receiver-heartbeats.json');
+var pagerGeocodeFile = path.join(path.dirname(fs.realpathSync(confFile)), 'pager-geocodes.json');
 var receiverHeartbeats = {};
+var pagerGeocodes = {};
 var centralWestGaugeMetadata = require('./central-west-gauges.json');
 var waterNswCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-dams.json');
 var waterNswGaugeCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-gauges.json');
@@ -91,6 +93,11 @@ try {
   receiverHeartbeats = JSON.parse(fs.readFileSync(receiverHeartbeatFile, 'utf8')) || {};
 } catch (receiverHeartbeatError) {
   receiverHeartbeats = {};
+}
+try {
+  pagerGeocodes = JSON.parse(fs.readFileSync(pagerGeocodeFile, 'utf8')) || {};
+} catch (pagerGeocodeError) {
+  pagerGeocodes = {};
 }
 try {
   var persistedDamData = JSON.parse(fs.readFileSync(waterNswCacheFile, 'utf8'));
@@ -1763,6 +1770,56 @@ router.route('/central-west/dashboard')
         logger.main.error(err);
         res.status(500).send(err);
       });
+  });
+
+// Resolve pager-supplied street addresses once on the server. Results are
+// persisted beside config.json so browsers never contact the geocoder and a
+// busy incident does not generate one lookup per viewer.
+router.route('/central-west/pager-geocodes')
+  .post(authHelper.isLoggedInMessages, function (req, res) {
+    var addresses = (Array.isArray(req.body.addresses) ? req.body.addresses : [])
+      .map(function (value) { return String(value || '').replace(/\s+/g, ' ').trim(); })
+      .filter(function (value, index, list) { return value.length >= 6 && value.length <= 180 && list.indexOf(value) === index; })
+      .slice(0, 10);
+    var now = Date.now();
+    var maxAge = 90 * 24 * 60 * 60 * 1000;
+    var results = {};
+    var pending = [];
+    addresses.forEach(function (address) {
+      var key = address.toLowerCase();
+      var cached = pagerGeocodes[key];
+      if (cached && now - Number(cached.cachedAt || 0) < maxAge) results[address] = cached;
+      else pending.push(address);
+    });
+    var chain = Promise.resolve();
+    pending.forEach(function (address, index) {
+      chain = chain.then(function () {
+        return new Promise(function (resolve) { setTimeout(resolve, index ? 1100 : 0); });
+      }).then(function () {
+        return axios.get('https://nominatim.openstreetmap.org/search', {
+          timeout: 12000,
+          params: {q: address + ', Australia', format: 'jsonv2', limit: 1, countrycodes: 'au'},
+          headers: {'User-Agent': 'PagerMon Central West incident map/1.0'}
+        }).then(function (response) {
+          var row = Array.isArray(response.data) && response.data[0];
+          var item = row ? {latitude: Number(row.lat), longitude: Number(row.lon), displayName: String(row.display_name || ''), cachedAt: now} : {notFound: true, cachedAt: now};
+          pagerGeocodes[address.toLowerCase()] = item;
+          results[address] = item;
+        }).catch(function (err) {
+          logger.main.warn('Unable to geocode pager address: ' + err.message);
+        });
+      });
+    });
+    chain.then(function () {
+      try {
+        fs.writeFileSync(pagerGeocodeFile + '.tmp', JSON.stringify(pagerGeocodes, null, 2) + '\n', {mode: 0o600});
+        fs.renameSync(pagerGeocodeFile + '.tmp', pagerGeocodeFile);
+      } catch (err) {
+        logger.main.warn('Unable to persist pager geocode cache: ' + err.message);
+      }
+      res.set('Cache-Control', 'private, no-store');
+      res.status(200).json({results: results});
+    });
   });
 
 router.route('/central-west/receiver-heartbeat')

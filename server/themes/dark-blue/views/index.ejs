@@ -383,6 +383,7 @@
                   MessageSearch: $resource('/api/messageSearch/'),
                   Agencies: $resource('/api/capcodes/agency'),
                   Dashboard: $resource('/api/central-west/dashboard'),
+                  PagerGeocodes: $resource('/api/central-west/pager-geocodes'),
                   DashboardConfig: $resource('/api/central-west/dashboard-config'),
                   BomWarnings: $resource('/api/central-west/bom-warnings'),
                   WaterNswDams: $resource('/api/central-west/waternsw-dams'),
@@ -589,6 +590,22 @@
           $scope.receivers = (data.receivers || []).map(CentralWestAlerts.receiverHealth);
           angular.forEach(data.messages, CentralWestAlerts.decorateMessage);
           $scope.incidents = CentralWestAlerts.groupIncidents(data.messages);
+          var geocodeAddresses = [];
+          angular.forEach($scope.incidents, function(incident) {
+            if (incident.details && incident.details.geocodeAddress && incident.coordinateAccuracy !== 'exact' && geocodeAddresses.indexOf(incident.details.geocodeAddress) === -1) geocodeAddresses.push(incident.details.geocodeAddress);
+          });
+          if (geocodeAddresses.length) Api.PagerGeocodes.save({addresses: geocodeAddresses}).$promise.then(function(geocoded) {
+            angular.forEach($scope.incidents, function(incident) {
+              var address = incident.details && incident.details.geocodeAddress;
+              var point = address && geocoded.results && geocoded.results[address];
+              if (point && !point.notFound && isFinite(Number(point.latitude)) && isFinite(Number(point.longitude))) {
+                incident.coordinates = {name: incident.details.locality, lat: Number(point.latitude), lng: Number(point.longitude)};
+                incident.coordinateAccuracy = 'address';
+              }
+            });
+            CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
+            if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+          });
           updateViewBadge('incidents', incidentKeys());
           CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
           $scope.unknownCapcodes = CentralWestAlerts.unknownCapcodes(data.messages);

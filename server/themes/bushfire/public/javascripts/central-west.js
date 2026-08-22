@@ -124,6 +124,7 @@
       details.format = 'ses'; details.callsign = cleanPagerField(sesMatch[1]); details.unit = responseUnitName(details.callsign); details.place = titleCase(sesMatch[2]);
       details.street = titleCase(sesMatch[3]); details.locality = titleCase(sesMatch[4]);
       details.address = [details.place, details.street, details.locality + ', NSW'].join(', ');
+      details.geocodeAddress = [details.street, details.locality + ', NSW'].join(', ');
       details.description = cleanPagerField(sesMatch[5]); details.title = 'SES response — ' + details.locality;
     }
     return details;
@@ -261,7 +262,7 @@
     if (details.address) lines.push('<strong>Address:</strong> ' + escapeHtml(details.address));
     if (details.description) lines.push('<strong>Details:</strong> ' + escapeHtml(details.description));
     lines.push(incident.messages.length + ' page' + (incident.messages.length === 1 ? '' : 's'));
-    lines.push('<em>' + (incident.coordinateAccuracy === 'exact' ? 'Coordinates supplied in pager message' : 'Approximate locality position') + '</em>');
+    lines.push('<em>' + (incident.coordinateAccuracy === 'exact' ? 'Coordinates supplied in pager message' : incident.coordinateAccuracy === 'address' ? 'Position geocoded from pager address' : 'Approximate locality position') + '</em>');
     return lines.join('<br>');
   }
 
