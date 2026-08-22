@@ -243,3 +243,17 @@ body.cw-dark footer { background: #101d2a; border-color: #31465b; }
   .cw-radio-call { grid-template-columns: 1fr; gap: 9px; }
   .cw-radio-call-title { align-items: flex-start; flex-direction: column; gap: 2px; }
 }
+/* Keep agency artwork aligned with the standard unknown-agency icon. */
+.agency-logo,
+.agency-logo-rfs,
+.agency-logo-ses,
+.agency-logo-vra {
+  display: inline-block !important;
+  width: 34px !important;
+  height: 34px !important;
+  max-width: 34px !important;
+  max-height: 34px !important;
+  margin-right: 6px;
+  object-fit: contain;
+  vertical-align: middle;
+}

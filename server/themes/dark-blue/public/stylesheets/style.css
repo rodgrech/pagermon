@@ -738,6 +738,18 @@ footer,
     height: 34px;
 }
 
+/* Keep all agency artwork aligned with the standard unknown-agency icon. */
+.agency-logo,
+.agency-logo-rfs,
+.agency-logo-ses,
+.agency-logo-vra {
+    width: 34px !important;
+    height: 34px !important;
+    max-width: 34px !important;
+    max-height: 34px !important;
+    object-fit: contain;
+}
+
 @media (max-width: 767px) {
     .agency-logo {
         width: 36px;
