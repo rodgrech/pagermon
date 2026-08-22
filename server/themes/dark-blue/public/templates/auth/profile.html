@@ -58,11 +58,12 @@
       <div class="form-group">
         <label class="col-xs-4 col-sm-3 control-label">Capcode</label>
         <div class="col-xs-8 col-sm-9">
+          <input class="form-control" type="search" ng-model="push.capcodeSearch" placeholder="Search capcode, alias or agency…" autocomplete="off" style="margin-bottom: 8px;">
           <select class="form-control" ng-model="push.capcode">
             <option value="">Select one capcode</option>
-            <option ng-repeat="item in push.capcodes" value="{{item.address}}">{{item.address}} — {{item.alias || 'Unknown'}}{{item.agency ? ' (' + item.agency + ')' : ''}}</option>
+            <option ng-repeat="item in filteredPushCapcodes() track by item.address" value="{{item.address}}">{{item.address}} — {{item.alias || 'Unknown'}}{{item.agency ? ' (' + item.agency + ')' : ''}}</option>
           </select>
-          <span class="help-block">Your account can follow one capcode. The same choice applies to every subscribed device.</span>
+          <span class="help-block">Type above to search. Up to 100 matches are shown. Your account can follow one capcode, shared by every subscribed device.</span>
         </div>
       </div>
       <div class="btn-group">

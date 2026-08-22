@@ -194,6 +194,22 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         $scope.loading = true;
         $scope.push = {supported: 'serviceWorker' in navigator && 'PushManager' in window, enabled: false, subscribed: false, capcode: '', capcodes: []};
 
+        $scope.filteredPushCapcodes = function() {
+            var query = String($scope.push.capcodeSearch || '').toLowerCase().trim();
+            var selected = String($scope.push.capcode || '');
+            var rows = $scope.push.capcodes || [];
+            var result = [];
+            for (var selectedIndex = 0; selected && selectedIndex < rows.length; selectedIndex += 1) {
+                if (String(rows[selectedIndex].address) === selected) { result.push(rows[selectedIndex]); break; }
+            }
+            for (var i = 0; i < rows.length && result.length < 100; i += 1) {
+                var item = rows[i];
+                var matches = !query || [item.address, item.alias, item.agency].join(' ').toLowerCase().indexOf(query) !== -1;
+                if (matches && String(item.address) !== selected) result.push(item);
+            }
+            return result;
+        };
+
         function pushMessage(text, type) {
             $scope.alertMessage.text = text;
             $scope.alertMessage.type = type || 'alert-info';
