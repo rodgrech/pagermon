@@ -940,14 +940,17 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
             $scope.alertMessage.show = true;
             $timeout(function () { $scope.alertMessage.show = false; }, 3000);
           } else {
-            $scope.alertMessage.text = 'Error saving settings: '+response.data.error;
+            $scope.alertMessage.text = 'Error saving settings: ' + ((response.data && response.data.error) || response.statusText || 'Unknown server error');
             $scope.alertMessage.type = 'alert-danger';
             $scope.alertMessage.show = true;
             $timeout(function () { $scope.alertMessage.show = false; }, 3000);
           }
         }, function(response) {
           console.log(response);
-          $scope.alertMessage.text = 'Error saving settings: ' + response.data.error;
+          var saveError = response.status === 401
+            ? 'Your admin session has expired. Sign in again, reopen Settings, and retry.'
+            : ((response.data && response.data.error) || response.statusText || ('HTTP ' + response.status));
+          $scope.alertMessage.text = 'Unable to save settings: ' + saveError;
           $scope.alertMessage.type = 'alert-danger';
           $scope.alertMessage.show = true;
           $timeout(function () {
