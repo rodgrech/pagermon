@@ -41,7 +41,9 @@
       .then(function (response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
       .then(function (data) {
         var receivers = data.receivers || [];
-        document.getElementById('receiver-status').innerHTML = receivers.map(function (receiver) {
+        var local = data.local || {label: 'PagerMon', state: 'online'};
+        var localCard = '<article class="cw-status-card cw-health-online"><span class="cw-health-dot"></span><div><h3>' + escapeHtml(local.label) + '</h3><p>Local PagerMon application</p></div><div class="cw-status-value"><strong>Online</strong><span>Uptime ' + uptimeLabel(data.uptime) + '</span></div></article>';
+        document.getElementById('receiver-status').innerHTML = localCard + receivers.map(function (receiver) {
           var state = receiver.state || 'offline';
           var label = state === 'online' ? 'Online' : state === 'stale' ? 'Beacon delayed' : 'Offline';
           return '<article class="cw-status-card cw-health-' + escapeHtml(state) + '">' +
@@ -50,7 +52,7 @@
             '<p><strong>Internal IP:</strong> ' + escapeHtml(receiver.internalIp || 'Awaiting receiver report') + '</p>' +
             '<p><strong>External IP:</strong> ' + escapeHtml(receiver.externalIp || 'Awaiting receiver report') + '</p></div>' +
             '<div class="cw-status-value"><strong>' + label + '</strong><span>Last check-in ' + ageLabel(receiver.age) + '</span></div></article>';
-        }).join('') || '<div class="alert alert-warning">No receivers are configured.</div>';
+        }).join('');
         document.getElementById('server-status').innerHTML = '<strong>PageMon server online</strong> · Uptime ' + uptimeLabel(data.uptime) + ' · Last refreshed ' + new Date().toLocaleTimeString();
       })
       .catch(function () {

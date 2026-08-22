@@ -933,6 +933,14 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         $scope.pwaIconThemes = results.pwaIconThemes || results.themes;
       });
 
+      $scope.addRemoteReceiver = function() {
+        $scope.settings.monitoring.receiverMonitoring.remotes.push({id: '', label: '', location: '', frequency: ''});
+      };
+
+      $scope.removeRemoteReceiver = function(index) {
+        $scope.settings.monitoring.receiverMonitoring.remotes.splice(index, 1);
+      };
+
       $scope.settingsSubmit = function() {
         $scope.loading = true;
         Api.Settings.save(null, $scope.settings).$promise.then(function (response) {

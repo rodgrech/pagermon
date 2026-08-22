@@ -39,6 +39,9 @@ router.route('/settingsData')
         });
         settings.notifications = Object.assign({}, defaultConfig.notifications, settings.notifications || {});
         settings.notifications.webPush = Object.assign({}, defaultConfig.notifications.webPush, settings.notifications.webPush || {});
+        settings.monitoring = Object.assign({}, defaultConfig.monitoring, settings.monitoring || {});
+        settings.monitoring.receiverMonitoring = Object.assign({}, defaultConfig.monitoring.receiverMonitoring, settings.monitoring.receiverMonitoring || {});
+        if (!Array.isArray(settings.monitoring.receiverMonitoring.remotes)) settings.monitoring.receiverMonitoring.remotes = [];
         // logger.main.debug(util.format('Config:\n\n%o',settings));
         let plugins = [];
         fs.readdirSync('./plugins').forEach(file => {

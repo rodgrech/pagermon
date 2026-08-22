@@ -67,7 +67,10 @@
     "azureEnable": false,
     "azureKey": "",
     "gaEnable": false,
-    "gaTrackingCode": ""
+    "gaTrackingCode": "",
+    "receiverMonitoring": {
+      "remotes": []
+    }
   },
   "notifications": {
     "webPush": {

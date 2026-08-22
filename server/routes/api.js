@@ -82,12 +82,8 @@ var waterNswAttemptSlot = null;
 var waterNswGaugeCache = { fetchedAt: 0, data: null };
 var waterNswGaugeAttemptSlot = null;
 var waterNswAlgaeCache = { fetchedAt: 0, data: null };
-var receiverHeartbeatFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/receiver-heartbeats.json');
+var receiverHeartbeatFile = path.join(path.dirname(fs.realpathSync(confFile)), 'receiver-heartbeats.json');
 var receiverHeartbeats = {};
-var receiverDefinitions = {
-  RFSPAGE: { id: 'RFSPAGE', label: 'RFSPAGE', location: 'RDIO server', frequency: '148.5875 MHz' },
-  RemoteSDR1: { id: 'RemoteSDR1', label: 'RemoteSDR1', location: 'Raspberry Pi', frequency: '148.5875 MHz' }
-};
 var centralWestGaugeMetadata = require('./central-west-gauges.json');
 var waterNswCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-dams.json');
 var waterNswGaugeCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-gauges.json');
@@ -111,6 +107,44 @@ try {
 function integrationConfig(name, defaults) {
   nconf.load();
   return Object.assign({}, defaults || {}, nconf.get('integrations:' + name) || {});
+}
+
+function receiverDefinitions() {
+  nconf.load();
+  var config = nconf.get('monitoring:receiverMonitoring') || {};
+  var definitions = {};
+  (Array.isArray(config.remotes) ? config.remotes : []).forEach(function (receiver) {
+    var id = String(receiver.id || '').trim();
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(id)) return;
+    definitions[id] = {
+      id: id,
+      label: String(receiver.label || id).slice(0, 100),
+      location: String(receiver.location || 'Remote receiver').slice(0, 100),
+      frequency: String(receiver.frequency || '').slice(0, 100)
+    };
+  });
+  return definitions;
+}
+
+function receiverStatusList(nowSeconds) {
+  var definitions = receiverDefinitions();
+  return Object.keys(definitions).map(function (id) {
+    var definition = definitions[id];
+    var heartbeat = receiverHeartbeats[id] || {};
+    var lastSeen = Number(heartbeat.lastSeen) || null;
+    var age = lastSeen ? nowSeconds - lastSeen : null;
+    return {
+      id: definition.id,
+      label: definition.label,
+      location: definition.location,
+      frequency: definition.frequency,
+      state: age === null ? 'offline' : age <= 180 ? 'online' : age <= 600 ? 'stale' : 'offline',
+      lastSeen: lastSeen,
+      age: age,
+      externalIp: net.isIP(String(heartbeat.externalIp || '')) ? heartbeat.externalIp : null,
+      internalIp: net.isIP(String(heartbeat.internalIp || '')) ? heartbeat.internalIp : null
+    };
+  });
 }
 
 function configuredWaterSlot(timestamp, refreshHours) {
@@ -1658,22 +1692,7 @@ router.route('/central-west/dashboard')
         }
         var latest = rows.length ? Number(rows[0].timestamp) : null;
         var nowSeconds = Math.floor(Date.now() / 1000);
-        var receivers = Object.keys(receiverDefinitions).map(function (id) {
-          var definition = receiverDefinitions[id];
-          var heartbeat = receiverHeartbeats[id] || {};
-          var lastSeen = Number(heartbeat.lastSeen) || null;
-          var age = lastSeen ? nowSeconds - lastSeen : null;
-          var state = age === null ? 'offline' : age <= 180 ? 'online' : age <= 600 ? 'stale' : 'offline';
-          return {
-            id: definition.id,
-            label: definition.label,
-            location: definition.location,
-            frequency: definition.frequency,
-            state: state,
-            lastSeen: lastSeen,
-            age: age
-          };
-        });
+        var receivers = receiverStatusList(nowSeconds);
         res.status(200).json({
           serverTime: Math.floor(Date.now() / 1000),
           uptime: Math.floor(process.uptime()),
@@ -1692,7 +1711,7 @@ router.route('/central-west/dashboard')
 router.route('/central-west/receiver-heartbeat')
   .post(authHelper.isAdmin, function (req, res) {
     var id = String(req.body.id || '').trim();
-    if (!Object.prototype.hasOwnProperty.call(receiverDefinitions, id)) {
+    if (!Object.prototype.hasOwnProperty.call(receiverDefinitions(), id)) {
       return res.status(400).json({ error: 'Unknown receiver id.' });
     }
     var externalIp = String(req.body.externalIp || '').trim();
@@ -1717,24 +1736,12 @@ router.route('/central-west/receiver-heartbeat')
 router.route('/central-west/receiver-status')
   .get(isSessionUser, function (req, res) {
     var nowSeconds = Math.floor(Date.now() / 1000);
-    var receivers = Object.keys(receiverDefinitions).map(function (id) {
-      var definition = receiverDefinitions[id];
-      var heartbeat = receiverHeartbeats[id] || {};
-      var lastSeen = Number(heartbeat.lastSeen) || null;
-      var age = lastSeen ? nowSeconds - lastSeen : null;
-      return {
-        id: definition.id,
-        label: definition.label,
-        location: definition.location,
-        frequency: definition.frequency,
-        state: age === null ? 'offline' : age <= 180 ? 'online' : age <= 600 ? 'stale' : 'offline',
-        lastSeen: lastSeen,
-        age: age,
-        externalIp: net.isIP(String(heartbeat.externalIp || '')) ? heartbeat.externalIp : null,
-        internalIp: net.isIP(String(heartbeat.internalIp || '')) ? heartbeat.internalIp : null
-      };
+    return res.status(200).json({
+      serverTime: nowSeconds,
+      uptime: Math.floor(process.uptime()),
+      local: { id: 'pagermon', label: nconf.get('global:monitorName') || 'PagerMon', state: 'online' },
+      receivers: receiverStatusList(nowSeconds)
     });
-    return res.status(200).json({ serverTime: nowSeconds, uptime: Math.floor(process.uptime()), receivers: receivers });
   });
 
 router.route('/central-west/dashboard-config')
