@@ -18,7 +18,8 @@ router.use(function (req, res, next) {
 var nconf = require('nconf');
 var confFile = './config/config.json';
 var conf_backup = './config/backup.json';
-var integrationDefaults = require('../config/default.json').integrations;
+var defaultConfig = require('../config/default.json');
+var integrationDefaults = defaultConfig.integrations;
 
 nconf.file({ file: confFile });
 nconf.load();
@@ -36,6 +37,8 @@ router.route('/settingsData')
         Object.keys(integrationDefaults).forEach(function (name) {
             settings.integrations[name] = Object.assign({}, integrationDefaults[name], settings.integrations[name] || {});
         });
+        settings.notifications = Object.assign({}, defaultConfig.notifications, settings.notifications || {});
+        settings.notifications.webPush = Object.assign({}, defaultConfig.notifications.webPush, settings.notifications.webPush || {});
         // logger.main.debug(util.format('Config:\n\n%o',settings));
         let plugins = [];
         fs.readdirSync('./plugins').forEach(file => {

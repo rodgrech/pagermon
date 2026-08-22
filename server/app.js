@@ -42,6 +42,17 @@ var nconf = require('nconf');
     nconf.file({file: confFile});
     nconf.load();
 
+// Existing persistent configs may predate web push or have push enabled before
+// VAPID keys were created. Generate a key pair once and retain it in config.
+var webPushConfig = nconf.get('notifications:webPush');
+if (webPushConfig && webPushConfig.enabled && (!webPushConfig.publicKey || !webPushConfig.privateKey)) {
+  var vapidKeys = require('web-push').generateVAPIDKeys();
+  nconf.set('notifications:webPush:publicKey', vapidKeys.publicKey);
+  nconf.set('notifications:webPush:privateKey', vapidKeys.privateKey);
+  nconf.save();
+  logger.main.info('Generated VAPID keys for web push notifications');
+}
+
 //Load current theme
 var theme = nconf.get('global:theme')
 // set the theme if none found, for backwards compatibility

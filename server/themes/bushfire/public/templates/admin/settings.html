@@ -541,14 +541,37 @@
                 <span class="help-block">Pending members appear under Admin → Users. Change their status to Active and save to approve them.</span>
               </div>
             </div>
-            <div class="form-group">
-              <label for="notifications.webPush.enabled" class="col-xs-4 col-sm-3 control-label">Web Push</label>
-              <div class="col-xs-8 col-sm-9">
-                <label>
-                  <input type="checkbox" name="notifications.webPush.enabled" ng-model="settings.notifications.webPush.enabled">
-                  Allow users to receive notifications for one selected capcode.
-                </label>
-                <span class="help-block">Users configure their device and capcode under My Profile.</span>
+            <h5>Push notifications</h5>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <strong><i class="fa fa-bell"></i> Web push notifications</strong>
+              </div>
+              <div class="panel-body">
+                <div class="form-group">
+                  <label for="notifications.webPush.enabled" class="col-xs-4 col-sm-3 control-label">Enable push</label>
+                  <div class="col-xs-8 col-sm-9">
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" name="notifications.webPush.enabled" ng-model="settings.notifications.webPush.enabled">
+                        Allow members to receive push notifications.
+                      </label>
+                    </div>
+                    <span class="help-block">Each member can select one capcode and manage their registered devices under My Profile.</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="col-xs-4 col-sm-3 control-label">Delivery</label>
+                  <div class="col-xs-8 col-sm-9">
+                    <p class="form-control-static">Notifications open the matching capcode feed when selected.</p>
+                    <span class="help-block">Disabling push stops new notifications but does not remove members' saved device registrations or capcode choices.</span>
+                  </div>
+                </div>
+                <div class="form-group" ng-if="settings.notifications.webPush.enabled">
+                  <label class="col-xs-4 col-sm-3 control-label">Service keys</label>
+                  <div class="col-xs-8 col-sm-9">
+                    <p class="form-control-static"><span class="label" ng-class="settings.notifications.webPush.publicKey && settings.notifications.webPush.privateKey ? 'label-success' : 'label-warning'">{{settings.notifications.webPush.publicKey && settings.notifications.webPush.privateKey ? 'Configured' : 'Created automatically after restart'}}</span></p>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="row">

@@ -1,11 +1,12 @@
 {
-  "version": "2026.08.22.1",
-  "title": "What’s new in PagerMon",
+  "version": "2026.08.22.2",
+  "title": "What’s new",
   "changes": [
     "Added the Bushfire theme and theme-aware Operations Display.",
     "Added selectable PWA icons and neutral link previews.",
     "Added a configurable watermarked login background.",
     "Made push notifications open the matching capcode feed.",
-    "Added search to the push-notification capcode picker."
+    "Added search to the push-notification capcode picker.",
+    "Grouped push-notification controls into a clearer admin settings panel."
   ]
 }
