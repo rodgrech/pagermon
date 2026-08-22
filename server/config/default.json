@@ -97,7 +97,10 @@
     },
     "radio": {
       "enabled": true,
+      "sourceMode": "local",
       "databasePath": "/home/rodgrech/Applications/rdio-scanner.db",
+      "remoteUrl": "",
+      "remoteToken": "",
       "maximumCalls": 50
     },
     "piaware": {

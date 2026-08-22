@@ -1,0 +1,19 @@
+[Unit]
+Description=Read-only Rdio Scanner integration bridge
+After=network.target rdio-scanner.service
+Requires=rdio-scanner.service
+
+[Service]
+Type=simple
+User=rodgrech
+EnvironmentFile=/etc/rdio-bridge.env
+ExecStart=/usr/bin/python3 /usr/local/lib/rdio-bridge.py --database /home/rodgrech/Applications/rdio-scanner.db --listen 0.0.0.0 --port 3071
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
