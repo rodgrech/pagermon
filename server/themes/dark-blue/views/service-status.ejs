@@ -44,8 +44,7 @@
         var receivers = data.receivers || [];
         var nodes = data.nodes || [];
         var local = data.local || {label: 'PagerMon', state: 'online'};
-        var localCard = '<article class="cw-status-card cw-health-online"><span class="cw-health-dot"></span><div><h3>' + escapeHtml(local.label) + '</h3><p>Local PagerMon server · ' + escapeHtml(local.platform || '') + ' · ' + escapeHtml(local.nodeVersion || '') + '</p><p><strong>Receivers:</strong> ' + Number(local.onlineReceiverCount || 0) + ' online / ' + Number(local.receiverCount || 0) + ' configured</p><p><strong>PagerMon memory:</strong> ' + memoryLabel(local.memoryUsed) + '</p></div><div class="cw-status-value"><strong>Online</strong><span>Uptime ' + uptimeLabel(data.uptime) + '</span></div></article>';
-        document.getElementById('receiver-status').innerHTML = localCard + nodes.map(function (receiver) {
+        document.getElementById('receiver-status').innerHTML = nodes.map(function (receiver) {
           var state = receiver.state || 'offline';
           var label = state === 'online' ? 'Online' : state === 'stale' ? 'Beacon delayed' : 'Offline';
           var usb = receiver.usbReceivers || [];
@@ -64,8 +63,8 @@
             '<p><strong>Monitored frequencies:</strong></p><ul>' + channelHtml + '</ul>' +
             '<p><strong>Decoders:</strong> ' + escapeHtml((receiver.decoders || []).join(' · ') || 'Awaiting decoder inventory') + '</p></div>' +
             '<div class="cw-status-value"><strong>' + label + '</strong><span>Last check-in ' + ageLabel(receiver.age) + '</span></div></article>';
-        }).join('');
-        document.getElementById('server-status').innerHTML = '<strong>PageMon server online</strong> · Uptime ' + uptimeLabel(data.uptime) + ' · Last refreshed ' + new Date().toLocaleTimeString();
+        }).join('') || '<div class="alert alert-warning">PagerMon is online, but no decoder nodes have reported yet.</div>';
+        document.getElementById('server-status').innerHTML = '<strong>' + escapeHtml(local.label) + ' application online</strong> · ' + escapeHtml(local.platform || '') + ' · ' + escapeHtml(local.nodeVersion || '') + ' · PagerMon memory ' + memoryLabel(local.memoryUsed) + ' · Uptime ' + uptimeLabel(data.uptime) + ' · Last refreshed ' + new Date().toLocaleTimeString();
       })
       .catch(function () {
         document.getElementById('receiver-status').innerHTML = '<div class="alert alert-danger">Unable to retrieve receiver status.</div>';

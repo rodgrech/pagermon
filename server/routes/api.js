@@ -168,7 +168,7 @@ function receiverNodeList(receivers) {
     if (!nodes[key]) {
       nodes[key] = {
         id: key,
-        label: receiver.location && receiver.location !== 'Remote receiver' ? receiver.location : (receiver.nodeName || receiver.label),
+        label: /^(?:server|local)$/i.test(String(receiver.location || '').trim()) ? (nconf.get('global:monitorName') || receiver.nodeName || receiver.label) : (receiver.location && receiver.location !== 'Remote receiver' ? receiver.location : (receiver.nodeName || receiver.label)),
         nodeName: receiver.nodeName,
         platform: receiver.platform,
         state: receiver.state,
