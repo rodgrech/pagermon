@@ -3,6 +3,7 @@
 
   var towns = [
     ['Mudgee', -32.5943, 149.5871], ['Gulgong', -32.3627, 149.5325],
+    ['Crudine', -32.93166, 149.70111],
     ['Rylstone', -32.7972, 149.9690], ['Kandos', -32.8575, 149.9683],
     ['Wellington', -32.5559, 148.9455], ['Dubbo', -32.2429, 148.6048],
     ['Bathurst', -33.4193, 149.5775], ['Orange', -33.2833, 149.1000],
@@ -66,9 +67,73 @@
     return null;
   }
 
+  function cleanPagerField(value) {
+    return String(value || '').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+  }
+
+  function titleCase(value) {
+    return cleanPagerField(value).toLowerCase().replace(/\b[a-z]/g, function (letter) { return letter.toUpperCase(); });
+  }
+
+  function brigadeName(callsign) {
+    var value = cleanPagerField(callsign).toUpperCase();
+    var known = {CGCOMMS1: 'CG Comms 1', CGDO: 'Cudgegong Duty', CGLAWSO7A: 'Lawson 7', CGMUDGE1: 'Mudgee 1', CGMUDGE: 'Mudgee'};
+    if (known[value]) return known[value];
+    return value || '';
+  }
+
+  function responseUnitName(callsign) {
+    var value = cleanPagerField(callsign).toUpperCase();
+    var known = {'WTZSOF CFR': 'Western Zone Sofala CFA Unit', 'WTZSOE CFR': 'Western Zone Sofala CFA Unit'};
+    return known[value] || cleanPagerField(callsign);
+  }
+
+  function brigadeSort(a, b) {
+    var order = {'Mudgee': 10, 'Mudgee 1': 20, 'Lawson 7': 30, 'Cudgegong Duty': 40, 'CG Comms 1': 50};
+    return (order[a] || 100) - (order[b] || 100) || a.localeCompare(b);
+  }
+
+  function parsePagerIncident(message) {
+    var text = cleanPagerField(message && message.message);
+    var agency = String(message && message.agency || '').toUpperCase();
+    var details = {raw: text};
+    var coordinateMatch = text.match(/\[\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,2}(?:\.\d+)?)\s*\]\s*$/);
+    if (coordinateMatch) {
+      var longitude = Number(coordinateMatch[1]);
+      var latitude = Number(coordinateMatch[2]);
+      if (longitude >= 140 && longitude <= 155 && latitude >= -39 && latitude <= -27) details.coordinates = {lat: latitude, lng: longitude, exact: true};
+    }
+    var parts = text.split(/\s+-\s+/).map(cleanPagerField);
+    var incidentIndex = -1;
+    for (var i = 0; i < parts.length; i++) if (/^\d{2}-\d{5,}$/.test(parts[i])) { incidentIndex = i; break; }
+    if (incidentIndex >= 0 && (agency.indexOf('RFS') !== -1 || details.coordinates)) {
+      details.format = 'rfs';
+      details.callsign = parts[incidentIndex - 1] || '';
+      details.brigade = brigadeName(details.callsign);
+      details.incidentId = parts[incidentIndex];
+      details.type = parts[incidentIndex + 1] || '';
+      details.subtype = parts[incidentIndex + 2] || '';
+      details.address = parts[incidentIndex + 3] || '';
+      var addressParts = details.address.split(',').map(cleanPagerField);
+      details.locality = titleCase(addressParts[1] || addressParts[0]);
+      details.title = cleanPagerField(details.type || details.subtype || 'RFS incident') + (details.locality ? ' — ' + details.locality : '');
+      return details;
+    }
+    var sesMatch = text.match(/^(.+?)\s+AT\s+([^,]+),\s*([^,]+),\s*([^,]+),\s*NSW\.?\s*(.*)$/i);
+    if (sesMatch && (agency.indexOf('SES') !== -1 || /\bCFR\b/i.test(sesMatch[1]))) {
+      details.format = 'ses'; details.callsign = cleanPagerField(sesMatch[1]); details.unit = responseUnitName(details.callsign); details.place = titleCase(sesMatch[2]);
+      details.street = titleCase(sesMatch[3]); details.locality = titleCase(sesMatch[4]);
+      details.address = [details.place, details.street, details.locality + ', NSW'].join(', ');
+      details.description = cleanPagerField(sesMatch[5]); details.title = 'SES response — ' + details.locality;
+    }
+    return details;
+  }
+
   function decorateMessage(message) {
+    message.cwIncident = parsePagerIncident(message);
     message.cwPriority = priority(message.message);
-    message.cwLocation = location(message.message + ' ' + (message.alias || ''));
+    message.cwLocation = message.cwIncident.coordinates || location((message.cwIncident.locality || '') + ' ' + message.message + ' ' + (message.alias || ''));
+    if (message.cwLocation && !message.cwLocation.name) message.cwLocation.name = message.cwIncident.locality || 'Incident location';
     return message;
   }
 
@@ -78,12 +143,14 @@
       decorateMessage(message);
       var bucket = Math.floor(Number(message.timestamp) / 10800);
       var loc = message.cwLocation ? message.cwLocation.name : '';
-      var key = (message.agency || 'unknown') + '|' + (loc || message.address || 'unknown') + '|' + bucket;
-      if (!groups[key]) groups[key] = {agency: message.agency, location: loc, coordinates: message.cwLocation, priority: message.cwPriority, messages: [], lastSeen: new Date(Number(message.timestamp) * 1000)};
+      var details = message.cwIncident || {};
+      var key = details.incidentId ? (message.agency || 'unknown') + '|incident|' + details.incidentId : (message.agency || 'unknown') + '|' + (loc || message.address || 'unknown') + '|' + bucket;
+      if (!groups[key]) groups[key] = {agency: message.agency, location: loc, coordinates: message.cwLocation, coordinateAccuracy: details.coordinates && details.coordinates.exact ? 'exact' : 'approximate', details: details, brigades: [], priority: message.cwPriority, messages: [], lastSeen: new Date(Number(message.timestamp) * 1000)};
       groups[key].messages.push(message);
+      if (details.brigade && groups[key].brigades.indexOf(details.brigade) === -1) groups[key].brigades.push(details.brigade);
       if (['routine', 'medium', 'high', 'critical'].indexOf(message.cwPriority) > ['routine', 'medium', 'high', 'critical'].indexOf(groups[key].priority)) groups[key].priority = message.cwPriority;
     });
-    return Object.keys(groups).map(function (key) { return groups[key]; }).sort(function (a, b) { return b.lastSeen - a.lastSeen; }).slice(0, 50);
+    return Object.keys(groups).map(function (key) { groups[key].brigades.sort(brigadeSort); return groups[key]; }).sort(function (a, b) { return b.lastSeen - a.lastSeen; }).slice(0, 50);
   }
 
   function unknownCapcodes(messages) {
@@ -182,6 +249,22 @@
     return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function pagerPopup(incident) {
+    var details = incident.details || {};
+    var lines = ['<strong>' + escapeHtml(details.title || incident.location || incident.agency || 'Pager incident') + '</strong>'];
+    lines.push(escapeHtml(incident.agency || 'Unknown agency'));
+    if (details.incidentId) lines.push('<strong>Incident:</strong> ' + escapeHtml(details.incidentId));
+    if (details.type || details.subtype) lines.push('<strong>Type:</strong> ' + escapeHtml([details.type, details.subtype].filter(Boolean).join(' · ')));
+    if (incident.brigades && incident.brigades.length) lines.push('<strong>Brigades paged:</strong> ' + escapeHtml(incident.brigades.join(', ')));
+    else if (details.unit) lines.push('<strong>Responding unit:</strong> ' + escapeHtml(details.unit));
+    else if (details.callsign) lines.push('<strong>Callsign:</strong> ' + escapeHtml(details.callsign));
+    if (details.address) lines.push('<strong>Address:</strong> ' + escapeHtml(details.address));
+    if (details.description) lines.push('<strong>Details:</strong> ' + escapeHtml(details.description));
+    lines.push(incident.messages.length + ' page' + (incident.messages.length === 1 ? '' : 's'));
+    lines.push('<em>' + (incident.coordinateAccuracy === 'exact' ? 'Coordinates supplied in pager message' : 'Approximate locality position') + '</em>');
+    return lines.join('<br>');
+  }
+
   function renderMap(id, incidents, rfsIncidents, aircraft, dams, gauges, algaeSites) {
     if (!window.L) return;
     var features = window.CentralWestMapFeatures || {};
@@ -207,7 +290,7 @@
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
       var combined = incident.rfsMatch ? '<hr><strong>Official RFS incident</strong><br>' + escapeHtml(incident.rfsMatch.title) + '<br>' + escapeHtml(incident.rfsMatch.category) + '<br>' + escapeHtml(incident.rfsMatch.description || '') + '<br><a href="' + escapeHtml(incident.rfsMatch.link) + '" target="_blank" rel="noopener">View official incident</a>' : '';
-      L.marker([incident.coordinates.lat, incident.coordinates.lng]).addTo(layerGroups.pager).bindPopup('<strong>' + escapeHtml(incident.location) + '</strong><br>' + escapeHtml(incident.agency || 'Unknown agency') + '<br>' + incident.messages.length + ' page(s)<br><em>Approximate pager-derived location</em>' + combined);
+      L.marker([incident.coordinates.lat, incident.coordinates.lng]).addTo(layerGroups.pager).bindPopup(pagerPopup(incident) + combined, {maxWidth: 420});
     });
     (rfsIncidents || []).forEach(function (incident) {
       var hazard = incidentKind(incident);
@@ -290,5 +373,5 @@
     return '<svg class="cw-aircraft-svg" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(' + Number(track || 0) + 'deg)">' + paths[kind] + '</svg>';
   }
 
-  window.CentralWestAlerts = {decorateMessage: decorateMessage, groupIncidents: groupIncidents, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar};
+  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar};
 })(window);
