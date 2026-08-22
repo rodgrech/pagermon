@@ -22,6 +22,7 @@ var fs = require('fs');
 var session = require('express-session');
 var SQLiteStore = require('connect-sqlite3')(session);
 var flash    = require('connect-flash');
+var whatsNew = require('./config/whats-new.json');
 
 
 
@@ -188,6 +189,7 @@ app.use(function (req, res, next) {
   nconf.load();
   res.locals.pwaIconVersion = nconf.get('global:pwaIconVersion') || 1;
   res.locals.publicBaseUrl = req.protocol + '://' + req.get('host');
+  res.locals.whatsNew = whatsNew;
   next();
 });
 //Admin Socket

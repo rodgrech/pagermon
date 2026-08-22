@@ -44,6 +44,24 @@
   </div>
 </nav>
 
+<% if (login && whatsNew && whatsNew.version) { %>
+<div class="modal fade" id="whatsNewModal" tabindex="-1" role="dialog" aria-labelledby="whatsNewTitle">
+  <div class="modal-dialog" role="document"><div class="modal-content whats-new-modal">
+    <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button><h4 class="modal-title" id="whatsNewTitle"><i class="fa fa-bullhorn"></i> <%= whatsNew.title %></h4></div>
+    <div class="modal-body"><p>PagerMon has been updated.</p><ul><% whatsNew.changes.forEach(function(change) { %><li><%= change %></li><% }); %></ul></div>
+    <div class="modal-footer"><button type="button" class="btn btn-primary" data-dismiss="modal">Got it</button></div>
+  </div></div>
+</div>
+<script>
+$(function () {
+  var key = 'pagermon-whats-new:' + <%- JSON.stringify(String(user.id || user.username || 'user')) %>;
+  var version = <%- JSON.stringify(String(whatsNew.version)) %>;
+  if (window.localStorage && localStorage.getItem(key) !== version) $('#whatsNewModal').modal('show');
+  $('#whatsNewModal').on('hidden.bs.modal', function () { if (window.localStorage) localStorage.setItem(key, version); });
+});
+</script>
+<% } %>
+
 <script>
     $(function () {
         $("#home-body a:contains('Home')").parent().addClass('active');
