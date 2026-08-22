@@ -450,8 +450,11 @@
       $scope.operationsMode = false;
       $scope.radarEnabled = false;
       $scope.radarConfig = null;
+      $scope.pagerIncidentExpiryHours = 24;
+      $scope.allIncidents = [];
 
       Api.DashboardConfig.get().$promise.then(function (config) {
+        $scope.pagerIncidentExpiryHours = Math.max(1, Number(config.pagerIncidentExpiryHours) || 24);
         $scope.integrationFeatures = {
           bom: config.bomEnabled !== false,
           waterNsw: config.waterNswEnabled !== false,
@@ -480,6 +483,7 @@
             ($scope.dashboardView === 'radio' && !$scope.integrationFeatures.radio)) {
           $scope.dashboardView = 'feed';
         }
+        applyPagerIncidentExpiry();
       });
 
       function correlateDamAlgae() {
@@ -541,6 +545,14 @@
         });
         return keys.filter(Boolean);
       }
+      function applyPagerIncidentExpiry() {
+        var incidents = ($scope.allIncidents || []).slice();
+        CentralWestAlerts.correlateIncidents(incidents, $scope.rfsIncidents || []);
+        var cutoff = Date.now() - Math.max(1, Number($scope.pagerIncidentExpiryHours) || 24) * 60 * 60 * 1000;
+        $scope.incidents = incidents.filter(function(incident) {
+          return !!incident.rfsMatch || (incident.lastSeen && incident.lastSeen.getTime() >= cutoff);
+        });
+      }
       function radioKeys() {
         return ($scope.radioCalls || []).map(function(call) { return itemKey(call, [call.timestamp, call.source, call.talkgroup].join('|')); }).filter(Boolean);
       }
@@ -589,7 +601,8 @@
           $scope.health = CentralWestAlerts.health(age, Number(data.uptime));
           $scope.receivers = (data.receivers || []).map(CentralWestAlerts.receiverHealth);
           angular.forEach(data.messages, CentralWestAlerts.decorateMessage);
-          $scope.incidents = CentralWestAlerts.groupIncidents(data.messages);
+          $scope.allIncidents = CentralWestAlerts.groupIncidents(data.messages);
+          applyPagerIncidentExpiry();
           var geocodeAddresses = [];
           angular.forEach($scope.incidents, function(incident) {
             if (incident.details && incident.details.geocodeAddress && incident.coordinateAccuracy !== 'exact' && geocodeAddresses.indexOf(incident.details.geocodeAddress) === -1) geocodeAddresses.push(incident.details.geocodeAddress);
@@ -603,11 +616,11 @@
                 incident.coordinateAccuracy = 'address';
               }
             });
-            CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
+            applyPagerIncidentExpiry();
             if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
           });
           updateViewBadge('incidents', incidentKeys());
-          CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
+          applyPagerIncidentExpiry();
           $scope.unknownCapcodes = CentralWestAlerts.unknownCapcodes(data.messages);
           if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
         }, function () {
@@ -626,7 +639,7 @@
       });
       Api.RfsIncidents.get().$promise.then(function (data) {
         $scope.rfsIncidents = data.incidents || [];
-        CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
+        applyPagerIncidentExpiry();
         if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
       });
       function refreshWeatherRadar() {

@@ -1910,7 +1910,7 @@ router.route('/central-west/dashboard-config')
     var radioConfig = integrationConfig('radio', { enabled: true });
     var piawareConfig = integrationConfig('piaware', { enabled: true, pollSeconds: 10 });
     var radarConfig = integrationConfig('weatherRadar', { enabled: true, opacityPercent: 62, defaultVisible: false });
-    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 180 });
+    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 180, pagerIncidentExpiryHours: 24 });
     res.set('Cache-Control', 'private, no-store');
     res.status(200).json({
       waterNswEnabled: waterConfig.enabled !== false,
@@ -1921,7 +1921,8 @@ router.route('/central-west/dashboard-config')
       weatherRadarEnabled: radarConfig.enabled !== false,
       weatherRadarOpacity: Math.min(Math.max(parseInt(radarConfig.opacityPercent, 10) || 62, 10), 100) / 100,
       weatherRadarDefaultVisible: radarConfig.defaultVisible === true,
-      wheelPxPerZoomLevel: Math.min(Math.max(parseInt(mapConfig.wheelPxPerZoomLevel, 10) || 180, 60), 600)
+      wheelPxPerZoomLevel: Math.min(Math.max(parseInt(mapConfig.wheelPxPerZoomLevel, 10) || 180, 60), 600),
+      pagerIncidentExpiryHours: Math.min(Math.max(parseInt(mapConfig.pagerIncidentExpiryHours, 10) || 24, 1), 720)
     });
   });
 

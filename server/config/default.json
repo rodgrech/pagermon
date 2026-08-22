@@ -118,7 +118,8 @@
       "defaultVisible": false
     },
     "liveMap": {
-      "wheelPxPerZoomLevel": 180
+      "wheelPxPerZoomLevel": 180,
+      "pagerIncidentExpiryHours": 24
     }
   },
   "plugins": {}

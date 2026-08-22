@@ -198,10 +198,12 @@
     (rfsIncidents || []).forEach(function (rfs) { rfs.pagerMatch = null; });
     (incidents || []).forEach(function (incident) {
       incident.rfsMatch = null;
+      if (String(incident.agency || '').toUpperCase().indexOf('RFS') === -1) return;
       if (!incident.coordinates) return;
       (rfsIncidents || []).forEach(function (rfs) {
         var km = distanceKm({lat: incident.coordinates.lat, lng: incident.coordinates.lng}, {lat: rfs.latitude, lng: rfs.longitude});
-        if (km <= 25 && (!incident.rfsMatch || km < incident.rfsMatch.distanceKm)) {
+        var matchRadiusKm = incident.coordinateAccuracy === 'exact' ? 5 : 25;
+        if (km <= matchRadiusKm && (!incident.rfsMatch || km < incident.rfsMatch.distanceKm)) {
           incident.rfsMatch = {title: rfs.title, category: rfs.category, description: rfs.description, link: rfs.link, latitude: rfs.latitude, longitude: rfs.longitude, distanceKm: Math.round(km)};
         }
       });

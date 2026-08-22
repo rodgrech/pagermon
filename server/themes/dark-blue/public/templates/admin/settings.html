@@ -217,6 +217,7 @@
               <div class="panel-heading"><strong><i class="fa fa-map"></i> Live map</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Scroll sensitivity</label><div class="col-xs-8 col-sm-9"><input type="number" min="60" max="600" step="10" class="form-control" ng-model="settings.integrations.liveMap.wheelPxPerZoomLevel"><span class="help-block">Higher values make mouse-wheel and trackpad zoom less sensitive. Recommended: 180.</span></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Pager incident expiry</label><div class="col-xs-8 col-sm-9"><div class="input-group"><input type="number" min="1" max="720" step="1" class="form-control" ng-model="settings.integrations.liveMap.pagerIncidentExpiryHours"><span class="input-group-addon">hours</span></div><span class="help-block">Pager-derived incidents disappear after this time. A matching active RFS RSS incident keeps the marker visible; when that RFS incident clears, the normal expiry is applied.</span></div></div>
               </div>
             </div>
 
