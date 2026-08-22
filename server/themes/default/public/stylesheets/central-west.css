@@ -145,8 +145,9 @@ tr.cw-priority-critical > td:first-child, .cw-incident.cw-priority-critical { bo
 .cw-dam-spill span { animation: cw-dam-pulse 1.15s infinite; }
 @keyframes cw-dam-pulse { 50% { box-shadow: 0 0 0 8px rgba(189,62,75,.2), 0 2px 5px rgba(0,0,0,.45); } }
 .cw-water-alert-active { border-color: #bd3e4b !important; }
-.cw-dam-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
-.cw-dam-card { position: relative; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; min-height: 105px; padding: 14px 58px 14px 14px; border: 1px solid #d8e5ec; border-left: 5px solid #1683a6; border-radius: 6px; background: #f8fbfd; }
+.cw-dam-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 12px; align-items: start; }
+.cw-dam-card { position: relative; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: start; align-self: start; min-height: 132px; padding: 46px 14px 14px; border: 1px solid #d8e5ec; border-left: 5px solid #1683a6; border-radius: 6px; background: #f8fbfd; overflow-wrap: anywhere; }
+.cw-dam-details { min-width: 0; line-height: 1.45; }
 .cw-dam-trend { position: absolute; top: 10px; right: 12px; display: inline-flex; gap: 4px; align-items: center; padding: 3px 7px; border-radius: 12px; font-size: 11px; font-weight: 700; }
 .cw-dam-trend-up { color: #19733a; background: #daf2e2; }
 .cw-dam-trend-down { color: #a52f3b; background: #f8dfe2; }
@@ -165,7 +166,7 @@ tr.cw-priority-critical > td:first-child, .cw-incident.cw-priority-critical { bo
 .cw-dam-algae-detail { display: grid; gap: 4px; margin: 8px 0; padding: 8px; border-radius: 5px; background: rgba(44,155,89,.08); }
 .cw-dam-algae-detail .cw-algae-chip { width: max-content; }
 .cw-dam-algae-detail small { color: var(--mw-muted); }
-.cw-dam-flow-estimate { display: grid; min-width: 215px; flex: 1 1 100%; gap: 3px; padding: 9px 11px; border-left: 4px solid #4e91c5; border-radius: 5px; background: rgba(78,145,197,.09); }
+.cw-dam-flow-estimate { display: grid; grid-column: 1 / -1; min-width: 0; gap: 3px; padding: 9px 11px; border-left: 4px solid #4e91c5; border-radius: 5px; background: rgba(78,145,197,.09); }
 .cw-dam-flow-estimate .cw-flow-label { color: var(--mw-muted); font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
 .cw-dam-flow-estimate small { max-width: 260px; color: var(--mw-muted); font-size: 10px; }
 .cw-dam-flow-estimate.cw-flow-elevated { border-left-color: #e49b21; background: rgba(228,155,33,.1); }
