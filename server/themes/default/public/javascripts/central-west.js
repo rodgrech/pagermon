@@ -184,6 +184,7 @@
 
   function renderMap(id, incidents, rfsIncidents, aircraft, dams, gauges, algaeSites) {
     if (!window.L) return;
+    var features = window.CentralWestMapFeatures || {};
     var element = document.getElementById(id);
     if (!element) return;
     if (!map) {
@@ -191,7 +192,15 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
       layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
-      L.control.layers(null, {'Pager incidents': layerGroups.pager, 'NSW RFS incidents': layerGroups.rfs, 'Live aircraft': layerGroups.aircraft, 'WaterNSW dams': layerGroups.dams, 'River gauges': layerGroups.gauges, 'Algae alerts': layerGroups.algae, 'Weather radar': layerGroups.radar}, {collapsed: true, position: 'topright'}).addTo(map);
+      var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS incidents': layerGroups.rfs};
+      if (features.piaware !== false) overlays['Live aircraft'] = layerGroups.aircraft;
+      if (features.waterNsw !== false) {
+        overlays['WaterNSW dams'] = layerGroups.dams;
+        overlays['River gauges'] = layerGroups.gauges;
+        overlays['Algae alerts'] = layerGroups.algae;
+      }
+      if (features.weatherRadar !== false) overlays['Weather radar'] = layerGroups.radar;
+      L.control.layers(null, overlays, {collapsed: true, position: 'topright'}).addTo(map);
       map.on('overlayadd overlayremove', saveLayerState);
     }
     ['pager', 'rfs', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
@@ -247,16 +256,15 @@
   }
 
   function setRadar(id, config, enabled) {
-    if (!window.L || !config || !config.tileUrl) return;
-    if (!map) renderMap(id, [], [], [], [], [], []);
+    if (!window.L) return;
     if (radarLayer) {
       layerGroups.radar.removeLayer(radarLayer);
       radarLayer = null;
     }
-    if (enabled) {
-      radarLayer = L.tileLayer(config.tileUrl, {opacity: 0.62, maxNativeZoom: 7, maxZoom: 18, zIndex: 250, attribution: '<a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>'});
-      radarLayer.addTo(layerGroups.radar);
-    }
+    if (!config || !config.tileUrl || !enabled) return;
+    if (!map) renderMap(id, [], [], [], [], [], []);
+    radarLayer = L.tileLayer(config.tileUrl, {opacity: Number(config.opacity) || 0.62, maxNativeZoom: 7, maxZoom: 18, zIndex: 250, attribution: '<a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>'});
+    radarLayer.addTo(layerGroups.radar);
   }
 
   function aircraftKind(plane) {

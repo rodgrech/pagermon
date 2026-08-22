@@ -91,6 +91,20 @@
       "databasePath": "/home/rodgrech/Applications/rdio-scanner.db",
       "maximumCalls": 50
     },
+    "piaware": {
+      "enabled": true,
+      "aircraftUrl": "http://192.168.1.118/skyaware/data/aircraft.json",
+      "pollSeconds": 10,
+      "timeoutSeconds": 4,
+      "maximumAgeSeconds": 60
+    },
+    "weatherRadar": {
+      "enabled": true,
+      "metadataUrl": "https://api.rainviewer.com/public/weather-maps.json",
+      "cacheMinutes": 10,
+      "opacityPercent": 62,
+      "defaultVisible": false
+    },
     "liveMap": {
       "wheelPxPerZoomLevel": 180
     }

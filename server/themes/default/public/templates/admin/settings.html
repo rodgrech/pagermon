@@ -130,11 +130,33 @@
             </div>
 
             <div class="panel panel-default">
+              <div class="panel-heading"><strong>PiAware aircraft</strong></div>
+              <div class="panel-body">
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable PiAware</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.piaware.enabled"> Show live aircraft on the map</label></div></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Aircraft JSON URL</label><div class="col-xs-8 col-sm-9"><input type="url" class="form-control" ng-model="settings.integrations.piaware.aircraftUrl" ng-disabled="!settings.integrations.piaware.enabled"><span class="help-block">Usually <code>http://PIAWARE-IP/skyaware/data/aircraft.json</code>.</span></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Poll interval</label><div class="col-xs-8 col-sm-9"><input type="number" min="5" max="300" class="form-control" ng-model="settings.integrations.piaware.pollSeconds" ng-disabled="!settings.integrations.piaware.enabled"><span class="help-block">Seconds between aircraft updates.</span></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Request timeout</label><div class="col-xs-8 col-sm-9"><input type="number" min="1" max="30" class="form-control" ng-model="settings.integrations.piaware.timeoutSeconds" ng-disabled="!settings.integrations.piaware.enabled"><span class="help-block">Seconds to wait for the receiver.</span></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Maximum aircraft age</label><div class="col-xs-8 col-sm-9"><input type="number" min="5" max="600" class="form-control" ng-model="settings.integrations.piaware.maximumAgeSeconds" ng-disabled="!settings.integrations.piaware.enabled"><span class="help-block">Hide aircraft not seen within this many seconds.</span></div></div>
+              </div>
+            </div>
+
+            <div class="panel panel-default">
               <div class="panel-heading"><strong>Radio integration</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable radio</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.radio.enabled"> Show authenticated users the Rdio Scanner call feed</label></div></div></div>
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Database path</label><div class="col-xs-8 col-sm-9"><input type="text" class="form-control" ng-model="settings.integrations.radio.databasePath" ng-disabled="!settings.integrations.radio.enabled"></div></div>
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Maximum calls</label><div class="col-xs-8 col-sm-9"><input type="number" min="1" max="100" class="form-control" ng-model="settings.integrations.radio.maximumCalls" ng-disabled="!settings.integrations.radio.enabled"></div></div>
+              </div>
+            </div>
+
+            <div class="panel panel-default">
+              <div class="panel-heading"><strong>Weather radar</strong></div>
+              <div class="panel-body">
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable radar</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.weatherRadar.enabled"> Offer the RainViewer radar overlay on the live map</label></div></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Metadata URL</label><div class="col-xs-8 col-sm-9"><input type="url" class="form-control" ng-model="settings.integrations.weatherRadar.metadataUrl" ng-disabled="!settings.integrations.weatherRadar.enabled"></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Cache minutes</label><div class="col-xs-8 col-sm-9"><input type="number" min="1" max="1440" class="form-control" ng-model="settings.integrations.weatherRadar.cacheMinutes" ng-disabled="!settings.integrations.weatherRadar.enabled"></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Opacity (%)</label><div class="col-xs-8 col-sm-9"><input type="number" min="10" max="100" class="form-control" ng-model="settings.integrations.weatherRadar.opacityPercent" ng-disabled="!settings.integrations.weatherRadar.enabled"></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Visible by default</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.weatherRadar.defaultVisible" ng-disabled="!settings.integrations.weatherRadar.enabled"> Turn the overlay on when the live map loads</label></div></div></div>
               </div>
             </div>
 

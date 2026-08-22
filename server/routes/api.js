@@ -1742,12 +1742,19 @@ router.route('/central-west/dashboard-config')
     var waterConfig = integrationConfig('waterNsw', { enabled: true });
     var bomConfig = integrationConfig('bom', { enabled: true });
     var radioConfig = integrationConfig('radio', { enabled: true });
+    var piawareConfig = integrationConfig('piaware', { enabled: true, pollSeconds: 10 });
+    var radarConfig = integrationConfig('weatherRadar', { enabled: true, opacityPercent: 62, defaultVisible: false });
     var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 180 });
     res.set('Cache-Control', 'private, no-store');
     res.status(200).json({
       waterNswEnabled: waterConfig.enabled !== false,
       bomEnabled: bomConfig.enabled !== false,
       radioEnabled: radioConfig.enabled !== false,
+      piawareEnabled: piawareConfig.enabled !== false,
+      piawarePollSeconds: Math.min(Math.max(parseInt(piawareConfig.pollSeconds, 10) || 10, 5), 300),
+      weatherRadarEnabled: radarConfig.enabled !== false,
+      weatherRadarOpacity: Math.min(Math.max(parseInt(radarConfig.opacityPercent, 10) || 62, 10), 100) / 100,
+      weatherRadarDefaultVisible: radarConfig.defaultVisible === true,
       wheelPxPerZoomLevel: Math.min(Math.max(parseInt(mapConfig.wheelPxPerZoomLevel, 10) || 180, 60), 600)
     });
   });
@@ -2078,11 +2085,23 @@ router.route('/central-west/waternsw-algae-alerts')
 
 router.route('/central-west/aircraft')
   .get(authHelper.isLoggedInMessages, function (req, res) {
-    axios.get('http://192.168.1.118/skyaware/data/aircraft.json', { timeout: 4000 })
+    var piawareConfig = integrationConfig('piaware', {
+      enabled: true,
+      aircraftUrl: 'http://192.168.1.118/skyaware/data/aircraft.json',
+      timeoutSeconds: 4,
+      maximumAgeSeconds: 60
+    });
+    res.set('Cache-Control', 'private, no-store');
+    if (piawareConfig.enabled === false) {
+      return res.status(200).json({ disabled: true, now: Date.now() / 1000, aircraft: [] });
+    }
+    var timeoutMs = Math.min(Math.max(parseInt(piawareConfig.timeoutSeconds, 10) || 4, 1), 30) * 1000;
+    var maximumAge = Math.min(Math.max(parseInt(piawareConfig.maximumAgeSeconds, 10) || 60, 5), 600);
+    axios.get(piawareConfig.aircraftUrl, { timeout: timeoutMs })
       .then(function (response) {
         var data = response.data || {};
         var aircraft = (data.aircraft || []).filter(function (item) {
-          return typeof item.lat === 'number' && typeof item.lon === 'number';
+          return typeof item.lat === 'number' && typeof item.lon === 'number' && (Number(item.seen) || 0) <= maximumAge;
         }).map(function (item) {
           return {
             hex: item.hex,
@@ -2215,11 +2234,20 @@ router.route('/central-west/radio-calls/:id/audio')
 
 router.route('/central-west/weather-radar')
   .get(authHelper.isLoggedInMessages, function (req, res) {
+    var radarConfig = integrationConfig('weatherRadar', {
+      enabled: true,
+      metadataUrl: 'https://api.rainviewer.com/public/weather-maps.json',
+      cacheMinutes: 10,
+      opacityPercent: 62
+    });
+    res.set('Cache-Control', 'private, no-store');
+    if (radarConfig.enabled === false) return res.status(200).json({ disabled: true });
     var now = Date.now();
-    if (radarCache.data && now - radarCache.fetchedAt < 10 * 60 * 1000) {
+    var cacheMs = Math.min(Math.max(parseInt(radarConfig.cacheMinutes, 10) || 10, 1), 1440) * 60 * 1000;
+    if (radarCache.data && now - radarCache.fetchedAt < cacheMs) {
       return res.status(200).json(radarCache.data);
     }
-    axios.get('https://api.rainviewer.com/public/weather-maps.json', { timeout: 10000 })
+    axios.get(radarConfig.metadataUrl, { timeout: 10000 })
       .then(function (response) {
         var data = response.data || {};
         var frames = data.radar && data.radar.past ? data.radar.past : [];
@@ -2229,6 +2257,7 @@ router.route('/central-west/weather-radar')
           generated: data.generated,
           frameTime: latest.time,
           tileUrl: data.host + latest.path + '/256/{z}/{x}/{y}/2/1_1.png',
+          opacity: Math.min(Math.max(parseInt(radarConfig.opacityPercent, 10) || 62, 10), 100) / 100,
           attribution: 'Weather radar by RainViewer'
         };
         radarCache = { fetchedAt: now, data: payload };

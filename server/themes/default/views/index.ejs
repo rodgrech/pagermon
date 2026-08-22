@@ -56,7 +56,7 @@
         <div class="cw-toolbar">
           <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'feed', 'btn-default': dashboardView != 'feed'}" ng-click="setDashboardView('feed')"><i class="fa fa-list"></i> Feed</button>
           <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'incidents', 'btn-default': dashboardView != 'incidents'}" ng-click="setDashboardView('incidents')"><i class="fa fa-layer-group"></i> Incidents <span class="badge">{{incidents.length}}</span></button>
-          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'map', 'btn-default': dashboardView != 'map'}" ng-click="setDashboardView('map')"><i class="fa fa-map-marker-alt"></i> Live map <span class="badge" ng-if="rfsIncidents.length || aircraft.length">{{rfsIncidents.length + aircraft.length}}</span></button>
+          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'map', 'btn-default': dashboardView != 'map'}" ng-click="setDashboardView('map')"><i class="fa fa-map-marker-alt"></i> Live map <span class="badge" ng-if="rfsIncidents.length || (integrationFeatures.piaware && aircraft.length)">{{rfsIncidents.length + (integrationFeatures.piaware ? aircraft.length : 0)}}</span></button>
           <% if (login && user.role == 'admin') { %><button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'discovery', 'btn-default': dashboardView != 'discovery'}" ng-click="setDashboardView('discovery')"><i class="fa fa-search"></i> Discovery <span class="badge">{{unknownCapcodes.length}}</span></button><% } %>
           <button ng-if="integrationFeatures.bom" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'warnings', 'btn-default': dashboardView != 'warnings', 'cw-warning-active': bomWarnings.length}" ng-click="setDashboardView('warnings')"><i class="fa fa-cloud-bolt"></i> BOM warnings <span class="badge" ng-if="bomWarnings.length">{{bomWarnings.length}}</span></button>
           <button ng-if="integrationFeatures.waterNsw" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'water', 'btn-default': dashboardView != 'water', 'cw-water-alert-active': damAlerts.length}" ng-click="setDashboardView('water')"><i class="fa fa-water"></i> WaterNSW <span class="badge" ng-if="damAlerts.length">{{damAlerts.length}}</span></button>
@@ -81,9 +81,9 @@
         </div>
 
         <div class="cw-panel" ng-show="dashboardView == 'map'">
-          <div class="cw-operations-header" ng-if="operationsMode"><div><strong>Central West Alerts</strong><span>Live Operations Display</span></div><div class="cw-operations-status"><span class="cw-health-dot"></span>{{health.label}} · {{aircraft.length}} aircraft · {{rfsIncidents.length}} RFS incidents</div><button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()"><i class="fa fa-compress"></i> Exit</button></div>
+          <div class="cw-operations-header" ng-if="operationsMode"><div><strong>Central West Alerts</strong><span>Live Operations Display</span></div><div class="cw-operations-status"><span class="cw-health-dot"></span>{{health.label}}<span ng-if="integrationFeatures.piaware"> · {{aircraft.length}} aircraft</span> · {{rfsIncidents.length}} RFS incidents</div><button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()"><i class="fa fa-compress"></i> Exit</button></div>
           <div id="cw-incident-map"></div>
-          <div class="cw-map-legend"><span><i class="cw-map-dot cw-map-dot-pager"></i> Pager-derived approximate town</span><span><i class="cw-map-incident-legend fa fa-fire"></i> Official NSW RFS incident</span><span><i class="cw-map-aircraft-icon fa fa-plane"></i> Live PiAware aircraft</span><span><i class="cw-map-dam-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="cw-dam-water" d="M3 22c3-2 5-2 8 0s5 2 8 0 5-2 10 0v5H3z"/><path class="cw-dam-wall" d="M8 7h16l3 15c-3-2-5-2-8 0s-5 2-8 0c-1.2-.8-2.3-1.2-3.4-1.3L8 7zm4 3v8m4-8v10m4-10v8"/></svg></i> WaterNSW dam</span><span><i class="cw-map-gauge-marker"></i> Live river gauge</span><span><i class="cw-map-algae-markers"><b></b><b></b><b></b></i> Algae alert</span></div>
+          <div class="cw-map-legend"><span><i class="cw-map-dot cw-map-dot-pager"></i> Pager-derived approximate town</span><span><i class="cw-map-incident-legend fa fa-fire"></i> Official NSW RFS incident</span><span ng-if="integrationFeatures.piaware"><i class="cw-map-aircraft-icon fa fa-plane"></i> Live PiAware aircraft</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-dam-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="cw-dam-water" d="M3 22c3-2 5-2 8 0s5 2 8 0 5-2 10 0v5H3z"/><path class="cw-dam-wall" d="M8 7h16l3 15c-3-2-5-2-8 0s-5 2-8 0c-1.2-.8-2.3-1.2-3.4-1.3L8 7zm4 3v8m4-8v10m4-10v8"/></svg></i> WaterNSW dam</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-gauge-marker"></i> Live river gauge</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-algae-markers"><b></b><b></b><b></b></i> Algae alert</span></div>
           <p class="cw-map-note">Pager markers show approximate town centres. RFS markers use published feed coordinates, which may represent an LGA centre until accurate spatial information is available. © State of New South Wales (NSW Rural Fire Service). <a href="https://www.rfs.nsw.gov.au/fire-information/fires-near-me" target="_blank" rel="noopener">Current information</a>.</p>
         </div>
 
@@ -422,7 +422,7 @@
         $scope.user="";
       <% } %>
       $scope.dashboardView = 'feed';
-      $scope.integrationFeatures = {bom: false, waterNsw: false, radio: false};
+      $scope.integrationFeatures = {bom: false, waterNsw: false, radio: false, piaware: false, weatherRadar: false};
       $scope.darkMode = localStorage.getItem('cw-dark-mode') === 'true';
       document.body.classList.toggle('cw-dark', $scope.darkMode);
       $scope.health = { state: 'loading', label: 'Checking receiver', lastSeen: 'Unknown', uptime: 'Unknown' };
@@ -446,15 +446,33 @@
       $scope.radioLoading = false;
       $scope.radioError = '';
       $scope.operationsMode = false;
-      $scope.radarEnabled = localStorage.getItem('cw-radar-enabled') === 'true';
+      $scope.radarEnabled = false;
       $scope.radarConfig = null;
 
       Api.DashboardConfig.get().$promise.then(function (config) {
         $scope.integrationFeatures = {
           bom: config.bomEnabled !== false,
           waterNsw: config.waterNswEnabled !== false,
-          radio: config.radioEnabled !== false
+          radio: config.radioEnabled !== false,
+          piaware: config.piawareEnabled !== false,
+          weatherRadar: config.weatherRadarEnabled !== false
         };
+        window.CentralWestMapFeatures = angular.copy($scope.integrationFeatures);
+        if ($scope.integrationFeatures.piaware) {
+          refreshAircraft();
+          aircraftPoll = $interval(refreshAircraft, Math.max(Number(config.piawarePollSeconds) || 10, 5) * 1000);
+        } else {
+          $scope.aircraft = [];
+        }
+        if ($scope.integrationFeatures.weatherRadar) {
+          var storedRadarPreference = localStorage.getItem('cw-radar-enabled');
+          $scope.radarEnabled = storedRadarPreference === null ? config.weatherRadarDefaultVisible === true : storedRadarPreference === 'true';
+          refreshWeatherRadar();
+        } else {
+          $scope.radarEnabled = false;
+          $scope.radarConfig = null;
+          CentralWestAlerts.setRadar('cw-incident-map', null, false);
+        }
         if (($scope.dashboardView === 'warnings' && !$scope.integrationFeatures.bom) ||
             ($scope.dashboardView === 'water' && !$scope.integrationFeatures.waterNsw) ||
             ($scope.dashboardView === 'radio' && !$scope.integrationFeatures.radio)) {
@@ -526,6 +544,7 @@
         window.setTimeout(function () { CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites); }, 100);
       };
       $scope.toggleRadar = function () {
+        if (!$scope.integrationFeatures.weatherRadar) return;
         $scope.radarEnabled = !$scope.radarEnabled;
         localStorage.setItem('cw-radar-enabled', $scope.radarEnabled);
         CentralWestAlerts.setRadar('cw-incident-map', $scope.radarConfig, $scope.radarEnabled);
@@ -578,11 +597,15 @@
         CentralWestAlerts.correlateIncidents($scope.incidents, $scope.rfsIncidents);
         if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
       });
-      Api.WeatherRadar.get().$promise.then(function (data) {
-        $scope.radarConfig = data;
-        $scope.radarTime = Number(data.frameTime) * 1000;
-        CentralWestAlerts.setRadar('cw-incident-map', data, true);
-      });
+      function refreshWeatherRadar() {
+        if (!$scope.integrationFeatures.weatherRadar) return;
+        Api.WeatherRadar.get().$promise.then(function (data) {
+          if (data.disabled) return;
+          $scope.radarConfig = data;
+          $scope.radarTime = Number(data.frameTime) * 1000;
+          CentralWestAlerts.setRadar('cw-incident-map', data, $scope.radarEnabled);
+        });
+      }
       Api.WaterNswDams.get().$promise.then(function (data) {
         $scope.dams = data.dams || [];
         $scope.damAlerts = data.alerts || [];
@@ -630,13 +653,13 @@
       refreshAlgaeAlerts();
       var algaePoll = $interval(refreshAlgaeAlerts, 60 * 60 * 1000);
       function refreshAircraft() {
+        if (!$scope.integrationFeatures.piaware) return;
         Api.Aircraft.get().$promise.then(function (data) {
           $scope.aircraft = data.aircraft || [];
           if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
         });
       }
-      refreshAircraft();
-      var aircraftPoll = $interval(refreshAircraft, 10000);
+      var aircraftPoll;
       var radioPoll;
       $scope.refreshRadio = function () {
         if (!$scope.integrationFeatures.radio) return;
