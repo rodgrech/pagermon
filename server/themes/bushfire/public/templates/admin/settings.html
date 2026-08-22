@@ -33,6 +33,17 @@
               </div>
             </div>
             <div class="form-group">
+              <label for="global.pwaIconTheme" class="col-xs-4 col-sm-3 control-label">PWA icon</label>
+              <div class="col-xs-8 col-sm-9">
+                <select name="global.pwaIconTheme" ng-model="settings.global.pwaIconTheme" class="form-control">
+                  <option value="theme">Match active theme</option>
+                  <option ng-repeat="iconTheme in pwaIconThemes" value="{{iconTheme}}">{{iconTheme === 'dark-blue' ? 'Dark Blue' : (iconTheme === 'bushfire' ? 'Bushfire' : (iconTheme === 'default' ? 'Default' : iconTheme))}}</option>
+                </select>
+                <span class="help-block">Select an installed theme's icon set. PagerMon versions the manifest immediately; iOS may require removing and re-adding an existing Home Screen app.</span>
+              </div>
+            </div>
+
+            <div class="form-group">
               <label for="global.faKey" class="col-xs-4 col-sm-3 control-label">Font Awesome Kit ID</label>
               <div class="col-xs-8 col-sm-9">
                   <input class="form-control" type="text" name="global.faKey" ng-model="settings.global.faKey">
@@ -139,17 +150,6 @@
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Maximum aircraft age</label><div class="col-xs-8 col-sm-9"><input type="number" min="5" max="600" class="form-control" ng-model="settings.integrations.piaware.maximumAgeSeconds" ng-disabled="!settings.integrations.piaware.enabled"><span class="help-block">Hide aircraft not seen within this many seconds.</span></div></div>
               </div>
             </div>
-            <div class="form-group">
-              <label for="global.pwaIconTheme" class="col-xs-4 col-sm-3 control-label">PWA icon</label>
-              <div class="col-xs-8 col-sm-9">
-                <select name="global.pwaIconTheme" ng-model="settings.global.pwaIconTheme" class="form-control">
-                  <option value="theme">Match active theme</option>
-                  <option ng-repeat="iconTheme in pwaIconThemes" value="{{iconTheme}}">{{iconTheme === 'dark-blue' ? 'Dark Blue' : (iconTheme === 'bushfire' ? 'Bushfire' : (iconTheme === 'default' ? 'Default' : iconTheme))}}</option>
-                </select>
-                <span class="help-block">Select an installed theme's icon set. PagerMon versions the manifest immediately; iOS may require removing and re-adding an existing Home Screen app.</span>
-              </div>
-            </div>
-
             <div class="panel panel-default">
               <div class="panel-heading"><strong>Radio integration</strong></div>
               <div class="panel-body">
