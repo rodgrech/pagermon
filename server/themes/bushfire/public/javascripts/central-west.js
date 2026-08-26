@@ -25,9 +25,14 @@
     ['Goolma', -32.3700, 149.2700], ['Mullamuddy', -32.6500, 149.6500]
   ];
   var map;
+  var baseLayer;
   var radarLayer;
   var layerGroups;
   var mapWheelPxPerZoomLevel = 180;
+  var lastRender;
+  var lastRadarConfig;
+  var lastRadarEnabled = false;
+  var recoveryTimer;
 
   if (window.fetch) {
     window.fetch('/api/central-west/dashboard-config', {credentials: 'same-origin'})
@@ -267,6 +272,46 @@
     return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function mapIsAttached(element) {
+    if (!map || !element) return false;
+    try {
+      return map.getContainer() === element &&
+        document.documentElement.contains(element) &&
+        !!element.querySelector('.leaflet-map-pane');
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function discardStaleMap() {
+    if (map) {
+      try { map.off(); map.remove(); } catch (err) {}
+    }
+    map = null;
+    baseLayer = null;
+    radarLayer = null;
+    layerGroups = null;
+  }
+
+  function refreshMapLayout(redrawTiles) {
+    if (!lastRender) return;
+    var element = document.getElementById(lastRender.id);
+    if (!element || element.offsetWidth === 0 || element.offsetHeight === 0) return;
+    if (!mapIsAttached(element)) {
+      discardStaleMap();
+      renderMap(lastRender.id, lastRender.incidents, lastRender.rfsIncidents, lastRender.aircraft, lastRender.dams, lastRender.gauges, lastRender.algaeSites);
+      return;
+    }
+    map.invalidateSize({pan: false, animate: false});
+    if (redrawTiles && baseLayer) baseLayer.redraw();
+  }
+
+  function queueMapRecovery(redrawTiles) {
+    window.clearTimeout(recoveryTimer);
+    window.requestAnimationFrame(function () { refreshMapLayout(redrawTiles); });
+    recoveryTimer = window.setTimeout(function () { refreshMapLayout(redrawTiles); }, 350);
+  }
+
   function pagerPopup(incident) {
     var details = incident.details || {};
     var lines = ['<strong>' + escapeHtml(details.title || incident.location || incident.agency || 'Pager incident') + '</strong>'];
@@ -288,9 +333,14 @@
     var features = window.CentralWestMapFeatures || {};
     var element = document.getElementById(id);
     if (!element) return;
+    lastRender = {id: id, incidents: incidents || [], rfsIncidents: rfsIncidents || [], aircraft: aircraft || [], dams: dams || [], gauges: gauges || [], algaeSites: algaeSites || []};
+    if (map && !mapIsAttached(element)) discardStaleMap();
     if (!map) {
-      map = L.map(id, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel}).setView([-32.65, 149.58], 8);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
+      // Angular/PWA navigation can replace the map element without unloading this
+      // script. Clear Leaflet's orphaned container id before rebuilding the map.
+      if (element._leaflet_id) delete element._leaflet_id;
+      map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel}).setView([-32.65, 149.58], 8);
+      baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
       layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
       var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS incidents': layerGroups.rfs};
@@ -303,6 +353,10 @@
       if (features.weatherRadar !== false) overlays['Weather radar'] = layerGroups.radar;
       L.control.layers(null, overlays, {collapsed: true, position: 'topright'}).addTo(map);
       map.on('overlayadd overlayremove', saveLayerState);
+      if (lastRadarEnabled && lastRadarConfig && lastRadarConfig.tileUrl && features.weatherRadar !== false) {
+        radarLayer = L.tileLayer(lastRadarConfig.tileUrl, {opacity: Number(lastRadarConfig.opacity) || 0.62, maxNativeZoom: 7, maxZoom: 18, zIndex: 250, attribution: '<a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>'});
+        radarLayer.addTo(layerGroups.radar);
+      }
     }
     ['pager', 'rfs', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     (incidents || []).forEach(function (incident) {
@@ -353,12 +407,13 @@
       var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + (emergency ? ' cw-plane-emergency' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
       L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: 500}).addTo(layerGroups.aircraft).bindPopup('<strong>' + escapeHtml(label) + '</strong><br>Class: ' + escapeHtml(kind) + '<br>ICAO type: ' + escapeHtml(plane.aircraftType || 'Unknown') + '<br>Altitude: ' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '<br>Ground speed: ' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '<br>Track: ' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '<br>Seen: ' + escapeHtml(plane.seen) + ' sec ago');
     });
-    map.invalidateSize(true);
-    window.setTimeout(function () { if (map) map.invalidateSize(true); }, 180);
+    queueMapRecovery(false);
   }
 
   function setRadar(id, config, enabled) {
     if (!window.L) return;
+    lastRadarConfig = config || null;
+    lastRadarEnabled = !!enabled;
     if (radarLayer) {
       layerGroups.radar.removeLayer(radarLayer);
       radarLayer = null;
@@ -367,6 +422,12 @@
     radarLayer = L.tileLayer(config.tileUrl, {opacity: Number(config.opacity) || 0.62, maxNativeZoom: 7, maxZoom: 18, zIndex: 250, attribution: '<a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>'});
     radarLayer.addTo(layerGroups.radar);
   }
+
+  window.addEventListener('resize', function () { queueMapRecovery(false); });
+  window.addEventListener('online', function () { queueMapRecovery(true); });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) queueMapRecovery(true);
+  });
 
   function aircraftKind(plane) {
     var category = String(plane.category || '').toUpperCase();
