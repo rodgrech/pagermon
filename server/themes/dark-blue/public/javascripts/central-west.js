@@ -29,10 +29,12 @@
   var radarLayer;
   var layerGroups;
   var mapWheelPxPerZoomLevel = 180;
+  var stopMessageWindowMinutes = 30;
   var lastRender;
   var lastRadarConfig;
   var lastRadarEnabled = false;
   var recoveryTimer;
+  var satelliteHotspots = [];
 
   if (window.fetch) {
     window.fetch('/api/central-west/dashboard-config', {credentials: 'same-origin'})
@@ -40,12 +42,18 @@
       .then(function (config) {
         if (!config) return;
         mapWheelPxPerZoomLevel = Number(config.wheelPxPerZoomLevel) || 180;
+        stopMessageWindowMinutes = Math.min(Math.max(Number(config.stopMessageWindowMinutes) || 30, 1), 1440);
         if (map) map.options.wheelPxPerZoomLevel = mapWheelPxPerZoomLevel;
       }).catch(function () {});
   }
 
   function layerEnabled(name) {
-    try { return JSON.parse(localStorage.getItem('cw-map-layers') || '{}')[name] !== false; }
+    try {
+      var saved = JSON.parse(localStorage.getItem('cw-map-layers') || '{}');
+      if (Object.prototype.hasOwnProperty.call(saved, name)) return saved[name] !== false;
+      if (name === 'hotspots') return !!(window.CentralWestMapFeatures && window.CentralWestMapFeatures.nasaFirmsDefaultVisible);
+      return true;
+    }
     catch (err) { return true; }
   }
 
@@ -62,6 +70,10 @@
     if (/MVA|MVC|GRASS FIRE|BUSH FIRE|FLOOD RESCUE|MISSING PERSON|HAZMAT|URGENT|ASSIST AMBULANCE/.test(text)) return 'high';
     if (/TREE DOWN|FLOOD|STORM|SMOKE|ALARM|BACKUP|ASSIST|INCIDENT/.test(text)) return 'medium';
     return 'routine';
+  }
+
+  function isStopPage(message) {
+    return /\b(?:STOP|STAND\s*DOWN|CANCEL(?:LED)?|NO NEED TO ATTEND)\b/i.test(String(message || ''));
   }
 
   function location(text) {
@@ -98,6 +110,30 @@
     return (order[a] || 100) - (order[b] || 100) || a.localeCompare(b);
   }
 
+  function isSharedFireNetworkAgency(agency) {
+    var value = String(agency || '').toUpperCase();
+    return value.indexOf('RFS') !== -1 || value.indexOf('VRA') !== -1;
+  }
+
+  function normalizedIncidentAddress(value) {
+    return cleanPagerField(value).toUpperCase()
+      .replace(/\[\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*\]\s*$/, '')
+      .replace(/\bNSW\b/g, '')
+      .replace(/[^A-Z0-9]+/g, ' ')
+      .replace(/^\s+|\s+$/g, '');
+  }
+
+  function incidentGroupKey(message, details, loc, bucket) {
+    var agency = message.agency || 'unknown';
+    if (isSharedFireNetworkAgency(agency)) {
+      if (details.incidentId) return 'rfs-vra|incident|' + details.incidentId;
+      var address = normalizedIncidentAddress(details.address);
+      if (address) return 'rfs-vra|address|' + address + '|' + bucket;
+      if (details.coordinates) return 'rfs-vra|coordinates|' + Number(details.coordinates.lat).toFixed(4) + '|' + Number(details.coordinates.lng).toFixed(4) + '|' + bucket;
+    }
+    return details.incidentId ? agency + '|incident|' + details.incidentId : agency + '|' + (loc || message.address || 'unknown') + '|' + bucket;
+  }
+
   function parsePagerIncident(message) {
     var text = cleanPagerField(message && message.message);
     var agency = String(message && message.agency || '').toUpperCase();
@@ -111,7 +147,7 @@
     var parts = text.split(/\s+-\s+/).map(cleanPagerField);
     var incidentIndex = -1;
     for (var i = 0; i < parts.length; i++) if (/^\d{2}-\d{5,}$/.test(parts[i])) { incidentIndex = i; break; }
-    if (incidentIndex >= 0 && (agency.indexOf('RFS') !== -1 || details.coordinates)) {
+    if (incidentIndex >= 0 && (isSharedFireNetworkAgency(agency) || details.coordinates)) {
       details.format = 'rfs';
       details.callsign = parts[incidentIndex - 1] || '';
       details.brigade = brigadeName(details.callsign);
@@ -145,18 +181,55 @@
 
   function groupIncidents(messages) {
     var groups = {};
+    var stopPages = [];
     (messages || []).forEach(function (message) {
       decorateMessage(message);
+      if (isStopPage(message.message)) {
+        stopPages.push(message);
+        return;
+      }
       var bucket = Math.floor(Number(message.timestamp) / 10800);
       var loc = message.cwLocation ? message.cwLocation.name : '';
       var details = message.cwIncident || {};
-      var key = details.incidentId ? (message.agency || 'unknown') + '|incident|' + details.incidentId : (message.agency || 'unknown') + '|' + (loc || message.address || 'unknown') + '|' + bucket;
-      if (!groups[key]) groups[key] = {agency: message.agency, location: loc, coordinates: message.cwLocation, coordinateAccuracy: details.coordinates && details.coordinates.exact ? 'exact' : 'approximate', details: details, brigades: [], priority: message.cwPriority, messages: [], lastSeen: new Date(Number(message.timestamp) * 1000)};
+      var key = incidentGroupKey(message, details, loc, bucket);
+      if (!groups[key]) groups[key] = {agency: message.agency, agencies: [], location: loc, coordinates: message.cwLocation, coordinateAccuracy: details.coordinates && details.coordinates.exact ? 'exact' : 'approximate', details: details, brigades: [], priority: message.cwPriority, messages: [], lastSeen: new Date(Number(message.timestamp) * 1000)};
       groups[key].messages.push(message);
+      if (message.agency && groups[key].agencies.indexOf(message.agency) === -1) groups[key].agencies.push(message.agency);
       if (details.brigade && groups[key].brigades.indexOf(details.brigade) === -1) groups[key].brigades.push(details.brigade);
       if (['routine', 'medium', 'high', 'critical'].indexOf(message.cwPriority) > ['routine', 'medium', 'high', 'critical'].indexOf(groups[key].priority)) groups[key].priority = message.cwPriority;
     });
-    return Object.keys(groups).map(function (key) { groups[key].brigades.sort(brigadeSort); return groups[key]; }).sort(function (a, b) { return b.lastSeen - a.lastSeen; }).slice(0, 50);
+    stopPages.forEach(function (message) {
+      var stopTime = Number(message.timestamp);
+      var best = null;
+      Object.keys(groups).forEach(function (key) {
+        var group = groups[key];
+        var sameCapcode = group.messages.some(function (candidate) { return String(candidate.address) === String(message.address); });
+        if (!sameCapcode) return;
+        var priorTimes = group.messages.map(function (candidate) { return Number(candidate.timestamp); }).filter(function (timestamp) { return timestamp <= stopTime; });
+        if (!priorTimes.length) return;
+        var latestPrior = Math.max.apply(Math, priorTimes);
+        var age = stopTime - latestPrior;
+        if (age <= stopMessageWindowMinutes * 60 && (!best || age < best.age)) best = {group: group, age: age};
+      });
+      if (best) {
+        best.group.messages.push(message);
+        best.group.status = 'stopped';
+        best.group.stoppedAt = new Date(stopTime * 1000);
+        best.group.lastSeen = new Date(Math.max(best.group.lastSeen.getTime(), stopTime * 1000));
+        if (message.agency && best.group.agencies.indexOf(message.agency) === -1) best.group.agencies.push(message.agency);
+        return;
+      }
+      var details = message.cwIncident || {};
+      var loc = message.cwLocation ? message.cwLocation.name : '';
+      var bucket = Math.floor(stopTime / 10800);
+      var key = (message.agency || 'unknown') + '|unmatched-stop|' + (loc || message.address || 'unknown') + '|' + bucket;
+      groups[key] = {agency: message.agency, agencies: message.agency ? [message.agency] : [], location: loc, coordinates: message.cwLocation, coordinateAccuracy: 'approximate', details: details, brigades: [], priority: message.cwPriority, messages: [message], lastSeen: new Date(stopTime * 1000), status: 'unmatched-stop', stoppedAt: new Date(stopTime * 1000)};
+    });
+    return Object.keys(groups).map(function (key) {
+      groups[key].brigades.sort(brigadeSort);
+      if (groups[key].agencies.length) groups[key].agency = groups[key].agencies.join(' + ');
+      return groups[key];
+    }).sort(function (a, b) { return b.lastSeen - a.lastSeen; }).slice(0, 50);
   }
 
   function unknownCapcodes(messages) {
@@ -314,18 +387,21 @@
 
   function pagerPopup(incident) {
     var details = incident.details || {};
-    var lines = ['<strong>' + escapeHtml(details.title || incident.location || incident.agency || 'Pager incident') + '</strong>'];
-    lines.push(escapeHtml(incident.agency || 'Unknown agency'));
-    if (details.incidentId) lines.push('<strong>Incident:</strong> ' + escapeHtml(details.incidentId));
-    if (details.type || details.subtype) lines.push('<strong>Type:</strong> ' + escapeHtml([details.type, details.subtype].filter(Boolean).join(' · ')));
-    if (incident.brigades && incident.brigades.length) lines.push('<strong>Brigades paged:</strong> ' + escapeHtml(incident.brigades.join(', ')));
-    else if (details.unit) lines.push('<strong>Responding unit:</strong> ' + escapeHtml(details.unit));
-    else if (details.callsign) lines.push('<strong>Callsign:</strong> ' + escapeHtml(details.callsign));
-    if (details.address) lines.push('<strong>Address:</strong> ' + escapeHtml(details.address));
-    if (details.description) lines.push('<strong>Details:</strong> ' + escapeHtml(details.description));
-    lines.push(incident.messages.length + ' page' + (incident.messages.length === 1 ? '' : 's'));
-    lines.push('<em>' + (incident.coordinateAccuracy === 'exact' ? 'Coordinates supplied in pager message' : incident.coordinateAccuracy === 'address' ? 'Position geocoded from pager address' : 'Approximate locality position') + '</em>');
-    return lines.join('<br>');
+    var level = incident.rfsMatch && incident.rfsMatch.category || (incident.priority === 'critical' ? 'Critical' : incident.priority === 'high' ? 'High priority' : 'Pager incident');
+    var hazard = incidentKind({title: details.title, category: details.type, description: details.subtype || details.description});
+    var updated = incident.lastSeen instanceof Date ? incident.lastSeen.toLocaleString([], {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'}) : '';
+    var units = (incident.brigades || []).slice();
+    if (!units.length && details.unit) units.push(details.unit);
+    if (!units.length && details.callsign) units.push(details.callsign);
+    var chips = units.length ? '<div class="cw-popup-label">Units paged</div><div class="cw-popup-units">' + units.map(function(unit) { return '<span>' + escapeHtml(unit) + '</span>'; }).join('') + '</div>' : '';
+    var timelineKey = details.incidentId || incident.location || '';
+    return '<div class="cw-incident-popup">' +
+      '<div class="cw-popup-heading"><i class="fa ' + hazard.icon + '"></i><strong>' + escapeHtml(String(level).toUpperCase()) + '</strong></div>' +
+      '<div class="cw-popup-title">' + escapeHtml(details.title || incident.location || incident.agency || 'Pager incident') + '</div>' +
+      '<div class="cw-popup-pills">' + (updated ? '<span><small>Updated</small>' + escapeHtml(updated) + '</span>' : '') + (details.incidentId ? '<span><small>Incident</small>' + escapeHtml(details.incidentId) + '</span>' : '') + '<span><small>Pages</small>' + incident.messages.length + '</span></div>' +
+      (details.address ? '<div class="cw-popup-address"><i class="fa fa-map-marker-alt"></i>' + escapeHtml(details.address) + '</div>' : '') + chips +
+      '<div class="cw-popup-agency">' + escapeHtml(incident.agency || 'Unknown agency') + '<small>' + (incident.coordinateAccuracy === 'exact' ? 'Coordinates supplied by pager' : incident.coordinateAccuracy === 'address' ? 'Position geocoded from address' : 'Approximate locality position') + '</small></div>' +
+      '<a class="cw-popup-action" href="/?view=incidents&incident=' + encodeURIComponent(timelineKey) + '"><i class="fa fa-stream"></i> View full incident timeline</a></div>';
   }
 
   function renderMap(id, incidents, rfsIncidents, aircraft, dams, gauges, algaeSites) {
@@ -341,9 +417,10 @@
       if (element._leaflet_id) delete element._leaflet_id;
       map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel}).setView([-32.65, 149.58], 8);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
+      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), hotspots: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
-      var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS incidents': layerGroups.rfs};
+      var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS / NPWS incidents': layerGroups.rfs};
+      if (features.nasaFirms !== false) overlays['Satellite hotspots (NASA FIRMS)'] = layerGroups.hotspots;
       if (features.piaware !== false) overlays['Live aircraft'] = layerGroups.aircraft;
       if (features.waterNsw !== false) {
         overlays['WaterNSW dams'] = layerGroups.dams;
@@ -358,18 +435,26 @@
         radarLayer.addTo(layerGroups.radar);
       }
     }
-    ['pager', 'rfs', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
+    ['pager', 'rfs', 'hotspots', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
       var combined = incident.rfsMatch ? '<hr><strong>Official RFS incident</strong><br>' + escapeHtml(incident.rfsMatch.title) + '<br>' + escapeHtml(incident.rfsMatch.category) + '<br>' + escapeHtml(incident.rfsMatch.description || '') + '<br><a href="' + escapeHtml(incident.rfsMatch.link) + '" target="_blank" rel="noopener">View official incident</a>' : '';
-      L.marker([incident.coordinates.lat, incident.coordinates.lng]).addTo(layerGroups.pager).bindPopup(pagerPopup(incident) + combined, {maxWidth: 420});
+      L.marker([incident.coordinates.lat, incident.coordinates.lng]).addTo(layerGroups.pager).bindPopup(pagerPopup(incident) + combined, {maxWidth: 390, className: 'cw-popup-shell'});
     });
     (rfsIncidents || []).forEach(function (incident) {
       var hazard = incidentKind(incident);
       var severity = /emergency warning/i.test(incident.category) ? ' emergency' : /watch and act/i.test(incident.category) ? ' watch' : '';
       var incidentIcon = L.divIcon({className: 'cw-incident-marker cw-incident-' + hazard.kind + severity, html: '<span><i class="fa ' + hazard.icon + '"></i></span>', iconSize: [34, 31], iconAnchor: [17, 28]});
       var pagerDetail = incident.pagerMatch ? '<hr><strong>Matching pager traffic</strong><br>' + escapeHtml(incident.pagerMatch.location || incident.pagerMatch.agency) + '<br>' + incident.pagerMatch.pageCount + ' page(s)<br>' + escapeHtml(incident.pagerMatch.latestMessage) : '';
-      L.marker([incident.latitude, incident.longitude], {icon: incidentIcon, zIndexOffset: 450}).addTo(layerGroups.rfs).bindPopup('<strong>' + escapeHtml(incident.title) + '</strong><br>' + escapeHtml(incident.category) + '<br>' + escapeHtml(incident.description) + pagerDetail + '<br><a href="' + escapeHtml(incident.link) + '" target="_blank" rel="noopener">View on NSW RFS</a>');
+      var npwsDetail = incident.npwsMatches && incident.npwsMatches.length ? '<div class="cw-popup-source-match"><i class="fa fa-tree"></i><strong> Combined with NSW NPWS</strong><br>' + incident.npwsMatches.map(function(item) { return escapeHtml(item.title); }).join('<br>') + '</div>' : '';
+      var officialPopup = '<div class="cw-incident-popup"><div class="cw-popup-heading"><i class="fa ' + hazard.icon + '"></i><strong>' + escapeHtml(String(incident.category || 'Official incident').toUpperCase()) + '</strong></div><div class="cw-popup-title">' + escapeHtml(incident.title) + '</div><div class="cw-popup-pills"><span><small>Status</small>' + escapeHtml(incident.category || 'Published') + '</span><span><small>Type</small>' + escapeHtml(hazard.kind) + '</span></div><div class="cw-popup-description">' + escapeHtml(incident.description || '') + '</div>' + npwsDetail + pagerDetail + '<div class="cw-popup-actions"><a href="/?view=incidents&incident=' + encodeURIComponent(incident.title || incident.link || '') + '"><i class="fa fa-stream"></i> Timeline</a><a href="' + escapeHtml(incident.link) + '" target="_blank" rel="noopener">Official details</a></div></div>';
+      L.marker([incident.latitude, incident.longitude], {icon: incidentIcon, zIndexOffset: 450}).addTo(layerGroups.rfs).bindPopup(officialPopup, {maxWidth: 390, className: 'cw-popup-shell'});
+    });
+    (satelliteHotspots || []).forEach(function(hotspot) {
+      var confidence = String(hotspot.confidence || 'unknown');
+      var colour = confidence === 'h' || confidence === 'high' ? '#d94335' : confidence === 'l' || confidence === 'low' ? '#f0a52b' : '#ef6c32';
+      var popup = '<div class="cw-incident-popup cw-hotspot-popup"><div class="cw-popup-heading"><i class="fa fa-satellite"></i><strong>UNCONFIRMED SATELLITE HOTSPOT</strong></div><div class="cw-popup-title">NASA FIRMS thermal detection</div><div class="cw-popup-pills"><span><small>Detected</small>' + escapeHtml(hotspot.acquiredAt || 'Unknown') + '</span><span><small>Sensor</small>' + escapeHtml((hotspot.satellite || '') + ' ' + (hotspot.instrument || 'VIIRS')) + '</span></div><p>Satellite thermal anomaly only—not confirmation of a fire.</p><a class="cw-popup-action" href="https://firms.modaps.eosdis.nasa.gov/map/" target="_blank" rel="noopener">Open NASA FIRMS</a></div>';
+      L.circleMarker([hotspot.latitude, hotspot.longitude], {radius: 7, color: '#fff', weight: 2, fillColor: colour, fillOpacity: .92}).addTo(layerGroups.hotspots).bindPopup(popup, {maxWidth: 360, className: 'cw-popup-shell'});
     });
     (dams || []).forEach(function (dam) {
       var colour = dam.possibleSpill ? '#bd3e4b' : dam.status === 'full' ? '#dc6b28' : dam.status === 'near-capacity' ? '#e49b21' : '#1683a6';
@@ -423,6 +508,11 @@
     radarLayer.addTo(layerGroups.radar);
   }
 
+  function setSatelliteHotspots(hotspots) {
+    satelliteHotspots = Array.isArray(hotspots) ? hotspots : [];
+    if (lastRender) renderMap(lastRender.id, lastRender.incidents, lastRender.rfsIncidents, lastRender.aircraft, lastRender.dams, lastRender.gauges, lastRender.algaeSites);
+  }
+
   window.addEventListener('resize', function () { queueMapRecovery(false); });
   window.addEventListener('online', function () { queueMapRecovery(true); });
   document.addEventListener('visibilitychange', function () {
@@ -452,5 +542,5 @@
     return '<svg class="cw-aircraft-svg" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(' + Number(track || 0) + 'deg)">' + paths[kind] + '</svg>';
   }
 
-  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar};
+  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots};
 })(window);

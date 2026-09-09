@@ -72,18 +72,18 @@
         <div class="cw-panel" ng-show="dashboardView == 'incidents'">
           <div class="cw-empty" ng-if="!incidents.length">No recent incidents could be grouped yet.</div>
           <article class="cw-incident cw-priority-{{incident.priority}}" ng-repeat="incident in incidents">
-            <div class="cw-incident-heading"><span class="cw-priority-label">{{incident.priority}}</span> <strong>{{incident.location || incident.agency || 'Unclassified incident'}}</strong><span class="pull-right">{{incident.messages.length}} page<span ng-if="incident.messages.length != 1">s</span></span></div>
+            <div class="cw-incident-heading"><span class="cw-priority-label">{{incident.priority}}</span> <span class="label label-default" ng-if="incident.status == 'stopped'">STOP RECEIVED</span> <strong>{{incident.location || incident.agency || 'Unclassified incident'}}</strong><span class="pull-right">{{incident.messages.length}} page<span ng-if="incident.messages.length != 1">s</span></span></div>
             <div class="cw-incident-meta">{{incident.agency || 'Unknown agency'}} · {{incident.lastSeen | date:'dd MMM HH:mm'}}</div>
             <div class="cw-correlation cw-correlation-combined" ng-if="incident.rfsMatch"><i class="fa fa-link"></i> <strong>Combined with official RFS incident:</strong> <a ng-href="{{incident.rfsMatch.link}}" target="_blank" rel="noopener">{{incident.rfsMatch.title}}</a> · {{incident.rfsMatch.category}} · approximately {{incident.rfsMatch.distanceKm}} km<div ng-if="incident.rfsMatch.description">{{incident.rfsMatch.description}}</div></div>
             <div class="cw-incident-message">{{incident.messages[0].message}}</div>
-            <details ng-if="incident.timeline.length > 1"><summary>Show incident timeline</summary><div class="cw-timeline" ng-repeat="item in incident.timeline"><strong ng-if="item.kind == 'rss'"><i class="fa" ng-class="item.state == 'removed' ? 'fa-times-circle text-danger' : 'fa-rss text-success'"></i> {{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — {{item.label}}</strong><span ng-if="item.kind == 'pager'">{{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — {{item.message}}</span></div></details>
+            <details ng-if="incident.timeline.length > 1"><summary>Show incident timeline</summary><div class="cw-timeline" ng-repeat="item in incident.timeline"><strong ng-if="item.kind == 'rss'"><i class="fa" ng-class="item.state == 'removed' ? 'fa-times-circle text-danger' : 'fa-rss text-success'"></i> {{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — {{item.label}}</strong><span ng-if="item.kind == 'pager'">{{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — <strong ng-if="item.agency">{{item.agency}}: </strong>{{item.message}}</span></div></details>
           </article>
         </div>
 
         <div class="cw-panel" ng-show="dashboardView == 'map'">
           <div class="cw-operations-header" ng-if="operationsMode"><div><strong>Central West Alerts</strong><span>Live Operations Display</span></div><div class="cw-operations-status"><span class="cw-health-dot"></span>{{health.label}}<span ng-if="integrationFeatures.piaware"> · {{aircraft.length}} aircraft</span> · {{rfsIncidents.length}} RFS incidents</div><button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()"><i class="fa fa-compress"></i> Exit</button></div>
           <div id="cw-incident-map"></div>
-          <div class="cw-map-legend"><span><i class="cw-map-dot cw-map-dot-pager"></i> Pager-derived approximate town</span><span><i class="cw-map-incident-legend fa fa-fire"></i> Official NSW RFS incident</span><span ng-if="integrationFeatures.piaware"><i class="cw-map-aircraft-icon fa fa-plane"></i> Live PiAware aircraft</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-dam-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="cw-dam-water" d="M3 22c3-2 5-2 8 0s5 2 8 0 5-2 10 0v5H3z"/><path class="cw-dam-wall" d="M8 7h16l3 15c-3-2-5-2-8 0s-5 2-8 0c-1.2-.8-2.3-1.2-3.4-1.3L8 7zm4 3v8m4-8v10m4-10v8"/></svg></i> WaterNSW dam</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-gauge-marker"></i> Live river gauge</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-algae-markers"><b></b><b></b><b></b></i> Algae alert</span></div>
+          <div class="cw-map-legend"><span><i class="cw-map-dot cw-map-dot-pager"></i> Pager-derived approximate town</span><span><i class="cw-map-incident-legend fa fa-fire"></i> Official NSW RFS incident</span><span ng-if="integrationFeatures.nasaFirms"><i class="cw-map-dot cw-map-dot-hotspot"></i> Unconfirmed NASA FIRMS hotspot</span><span ng-if="integrationFeatures.piaware"><i class="cw-map-aircraft-icon fa fa-plane"></i> Live PiAware aircraft</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-dam-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="cw-dam-water" d="M3 22c3-2 5-2 8 0s5 2 8 0 5-2 10 0v5H3z"/><path class="cw-dam-wall" d="M8 7h16l3 15c-3-2-5-2-8 0s-5 2-8 0c-1.2-.8-2.3-1.2-3.4-1.3L8 7zm4 3v8m4-8v10m4-10v8"/></svg></i> WaterNSW dam</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-gauge-marker"></i> Live river gauge</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-algae-markers"><b></b><b></b><b></b></i> Algae alert</span></div>
           <p class="cw-map-note">Pager markers show approximate town centres. RFS markers use published feed coordinates, which may represent an LGA centre until accurate spatial information is available. © State of New South Wales (NSW Rural Fire Service). <a href="https://www.rfs.nsw.gov.au/fire-information/fires-near-me" target="_blank" rel="noopener">Current information</a>.</p>
         </div>
 
@@ -235,10 +235,11 @@
               <img ng-if="message.agency == 'NSW RFS'" class="agency-logo agency-logo-rfs" src="/images/agencies/rfs.png" alt="NSW RFS">
               <img ng-if="message.agency == 'NSW SES'" class="agency-logo agency-logo-ses" src="/images/agencies/ses.svg" alt="NSW SES">
               <img ng-if="message.agency == 'NSW VRA'" class="agency-logo agency-logo-vra" src="/images/agencies/vra.png" alt="NSW VRA">
+              <img ng-if="message.agency == 'FRNSW' || message.agency == 'Fire and Rescue NSW'" class="agency-logo agency-logo-frnsw" src="/images/agencies/frnsw.png" alt="Fire and Rescue NSW">
               <% if (iconsize == 'small') { %>
-              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA'" class="fa-stack fa-fw" style="color: {{message.color || 'grey'}};">
+              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA' && message.agency !== 'FRNSW' && message.agency !== 'Fire and Rescue NSW'" class="fa-stack fa-fw" style="color: {{message.color || 'grey'}};">
               <% } else { %>
-              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA'" class="fa-stack fa-lg fa-fw" style="color: {{message.color || 'grey'}};">
+              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA' && message.agency !== 'FRNSW' && message.agency !== 'Fire and Rescue NSW'" class="fa-stack fa-lg fa-fw" style="color: {{message.color || 'grey'}};">
               <% } %>
                 <i class="fa fa-circle fa-stack-2x"></i>
                 <i ng-if="message.icon" class="fa fa-{{message.icon}} fa-stack-1x fa-inverse"></i>
@@ -392,6 +393,8 @@
                   RfsIncidents: $resource('/api/central-west/rfs-incidents'),
                   Aircraft: $resource('/api/central-west/aircraft'),
                   WeatherRadar: $resource('/api/central-west/weather-radar'),
+                  SatelliteHotspots: $resource('/api/central-west/nasa-firms-hotspots'),
+                  NpwsIncidents: $resource('/api/central-west/npws-incidents'),
                   RadioCalls: $resource('/api/central-west/radio-calls')
                 };
               }])
@@ -421,8 +424,8 @@
       <% }else{ %>
         $scope.user="";
       <% } %>
-      $scope.dashboardView = 'feed';
-      $scope.integrationFeatures = {bom: false, waterNsw: false, radio: false, piaware: false, weatherRadar: false};
+      $scope.dashboardView = /(?:\?|&)view=incidents(?:&|$)/.test(window.location.search) ? 'incidents' : 'feed';
+      $scope.integrationFeatures = {bom: false, waterNsw: false, radio: false, piaware: false, weatherRadar: false, nasaFirms: false, npws: false};
       $scope.darkMode = localStorage.getItem('cw-dark-mode') === 'true';
       document.body.classList.toggle('cw-dark', $scope.darkMode);
       $scope.health = { state: 'loading', label: 'Checking receiver', lastSeen: 'Unknown', uptime: 'Unknown' };
@@ -461,8 +464,11 @@
           waterNsw: config.waterNswEnabled !== false,
           radio: config.radioEnabled !== false,
           piaware: config.piawareEnabled !== false,
-          weatherRadar: config.weatherRadarEnabled !== false
+          weatherRadar: config.weatherRadarEnabled !== false,
+          nasaFirms: config.nasaFirmsEnabled === true,
+          npws: config.npwsEnabled === true
         };
+        $scope.integrationFeatures.nasaFirmsDefaultVisible = config.nasaFirmsDefaultVisible === true;
         window.CentralWestMapFeatures = angular.copy($scope.integrationFeatures);
         if ($scope.integrationFeatures.piaware) {
           refreshAircraft();
@@ -479,6 +485,9 @@
           $scope.radarConfig = null;
           CentralWestAlerts.setRadar('cw-incident-map', null, false);
         }
+        if ($scope.integrationFeatures.nasaFirms) {
+          Api.SatelliteHotspots.get().$promise.then(function(data) { CentralWestAlerts.setSatelliteHotspots(data.hotspots || []); });
+        } else CentralWestAlerts.setSatelliteHotspots([]);
         if (($scope.dashboardView === 'warnings' && !$scope.integrationFeatures.bom) ||
             ($scope.dashboardView === 'water' && !$scope.integrationFeatures.waterNsw) ||
             ($scope.dashboardView === 'radio' && !$scope.integrationFeatures.radio)) {
@@ -550,7 +559,7 @@
         var incidents = ($scope.allIncidents || []).slice();
         CentralWestAlerts.correlateIncidents(incidents, $scope.rfsIncidents || [], $scope.removedRfsIncidents || []);
         angular.forEach(incidents, function(incident) {
-          incident.timeline = (incident.messages || []).map(function(message) { return {kind: 'pager', timestamp: Number(message.timestamp), message: message.message}; })
+          incident.timeline = (incident.messages || []).map(function(message) { return {kind: 'pager', timestamp: Number(message.timestamp), agency: message.agency, message: message.message}; })
             .concat((incident.rfsLifecycle || []).map(function(event) { return {kind: 'rss', timestamp: Number(event.timestamp), label: event.label, state: event.state}; }))
             .sort(function(a, b) { return a.timestamp - b.timestamp; });
         });
@@ -648,6 +657,27 @@
         $scope.removedRfsIncidents = data.removedIncidents || [];
         applyPagerIncidentExpiry();
         if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+        if ($scope.integrationFeatures.npws) Api.NpwsIncidents.get().$promise.then(function(npwsData) {
+          var unmatched = [];
+          angular.forEach(npwsData.incidents || [], function(npws) {
+            var best = null;
+            angular.forEach($scope.rfsIncidents, function(rfs) {
+              var idText = [rfs.feedId, rfs.title, rfs.description].join(' ');
+              var idMatch = npws.incidentId && idText.indexOf(String(npws.incidentId)) !== -1;
+              var dy = (Number(npws.latitude) - Number(rfs.latitude)) * 111;
+              var dx = (Number(npws.longitude) - Number(rfs.longitude)) * 111 * Math.cos(Number(rfs.latitude) * Math.PI / 180);
+              var km = Math.sqrt(dx * dx + dy * dy);
+              if (idMatch || km <= 5) if (!best || idMatch || km < best.km) best = {incident: rfs, km: km, idMatch: idMatch};
+            });
+            if (best) {
+              best.incident.npwsMatches = best.incident.npwsMatches || [];
+              best.incident.npwsMatches.push(npws);
+            } else unmatched.push(npws);
+          });
+          $scope.rfsIncidents = $scope.rfsIncidents.concat(unmatched);
+          applyPagerIncidentExpiry();
+          if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
+        });
       });
       function refreshWeatherRadar() {
         if (!$scope.integrationFeatures.weatherRadar) return;

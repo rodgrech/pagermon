@@ -117,9 +117,23 @@
       "opacityPercent": 62,
       "defaultVisible": false
     },
+    "nasaFirms": {
+      "enabled": false,
+      "mapKey": "",
+      "cacheMinutes": 15,
+      "dayRange": 1,
+      "defaultVisible": false,
+      "bounds": "147,-35,151,-30"
+    },
+    "npws": {
+      "enabled": false,
+      "feedUrl": "",
+      "cacheMinutes": 10
+    },
     "liveMap": {
       "wheelPxPerZoomLevel": 180,
-      "pagerIncidentExpiryHours": 24
+      "pagerIncidentExpiryHours": 24,
+      "stopMessageWindowMinutes": 30
     }
   },
   "plugins": {}

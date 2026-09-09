@@ -196,6 +196,29 @@
               </div>
             </div>
 
+            <div class="panel panel-default">
+              <div class="panel-heading"><strong><i class="fa fa-satellite"></i> NASA FIRMS satellite hotspots</strong></div>
+              <div class="panel-body">
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable hotspots</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.nasaFirms.enabled"> Show near-real-time satellite thermal detections on the live map</label></div></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">FIRMS MAP_KEY</label><div class="col-xs-8 col-sm-9"><input type="password" autocomplete="new-password" class="form-control" ng-model="settings.integrations.nasaFirms.mapKey" ng-disabled="!settings.integrations.nasaFirms.enabled"><span class="help-block">Request a free key from NASA FIRMS. It is used only by the PagerMon server and is never sent to browsers.</span></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Map bounds</label><div class="col-xs-8 col-sm-9"><input type="text" class="form-control" ng-model="settings.integrations.nasaFirms.bounds" ng-disabled="!settings.integrations.nasaFirms.enabled" placeholder="147,-35,151,-30"><span class="help-block">west,south,east,north. The default covers the NSW Central West.</span></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Detection window</label><div class="col-xs-8 col-sm-9"><div class="input-group"><input type="number" min="1" max="5" class="form-control" ng-model="settings.integrations.nasaFirms.dayRange" ng-disabled="!settings.integrations.nasaFirms.enabled"><span class="input-group-addon">days</span></div></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Cache time</label><div class="col-xs-8 col-sm-9"><div class="input-group"><input type="number" min="5" max="1440" class="form-control" ng-model="settings.integrations.nasaFirms.cacheMinutes" ng-disabled="!settings.integrations.nasaFirms.enabled"><span class="input-group-addon">minutes</span></div></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Visible by default</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.nasaFirms.defaultVisible" ng-disabled="!settings.integrations.nasaFirms.enabled"> Turn the hotspot layer on when a user first opens the map</label></div></div></div>
+                <div class="alert alert-warning"><strong>Important:</strong> FIRMS points are satellite thermal anomalies, not confirmed fires. Cloud, industrial heat and delayed satellite passes can affect the feed.</div>
+              </div>
+            </div>
+
+            <div class="panel panel-default">
+              <div class="panel-heading"><strong><i class="fa fa-tree"></i> NSW NPWS incidents</strong></div>
+              <div class="panel-body">
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable NPWS</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.npws.enabled"> Add a compatible NPWS GeoJSON/JSON incident feed</label></div></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Incident feed URL</label><div class="col-xs-8 col-sm-9"><input type="url" class="form-control" ng-model="settings.integrations.npws.feedUrl" ng-disabled="!settings.integrations.npws.enabled"><span class="help-block">Must return GeoJSON features or a JSON incidents/results array. The server fetches and caches it.</span></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Cache time</label><div class="col-xs-8 col-sm-9"><div class="input-group"><input type="number" min="1" max="1440" class="form-control" ng-model="settings.integrations.npws.cacheMinutes" ng-disabled="!settings.integrations.npws.enabled"><span class="input-group-addon">minutes</span></div></div></div>
+                <div class="alert alert-info">NPWS records are folded into an RFS incident when their incident reference matches, or when the locations are within 5 km. Unmatched records remain separate.</div>
+              </div>
+            </div>
+
             <div class="panel panel-default" ng-repeat="plugin in plugins" ng-if="plugin.name == 'SimpleWebhook' || plugin.name == 'AdvancedWebhook'">
               <div class="panel-heading"><strong><i class="fa fa-exchange-alt"></i> {{plugin.name == 'SimpleWebhook' ? 'Simple Webhook' : 'Advanced Webhook'}}</strong></div>
               <div class="panel-body">
@@ -218,6 +241,9 @@
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Scroll sensitivity</label><div class="col-xs-8 col-sm-9"><input type="number" min="60" max="600" step="10" class="form-control" ng-model="settings.integrations.liveMap.wheelPxPerZoomLevel"><span class="help-block">Higher values make mouse-wheel and trackpad zoom less sensitive. Recommended: 180.</span></div></div>
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Pager incident expiry</label><div class="col-xs-8 col-sm-9"><div class="input-group"><input type="number" min="1" max="720" step="1" class="form-control" ng-model="settings.integrations.liveMap.pagerIncidentExpiryHours"><span class="input-group-addon">hours</span></div><span class="help-block">Pager-derived incidents disappear after this time. A matching active RFS RSS incident keeps the marker visible; when that RFS incident clears, the normal expiry is applied.</span></div></div>
+                <hr>
+                <h4>Stop message handling</h4>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Matching window</label><div class="col-xs-8 col-sm-9"><div class="input-group"><input type="number" min="1" max="1440" step="1" class="form-control" ng-model="settings.integrations.liveMap.stopMessageWindowMinutes"><span class="input-group-addon">minutes</span></div><span class="help-block">Attach a stop, stand-down or cancellation page to the nearest earlier incident sent to the same capcode within this period. Default: 30 minutes.</span></div></div>
               </div>
             </div>
 

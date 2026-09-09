@@ -25,7 +25,7 @@ This fork preserves the original PagerMon workflow while modernising its depende
 - Duplicate filtering, text highlighting and regex replacement
 - Optional Australian phone-number redaction
 - Incident grouping, discovery queue and locality detection
-- Live map with optional RFS, BOM, WaterNSW, PiAware and weather-radar data
+- Live map with optional RFS, BOM, WaterNSW, NASA FIRMS, PiAware and weather-radar data
 - Rdio Scanner call-feed integration
 - Browser/PWA support with selectable icons and installable themes
 - Default, Dark Blue and Bushfire themes
@@ -296,7 +296,20 @@ All integrations can be disabled. Disabled dashboard tabs and map assets are hid
 - **PiAware** — aircraft data from a local SkyAware `aircraft.json` feed
 - **Rdio Scanner** — authenticated access to recent local scanner calls
 - **Weather radar** — optional RainViewer overlay
+- **NASA FIRMS** — optional near-real-time VIIRS satellite thermal detections
+- **NSW NPWS** — optional compatible GeoJSON/JSON incident source; matching records are folded into RFS incidents by reference or proximity
 - **Simple/Advanced Webhook** — HTTP delivery to another service
+
+### Configure NASA FIRMS hotspots
+
+FIRMS requires a free `MAP_KEY`. Request one from the [official NASA FIRMS map-key page](https://firms.modaps.eosdis.nasa.gov/api/map_key/), then open **Admin → Settings → Self-hosted integrations and third-party APIs → NASA FIRMS satellite hotspots**.
+
+1. Enable the integration and paste the `MAP_KEY`.
+2. Leave the default bounds `147,-35,151,-30` for the NSW Central West, or enter another `west,south,east,north` bounding box.
+3. Select a one-to-five-day detection window and a cache interval. Fifteen minutes matches the normal FIRMS update cadence.
+4. Choose whether the layer should be visible the first time a user opens the map, save settings, and restart PagerMon when prompted.
+
+PagerMon requests NOAA-20 and NOAA-21 VIIRS near-real-time data through its server, combines duplicate detections and caches the response. The key is not exposed to users' browsers. Each point is labelled as an **unconfirmed satellite thermal anomaly**: it may represent fire, industrial heat or another hot surface, and satellite/cloud conditions can delay or prevent detections. Always verify against official incident information.
 
 API availability, licensing and quotas remain the responsibility of the operator.
 

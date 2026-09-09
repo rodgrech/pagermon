@@ -78,6 +78,8 @@ var bomWarningCache = { fetchedAt: 0, data: null };
 var rfsIncidentCache = { fetchedAt: 0, data: null };
 var radarCache = { fetchedAt: 0, data: null };
 var waterNswCache = { fetchedAt: 0, data: null };
+var nasaFirmsCache = { fetchedAt: 0, data: null, signature: '' };
+var npwsIncidentCache = { fetchedAt: 0, data: null };
 var waterNswAttemptSlot = null;
 var waterNswGaugeCache = { fetchedAt: 0, data: null };
 var waterNswGaugeAttemptSlot = null;
@@ -1917,7 +1919,9 @@ router.route('/central-west/dashboard-config')
     var radioConfig = integrationConfig('radio', { enabled: true });
     var piawareConfig = integrationConfig('piaware', { enabled: true, pollSeconds: 10 });
     var radarConfig = integrationConfig('weatherRadar', { enabled: true, opacityPercent: 62, defaultVisible: false });
-    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 180, pagerIncidentExpiryHours: 24 });
+    var firmsConfig = integrationConfig('nasaFirms', { enabled: false, defaultVisible: false });
+    var npwsConfig = integrationConfig('npws', { enabled: false, feedUrl: '' });
+    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 180, pagerIncidentExpiryHours: 24, stopMessageWindowMinutes: 30 });
     res.set('Cache-Control', 'private, no-store');
     res.status(200).json({
       waterNswEnabled: waterConfig.enabled !== false,
@@ -1928,8 +1932,101 @@ router.route('/central-west/dashboard-config')
       weatherRadarEnabled: radarConfig.enabled !== false,
       weatherRadarOpacity: Math.min(Math.max(parseInt(radarConfig.opacityPercent, 10) || 62, 10), 100) / 100,
       weatherRadarDefaultVisible: radarConfig.defaultVisible === true,
+      nasaFirmsEnabled: firmsConfig.enabled === true && !!firmsConfig.mapKey,
+      nasaFirmsDefaultVisible: firmsConfig.defaultVisible === true,
+      npwsEnabled: npwsConfig.enabled === true && !!npwsConfig.feedUrl,
       wheelPxPerZoomLevel: Math.min(Math.max(parseInt(mapConfig.wheelPxPerZoomLevel, 10) || 180, 60), 600),
-      pagerIncidentExpiryHours: Math.min(Math.max(parseInt(mapConfig.pagerIncidentExpiryHours, 10) || 24, 1), 720)
+      pagerIncidentExpiryHours: Math.min(Math.max(parseInt(mapConfig.pagerIncidentExpiryHours, 10) || 24, 1), 720),
+      stopMessageWindowMinutes: Math.min(Math.max(parseInt(mapConfig.stopMessageWindowMinutes, 10) || 30, 1), 1440)
+    });
+  });
+
+function parseCsvLine(line) {
+  var fields = [], value = '', quoted = false;
+  for (var i = 0; i < line.length; i++) {
+    var character = line[i];
+    if (character === '"' && quoted && line[i + 1] === '"') { value += '"'; i++; }
+    else if (character === '"') quoted = !quoted;
+    else if (character === ',' && !quoted) { fields.push(value); value = ''; }
+    else value += character;
+  }
+  fields.push(value);
+  return fields;
+}
+
+function parseFirmsCsv(csv, source) {
+  var lines = String(csv || '').trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  var headings = parseCsvLine(lines.shift());
+  return lines.map(function(line) {
+    var values = parseCsvLine(line), row = {};
+    headings.forEach(function(heading, index) { row[heading] = values[index]; });
+    return {
+      latitude: Number(row.latitude), longitude: Number(row.longitude),
+      acquiredAt: String(row.acq_date || '') + ' ' + String(row.acq_time || '').padStart(4, '0').replace(/(..)$/, ':$1') + ' UTC',
+      satellite: row.satellite || source, instrument: row.instrument || 'VIIRS',
+      confidence: row.confidence || 'unknown', frp: row.frp === '' ? null : Number(row.frp), daynight: row.daynight || ''
+    };
+  }).filter(function(item) { return isFinite(item.latitude) && isFinite(item.longitude); });
+}
+
+router.route('/central-west/nasa-firms-hotspots')
+  .get(authHelper.isLoggedInMessages, function(req, res) {
+    var config = integrationConfig('nasaFirms', { enabled: false, mapKey: '', cacheMinutes: 15, dayRange: 1, bounds: '147,-35,151,-30' });
+    if (config.enabled !== true || !config.mapKey) return res.status(200).json({disabled: true, hotspots: []});
+    var bounds = /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/.test(String(config.bounds || '')) ? config.bounds : '147,-35,151,-30';
+    var dayRange = Math.min(Math.max(parseInt(config.dayRange, 10) || 1, 1), 5);
+    var cacheMs = Math.min(Math.max(parseInt(config.cacheMinutes, 10) || 15, 5), 1440) * 60000;
+    var signature = bounds + '|' + dayRange;
+    if (nasaFirmsCache.data && nasaFirmsCache.signature === signature && Date.now() - nasaFirmsCache.fetchedAt < cacheMs) return res.json(nasaFirmsCache.data);
+    var sources = ['VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'];
+    Promise.all(sources.map(function(source) {
+      var url = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv/' + encodeURIComponent(config.mapKey) + '/' + source + '/' + bounds + '/' + dayRange;
+      return axios.get(url, {timeout: 20000, responseType: 'text', headers: {'User-Agent': 'PagerMon NASA-FIRMS integration'}}).then(function(response) { return parseFirmsCsv(response.data, source); });
+    })).then(function(results) {
+      var seen = {}, hotspots = [];
+      [].concat.apply([], results).forEach(function(item) {
+        var key = item.latitude.toFixed(4) + '|' + item.longitude.toFixed(4) + '|' + item.acquiredAt;
+        if (!seen[key]) { seen[key] = true; hotspots.push(item); }
+      });
+      var payload = {source: 'NASA FIRMS', fetchedAt: Math.floor(Date.now() / 1000), hotspots: hotspots};
+      nasaFirmsCache = {fetchedAt: Date.now(), data: payload, signature: signature};
+      res.json(payload);
+    }).catch(function(err) {
+      logger.main.warn('Unable to retrieve NASA FIRMS hotspots: ' + err.message);
+      if (nasaFirmsCache.data) return res.json(nasaFirmsCache.data);
+      res.status(502).json({error: 'NASA FIRMS hotspot feed is temporarily unavailable'});
+    });
+  });
+
+router.route('/central-west/npws-incidents')
+  .get(authHelper.isLoggedInMessages, function(req, res) {
+    var config = integrationConfig('npws', {enabled: false, feedUrl: '', cacheMinutes: 10});
+    if (config.enabled !== true || !config.feedUrl) return res.json({disabled: true, incidents: []});
+    var cacheMs = Math.min(Math.max(parseInt(config.cacheMinutes, 10) || 10, 1), 1440) * 60000;
+    if (npwsIncidentCache.data && Date.now() - npwsIncidentCache.fetchedAt < cacheMs) return res.json(npwsIncidentCache.data);
+    axios.get(config.feedUrl, {timeout: 20000, headers: {'Accept': 'application/geo+json, application/json', 'User-Agent': 'PagerMon NPWS incident integration'}}).then(function(response) {
+      var features = response.data && (response.data.features || response.data.incidents || response.data.results) || [];
+      var incidents = features.map(function(feature) {
+        var properties = feature.properties || feature.attributes || feature;
+        var geometry = feature.geometry || {};
+        var coordinates = geometry.coordinates || [properties.longitude || properties.lon, properties.latitude || properties.lat];
+        if (geometry.type === 'Polygon') coordinates = geometry.coordinates && geometry.coordinates[0] && geometry.coordinates[0][0];
+        if (geometry.type === 'MultiPolygon') coordinates = geometry.coordinates && geometry.coordinates[0] && geometry.coordinates[0][0] && geometry.coordinates[0][0][0];
+        var longitude = Number(coordinates && coordinates[0]), latitude = Number(coordinates && coordinates[1]);
+        if (!isFinite(latitude) || !isFinite(longitude)) return null;
+        var title = properties.title || properties.name || properties.fire_name || properties.FireName || 'NPWS incident';
+        var description = properties.description || properties.details || properties.additionalInfo || '';
+        var reference = properties.incidentId || properties.incident_id || properties.fire_id || properties.FireNo || String(title + ' ' + description).match(/\b\d{2}-\d{5,}\b/);
+        return {source: 'NSW NPWS', feedId: String(properties.id || properties.guid || feature.id || title + '|' + latitude + '|' + longitude), incidentId: Array.isArray(reference) ? reference[0] : reference || '', title: String(title), category: String(properties.category || properties.status || properties.fire_type || 'NPWS incident'), description: String(description).replace(/<[^>]+>/g, ' '), link: properties.link || properties.url || 'https://www.nationalparks.nsw.gov.au/alerts/alerts-list', published: properties.updated || properties.pubDate || properties.modified || '', latitude: latitude, longitude: longitude};
+      }).filter(Boolean);
+      var payload = {source: 'NSW NPWS', fetchedAt: Math.floor(Date.now() / 1000), incidents: incidents};
+      npwsIncidentCache = {fetchedAt: Date.now(), data: payload};
+      res.json(payload);
+    }).catch(function(err) {
+      logger.main.warn('Unable to retrieve NPWS incident feed: ' + err.message);
+      if (npwsIncidentCache.data) return res.json(npwsIncidentCache.data);
+      res.status(502).json({error: 'NPWS incident feed is temporarily unavailable'});
     });
   });
 

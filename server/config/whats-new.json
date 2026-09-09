@@ -1,7 +1,13 @@
 {
-  "version": "2026.08.22.4",
+  "version": "2026.09.09.1",
   "title": "What’s new",
   "changes": [
+    "Added optional NASA FIRMS satellite hotspots to the live map, with server-side caching and an independent layer switch.",
+    "Added an optional NPWS incident source with automatic folding into matching RFS incidents.",
+    "Redesigned incident map popups with warning status, incident details, units paged and a direct incident-timeline action.",
+    "Added configurable stop-message correlation so short cancellation pages can join the correct incident timeline.",
+    "Improved RFS and VRA incident correlation using shared incident numbers and addresses.",
+    "Added a dedicated Fire and Rescue NSW agency icon and normalised agency-logo sizing.",
     "Administrators can now protect their accounts with authenticator-app two-factor authentication and recovery codes.",
     "Added the Bushfire theme and theme-aware Operations Display.",
     "Added selectable PWA icons and neutral link previews.",
