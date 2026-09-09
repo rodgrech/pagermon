@@ -25,7 +25,8 @@ RUN mkdir -p /config /defaults \
     && chown -R node:node /app /defaults /config
 
 COPY docker-entrypoint.sh /usr/local/bin/pagermon-entrypoint
-RUN chmod 0755 /usr/local/bin/pagermon-entrypoint
+RUN sed -i 's/\r$//' /usr/local/bin/pagermon-entrypoint \
+    && chmod 0755 /usr/local/bin/pagermon-entrypoint
 
 EXPOSE 3000
 
