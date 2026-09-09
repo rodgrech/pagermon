@@ -132,6 +132,9 @@
     },
     "liveMap": {
       "wheelPxPerZoomLevel": 180,
+      "centerLatitude": -32.65,
+      "centerLongitude": 149.58,
+      "initialZoom": 8,
       "pagerIncidentExpiryHours": 24,
       "stopMessageWindowMinutes": 30
     }

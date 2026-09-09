@@ -29,6 +29,8 @@
   var radarLayer;
   var layerGroups;
   var mapWheelPxPerZoomLevel = 180;
+  var mapCenter = [-32.65, 149.58];
+  var mapInitialZoom = 8;
   var stopMessageWindowMinutes = 30;
   var lastRender;
   var lastRadarConfig;
@@ -42,8 +44,13 @@
       .then(function (config) {
         if (!config) return;
         mapWheelPxPerZoomLevel = Number(config.wheelPxPerZoomLevel) || 180;
+        mapCenter = [Number(config.mapCenterLatitude) || -32.65, Number(config.mapCenterLongitude) || 149.58];
+        mapInitialZoom = Number(config.mapInitialZoom) || 8;
         stopMessageWindowMinutes = Math.min(Math.max(Number(config.stopMessageWindowMinutes) || 30, 1), 1440);
-        if (map) map.options.wheelPxPerZoomLevel = mapWheelPxPerZoomLevel;
+        if (map) {
+          map.options.wheelPxPerZoomLevel = mapWheelPxPerZoomLevel;
+          map.setView(mapCenter, mapInitialZoom);
+        }
       }).catch(function () {});
   }
 
@@ -415,7 +422,7 @@
       // Angular/PWA navigation can replace the map element without unloading this
       // script. Clear Leaflet's orphaned container id before rebuilding the map.
       if (element._leaflet_id) delete element._leaflet_id;
-      map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel}).setView([-32.65, 149.58], 8);
+      map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel}).setView(mapCenter, mapInitialZoom);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
       layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), hotspots: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });

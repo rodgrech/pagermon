@@ -1921,7 +1921,7 @@ router.route('/central-west/dashboard-config')
     var radarConfig = integrationConfig('weatherRadar', { enabled: true, opacityPercent: 62, defaultVisible: false });
     var firmsConfig = integrationConfig('nasaFirms', { enabled: false, defaultVisible: false });
     var npwsConfig = integrationConfig('npws', { enabled: false, feedUrl: '' });
-    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 180, pagerIncidentExpiryHours: 24, stopMessageWindowMinutes: 30 });
+    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 180, centerLatitude: -32.65, centerLongitude: 149.58, initialZoom: 8, pagerIncidentExpiryHours: 24, stopMessageWindowMinutes: 30 });
     res.set('Cache-Control', 'private, no-store');
     res.status(200).json({
       waterNswEnabled: waterConfig.enabled !== false,
@@ -1936,6 +1936,9 @@ router.route('/central-west/dashboard-config')
       nasaFirmsDefaultVisible: firmsConfig.defaultVisible === true,
       npwsEnabled: npwsConfig.enabled === true && !!npwsConfig.feedUrl,
       wheelPxPerZoomLevel: Math.min(Math.max(parseInt(mapConfig.wheelPxPerZoomLevel, 10) || 180, 60), 600),
+      mapCenterLatitude: Math.min(Math.max(parseFloat(mapConfig.centerLatitude) || -32.65, -90), 90),
+      mapCenterLongitude: Math.min(Math.max(parseFloat(mapConfig.centerLongitude) || 149.58, -180), 180),
+      mapInitialZoom: Math.min(Math.max(parseInt(mapConfig.initialZoom, 10) || 8, 3), 18),
       pagerIncidentExpiryHours: Math.min(Math.max(parseInt(mapConfig.pagerIncidentExpiryHours, 10) || 24, 1), 720),
       stopMessageWindowMinutes: Math.min(Math.max(parseInt(mapConfig.stopMessageWindowMinutes, 10) || 30, 1), 1440)
     });
@@ -1979,7 +1982,10 @@ router.route('/central-west/nasa-firms-hotspots')
     var cacheMs = Math.min(Math.max(parseInt(config.cacheMinutes, 10) || 15, 5), 1440) * 60000;
     var signature = bounds + '|' + dayRange;
     if (nasaFirmsCache.data && nasaFirmsCache.signature === signature && Date.now() - nasaFirmsCache.fetchedAt < cacheMs) return res.json(nasaFirmsCache.data);
-    var sources = ['VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'];
+    // SNPP is often available before the NOAA-20/21 daily area products. Keep
+    // all three feeds so a valid MAP_KEY does not produce an apparently empty
+    // layer while the newer satellite products are still being processed.
+    var sources = ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'];
     Promise.all(sources.map(function(source) {
       var url = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv/' + encodeURIComponent(config.mapKey) + '/' + source + '/' + bounds + '/' + dayRange;
       return axios.get(url, {timeout: 20000, responseType: 'text', headers: {'User-Agent': 'PagerMon NASA-FIRMS integration'}}).then(function(response) { return parseFirmsCsv(response.data, source); });
