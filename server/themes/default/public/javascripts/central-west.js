@@ -283,6 +283,26 @@
     return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
   }
 
+  function correlationText(value) {
+    return String(value || '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function hasIncidentLocationEvidence(incident, rfs) {
+    var official = correlationText((rfs.title || '') + ' ' + (rfs.description || ''));
+    var locality = correlationText(incident.location || '');
+    if (locality.length >= 4 && official.indexOf(locality) !== -1) return true;
+    var ignored = /^(NSW|MID|WESTERN|ROAD|STREET|DRIVE|LANE|HIGHWAY|HWY|RD|ST|DR|FIRE|GRASS|BUSH|INCIDENT|ALERT|RFS)$/;
+    return correlationText((incident.messages && incident.messages[0] && incident.messages[0].message) || '').split(' ').some(function (token) {
+      return token.length >= 5 && !ignored.test(token) && official.indexOf(token) !== -1;
+    });
+  }
+
+  function isDefensibleRfsMatch(incident, rfs, km) {
+    var textEvidence = hasIncidentLocationEvidence(incident, rfs);
+    if (incident.coordinateAccuracy === 'exact') return km <= 5 && textEvidence;
+    return km <= 25 && textEvidence;
+  }
+
   function correlateIncidents(incidents, rfsIncidents, removedRfsIncidents) {
     (rfsIncidents || []).forEach(function (rfs) { rfs.pagerMatch = null; });
     (incidents || []).forEach(function (incident) {
@@ -292,8 +312,7 @@
       if (!incident.coordinates) return;
       (rfsIncidents || []).forEach(function (rfs) {
         var km = distanceKm({lat: incident.coordinates.lat, lng: incident.coordinates.lng}, {lat: rfs.latitude, lng: rfs.longitude});
-        var matchRadiusKm = incident.coordinateAccuracy === 'exact' ? 5 : 25;
-        if (km <= matchRadiusKm && (!incident.rfsMatch || km < incident.rfsMatch.distanceKm)) {
+        if (isDefensibleRfsMatch(incident, rfs, km) && (!incident.rfsMatch || km < incident.rfsMatch.distanceKm)) {
           incident.rfsMatch = {title: rfs.title, category: rfs.category, description: rfs.description, link: rfs.link, latitude: rfs.latitude, longitude: rfs.longitude, distanceKm: Math.round(km), firstSeenAt: rfs.firstSeenAt};
         }
       });
@@ -306,10 +325,9 @@
         var removedMatch = null;
         (removedRfsIncidents || []).forEach(function (rfs) {
           var km = distanceKm({lat: incident.coordinates.lat, lng: incident.coordinates.lng}, {lat: rfs.latitude, lng: rfs.longitude});
-          var matchRadiusKm = incident.coordinateAccuracy === 'exact' ? 5 : 25;
           var pagerTime = incident.lastSeen ? incident.lastSeen.getTime() / 1000 : 0;
           var inLifecycleWindow = pagerTime >= Number(rfs.firstSeenAt || 0) - 21600 && pagerTime <= Number(rfs.removedAt || 0) + 21600;
-          if (inLifecycleWindow && km <= matchRadiusKm && (!removedMatch || km < removedMatch.distanceKm)) removedMatch = Object.assign({}, rfs, {distanceKm: km});
+          if (inLifecycleWindow && isDefensibleRfsMatch(incident, rfs, km) && (!removedMatch || km < removedMatch.distanceKm)) removedMatch = Object.assign({}, rfs, {distanceKm: km});
         });
         if (removedMatch) {
           incident.rfsLifecycle.push({timestamp: removedMatch.firstSeenAt, label: 'Loaded into public RSS/ICON', state: 'loaded'});
