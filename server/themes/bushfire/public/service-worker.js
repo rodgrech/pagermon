@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pagermon-bushfire-static-v2-actionable-push';
+const CACHE_NAME = 'pagermon-bushfire-static-v3-aircraft-correlation';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/textAngular.css',
