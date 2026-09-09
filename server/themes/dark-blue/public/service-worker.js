@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-west-alerts-static-v17-aircraft-correlation';
+const CACHE_NAME = 'central-west-alerts-static-v18-forestry-closures';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/textAngular.css',

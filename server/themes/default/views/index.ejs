@@ -395,6 +395,7 @@
                   WeatherRadar: $resource('/api/central-west/weather-radar'),
                   SatelliteHotspots: $resource('/api/central-west/nasa-firms-hotspots'),
                   NpwsIncidents: $resource('/api/central-west/npws-incidents'),
+                  ForestryClosures: $resource('/api/central-west/forestry-closures'),
                   RadioCalls: $resource('/api/central-west/radio-calls')
                 };
               }])
@@ -685,6 +686,10 @@
           applyPagerIncidentExpiry();
           if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
         });
+      });
+      Api.ForestryClosures.get().$promise.then(function(data) {
+        CentralWestAlerts.setForestryClosures(data.features || []);
+        if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
       });
       function refreshWeatherRadar() {
         if (!$scope.integrationFeatures.weatherRadar) return;

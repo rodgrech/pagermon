@@ -28,6 +28,7 @@
   var baseLayer;
   var radarLayer;
   var layerGroups;
+  var forestryClosures = [];
   var mapWheelPxPerZoomLevel = 360;
   var mapCenter = [-32.65, 149.58];
   var mapInitialZoom = 8;
@@ -59,6 +60,7 @@
       var saved = JSON.parse(localStorage.getItem('cw-map-layers') || '{}');
       if (Object.prototype.hasOwnProperty.call(saved, name)) return saved[name] !== false;
       if (name === 'hotspots') return !!(window.CentralWestMapFeatures && window.CentralWestMapFeatures.nasaFirmsDefaultVisible);
+      if (name === 'forestry') return false;
       return true;
     }
     catch (err) { return true; }
@@ -446,9 +448,10 @@
       if (element._leaflet_id) delete element._leaflet_id;
       map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel, zoomSnap: 0.5, zoomDelta: 0.5}).setView(mapCenter, mapInitialZoom);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), hotspots: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
+      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), hotspots: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
       var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS / NPWS incidents': layerGroups.rfs};
+      overlays['Forestry closures and notices'] = layerGroups.forestry;
       if (features.nasaFirms !== false) overlays['Satellite hotspots (NASA FIRMS)'] = layerGroups.hotspots;
       if (features.piaware !== false) overlays['Live aircraft'] = layerGroups.aircraft;
       if (features.waterNsw !== false) {
@@ -464,7 +467,7 @@
         radarLayer.addTo(layerGroups.radar);
       }
     }
-    ['pager', 'rfs', 'hotspots', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
+    ['pager', 'rfs', 'forestry', 'hotspots', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
       // A confirmed official match represents the same job. Keep its pager
@@ -481,6 +484,11 @@
       var npwsDetail = incident.npwsMatches && incident.npwsMatches.length ? '<div class="cw-popup-source-match"><i class="fa fa-tree"></i><strong> Combined with NSW NPWS</strong><br>' + incident.npwsMatches.map(function(item) { return escapeHtml(item.title); }).join('<br>') + '</div>' : '';
       var officialPopup = '<div class="cw-incident-popup"><div class="cw-popup-heading"><i class="fa ' + hazard.icon + '"></i><strong>' + escapeHtml(String(incident.category || 'Official incident').toUpperCase()) + '</strong></div><div class="cw-popup-title">' + escapeHtml(incident.title) + '</div><div class="cw-popup-pills"><span><small>Status</small>' + escapeHtml(incident.category || 'Published') + '</span><span><small>Type</small>' + escapeHtml(hazard.kind) + '</span></div><div class="cw-popup-description">' + escapeHtml(incident.description || '') + '</div>' + npwsDetail + pagerDetail + '<div class="cw-popup-actions"><a href="/?view=incidents&incident=' + encodeURIComponent((incident.pagerMatch && incident.pagerMatch.timelineKey) || incident.title || incident.link || '') + '"><i class="fa fa-stream"></i> Timeline</a><a href="' + escapeHtml(incident.link) + '" target="_blank" rel="noopener">Official details</a></div></div>';
       L.marker([incident.latitude, incident.longitude], {icon: incidentIcon, zIndexOffset: 450}).addTo(layerGroups.rfs).bindPopup(officialPopup, {maxWidth: 390, className: 'cw-popup-shell'});
+    });
+    (forestryClosures || []).forEach(function(feature) {
+      if (!feature || !feature.geometry) return;
+      var title = feature.properties && feature.properties.title || 'Forestry closure or notice';
+      L.geoJSON(feature, {style: {color: '#8b4f2b', weight: 2, opacity: .9, fillColor: '#c97a42', fillOpacity: .18}}).addTo(layerGroups.forestry).bindPopup('<div class="cw-incident-popup"><div class="cw-popup-heading"><i class="fa fa-tree"></i><strong>FORESTRY NOTICE</strong></div><div class="cw-popup-title">' + escapeHtml(title) + '</div><p>Forestry Corporation of NSW closure or access notice. Check the official notice before entering the area.</p><a class="cw-popup-action" href="https://www.forestrycorporation.com.au/visiting/closures" target="_blank" rel="noopener">View official closures</a></div>', {maxWidth: 360, className: 'cw-popup-shell'});
     });
     (satelliteHotspots || []).forEach(function(hotspot) {
       var confidence = String(hotspot.confidence || 'unknown');
@@ -584,5 +592,6 @@
     return '<svg class="cw-aircraft-svg" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(' + Number(track || 0) + 'deg)">' + paths[kind] + '</svg>';
   }
 
-  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots};
+  function setForestryClosures(features) { forestryClosures = features || []; queueMapRecovery(false); }
+  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots, setForestryClosures: setForestryClosures};
 })(window);

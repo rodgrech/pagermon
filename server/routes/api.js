@@ -80,6 +80,7 @@ var radarCache = { fetchedAt: 0, data: null };
 var waterNswCache = { fetchedAt: 0, data: null };
 var nasaFirmsCache = { fetchedAt: 0, data: null, signature: '' };
 var npwsIncidentCache = { fetchedAt: 0, data: null };
+var forestryClosureCache = { fetchedAt: 0, data: null };
 var nafcAircraftCache = { fetchedAt: 0, data: [] };
 var hexAircraftCache = {};
 var waterNswAttemptSlot = null;
@@ -2085,6 +2086,33 @@ router.route('/central-west/npws-incidents')
       logger.main.warn('Unable to retrieve NPWS incident feed: ' + err.message);
       if (npwsIncidentCache.data) return res.json(npwsIncidentCache.data);
       res.status(502).json({error: 'NPWS incident feed is temporarily unavailable'});
+    });
+  });
+
+router.route('/central-west/forestry-closures')
+  .get(authHelper.isLoggedInMessages, function(req, res) {
+    var cacheMs = 6 * 60 * 60 * 1000;
+    if (forestryClosureCache.data && Date.now() - forestryClosureCache.fetchedAt < cacheMs) return res.json(forestryClosureCache.data);
+    axios.get('https://forestclosure.fcnsw.net/', {timeout: 30000, responseType: 'text', headers: {'User-Agent': 'PagerMon Forestry closure integration'}}).then(function(response) {
+      var html = String(response.data || '');
+      var pattern = /closureLayers\.push\(L\.geoJSON\((\{[\s\S]*?\}),\s*\{\s*color:\s*['"]([^'"]+)['"],\s*tipText:\s*"((?:\\.|[^"])*)"/g;
+      var features = [], match;
+      while ((match = pattern.exec(html)) !== null) {
+        try {
+          var geometry = JSON.parse(match[1]);
+          var title = JSON.parse('"' + match[3].replace(/"/g, '\\"') + '"');
+          features.push({type: 'Feature', geometry: geometry, properties: {title: title, colour: match[2], sourceUrl: 'https://www.forestrycorporation.com.au/visiting/closures'}});
+        } catch (parseError) {
+          logger.main.debug('Skipping malformed Forestry closure geometry: ' + parseError.message);
+        }
+      }
+      var payload = {source: 'Forestry Corporation of NSW', fetchedAt: Math.floor(Date.now() / 1000), features: features};
+      forestryClosureCache = {fetchedAt: Date.now(), data: payload};
+      res.json(payload);
+    }).catch(function(err) {
+      logger.main.warn('Unable to retrieve Forestry closures: ' + err.message);
+      if (forestryClosureCache.data) return res.json(forestryClosureCache.data);
+      res.status(502).json({error: 'Forestry closure information is temporarily unavailable'});
     });
   });
 
