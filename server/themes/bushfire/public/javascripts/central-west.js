@@ -498,10 +498,11 @@
     });
     (aircraft || []).forEach(function (plane) {
       var emergency = plane.emergency && plane.emergency !== 'none';
-      var label = plane.flight || plane.registration || plane.hex || 'Aircraft';
+      var label = plane.fireCallsign || plane.flight || plane.registration || plane.hex || 'Aircraft';
       var kind = aircraftKind(plane);
-      var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + (emergency ? ' cw-plane-emergency' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
-      L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: 500}).addTo(layerGroups.aircraft).bindPopup('<strong>' + escapeHtml(label) + '</strong><br>Class: ' + escapeHtml(kind) + '<br>ICAO type: ' + escapeHtml(plane.aircraftType || 'Unknown') + '<br>Altitude: ' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '<br>Ground speed: ' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '<br>Track: ' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '<br>Seen: ' + escapeHtml(plane.seen) + ' sec ago');
+      var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + (plane.fireAircraft ? ' cw-aircraft-fire' : '') + (emergency ? ' cw-plane-emergency' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
+      var fireInfo = plane.fireAircraft ? '<br><strong>Fire aviation asset</strong>' + (plane.fireRole ? '<br>Role: ' + escapeHtml(plane.fireRole) : '') + (plane.fireManufacturer ? '<br>Manufacturer: ' + escapeHtml(plane.fireManufacturer) : '') + (plane.fireModel ? '<br>Model: ' + escapeHtml(plane.fireModel) : '') + '<br><small>Matched using ' + escapeHtml(plane.fireMatchSource || 'aircraft identity') + '</small>' : '';
+      L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: plane.fireAircraft ? 650 : 500}).addTo(layerGroups.aircraft).bindPopup('<strong>' + escapeHtml(label) + '</strong>' + (plane.fireCallsign && plane.flight && plane.fireCallsign !== plane.flight ? '<br>Transmitted callsign: ' + escapeHtml(plane.flight) : '') + '<br>Registration: ' + escapeHtml(plane.registration || 'Unknown') + '<br>Class: ' + escapeHtml(kind.replace(/-/g, ' ')) + '<br>ICAO type: ' + escapeHtml(plane.aircraftType || 'Unknown') + fireInfo + '<br>Altitude: ' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '<br>Ground speed: ' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '<br>Track: ' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '<br>Seen: ' + escapeHtml(plane.seen) + ' sec ago');
     });
     queueMapRecovery(false);
   }
@@ -533,6 +534,11 @@
   function aircraftKind(plane) {
     var category = String(plane.category || '').toUpperCase();
     var type = String(plane.aircraftType || '').toUpperCase();
+    var role = String(plane.fireRole || '').toUpperCase();
+    if (plane.fireAircraft && /\bRW\b|HELICOPTER/.test(role)) return 'fire-helicopter';
+    if (plane.fireAircraft && /SEAT|LAT|FIREBOMB/.test(role)) return 'air-tanker';
+    if (plane.fireAircraft && /AAS|RECCE|BIRDDOG|FIRESPOTTER|LEAD/.test(role)) return 'air-attack';
+    if (plane.fireAircraft) return 'fire-plane';
     if (category === 'A7' || /^(R22|R44|B06|B407|EC35|EC45|AS50|AS55|S76|A139|BK17|H125|H135|H145|H160|H175)/.test(type)) return 'helicopter';
     if (category === 'B1') return 'glider';
     if (category === 'B6') return 'drone';
@@ -544,6 +550,10 @@
   function aircraftSvg(kind, track) {
     var paths = {
       helicopter: '<path d="M3 11h7l2-3h5l2 3h2v2h-7l-2 5h-2l1-5H3zm8-5V3h2v3h5v1H6V6z"/>',
+      'fire-helicopter': '<path d="M3 11h7l2-3h5l2 3h2v2h-7l-2 5h-2l1-5H3zm8-5V3h2v3h5v1H6V6zm9 10c1.5 1.6 1.5 3.1 0 4.4-1.5-1.3-1.5-2.8 0-4.4z"/>',
+      'air-tanker': '<path d="M12 2l2.2 7.2L22 12v2.5l-7.7-.9-1 5.7 3.2 2.2V23L12 21.8 7.5 23v-1.5l3.2-2.2-1-5.7-7.7.9V12l7.8-2.8zM5 16h3v2H5zm11 0h3v2h-3z"/>',
+      'air-attack': '<path d="M12 2l1.7 7.6L22 13v2l-8-1.4-.8 6 3 2V23L12 22l-4.2 1v-1.4l3-2-.8-6L2 15v-2l8.3-3.4zM4 7h5v1H4zm11 0h5v1h-5z"/>',
+      'fire-plane': '<path d="M12 2l2 8 8 3v2l-8-1-1 6 3 2v1l-4-1-4 1v-1l3-2-1-6-8 1v-2l8-3zm7 15c1.3 1.4 1.3 2.7 0 3.9-1.3-1.2-1.3-2.5 0-3.9z"/>',
       glider: '<path d="M12 2l1.4 7 8.6 3-8.6 1.4L12 22l-1.4-8.6L2 12l8.6-3z"/>',
       drone: '<path d="M7 9h10v6H7zM3 5h6v2H3zm12 0h6v2h-6zM3 17h6v2H3zm12 0h6v2h-6zM6 7l3 3m9-3-3 3M6 17l3-3m9 3-3-3" fill="none" stroke="currentColor" stroke-width="1.8"/>',
       heavy: '<path d="M12 2l2 7 8 4v2l-8-2-1 7 3 2v1l-4-1-4 1v-1l3-2-1-7-8 2v-2l8-4z"/>',

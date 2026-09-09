@@ -227,6 +227,8 @@ body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: 
 .cw-aircraft-jet { color: #176c98; }
 .cw-aircraft-glider { color: #198a71; }
 .cw-aircraft-drone { color: #6d7882; }
+.cw-aircraft-marker.cw-aircraft-fire { color: #d8a900; }
+.cw-aircraft-marker.cw-aircraft-fire .cw-aircraft-svg { width: 34px; height: 34px; filter: drop-shadow(0 1px 0 #202b33) drop-shadow(0 0 5px rgba(255,214,0,.9)); }
 .cw-aircraft-marker.cw-plane-emergency { color: #bd3e4b; animation: cw-plane-pulse 1.2s infinite; }
 @keyframes cw-plane-pulse { 50% { filter: drop-shadow(0 0 7px rgba(189,62,75,.9)); } }
 .cw-operations-header { display: none; }

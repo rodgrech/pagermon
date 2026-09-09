@@ -80,6 +80,7 @@ var radarCache = { fetchedAt: 0, data: null };
 var waterNswCache = { fetchedAt: 0, data: null };
 var nasaFirmsCache = { fetchedAt: 0, data: null, signature: '' };
 var npwsIncidentCache = { fetchedAt: 0, data: null };
+var nafcAircraftCache = { fetchedAt: 0, data: [] };
 var waterNswAttemptSlot = null;
 var waterNswGaugeCache = { fetchedAt: 0, data: null };
 var waterNswGaugeAttemptSlot = null;
@@ -1957,6 +1958,43 @@ function parseCsvLine(line) {
   return fields;
 }
 
+function decodeNafcHtml(value) {
+  return String(value || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;|&#160;/gi, ' ').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#0*39;|&apos;/gi, "'").replace(/&#(\d+);/g, function (_, code) { return String.fromCharCode(Number(code)); }).replace(/\s+/g, ' ').trim();
+}
+
+function aircraftIdentity(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function loadNafcAircraftRegistry() {
+  var now = Date.now();
+  if (nafcAircraftCache.data.length && now - nafcAircraftCache.fetchedAt < 12 * 60 * 60 * 1000) return Promise.resolve(nafcAircraftCache.data);
+  return axios.get('https://www.nafc.org.au/call-signs/', { timeout: 8000 }).then(function (response) {
+    var rows = String(response.data || '').match(/<tr[\s\S]*?<\/tr>/gi) || [];
+    var aircraft = rows.map(function (row) {
+      var cells = row.match(/<td[\s\S]*?<\/td>/gi) || [];
+      if (cells.length < 5) return null;
+      return { callsign: decodeNafcHtml(cells[0]), registration: decodeNafcHtml(cells[1]), role: decodeNafcHtml(cells[2]), manufacturer: decodeNafcHtml(cells[3]), model: decodeNafcHtml(cells[4]) };
+    }).filter(function (item) { return item && item.registration && !/^VH-?TEST/i.test(item.callsign); });
+    nafcAircraftCache = { fetchedAt: now, data: aircraft };
+    return aircraft;
+  }).catch(function (err) {
+    logger.main.warn('Unable to refresh NAFC aircraft registry: ' + err.message);
+    return nafcAircraftCache.data;
+  });
+}
+
+function identifyFireAircraft(item, registry) {
+  var registration = aircraftIdentity(item.r);
+  var flight = aircraftIdentity(item.flight);
+  var match = (registry || []).find(function (candidate) {
+    return (registration && aircraftIdentity(candidate.registration) === registration) || (flight && aircraftIdentity(candidate.callsign) === flight);
+  });
+  if (match) return { fireAircraft: true, fireCallsign: match.callsign, fireRole: match.role, fireManufacturer: match.manufacturer, fireModel: match.model, fireMatchSource: 'NAFC registry' };
+  if (/^(FIREBIRD|HELITAK|BIRDDOG|BOMBER|FIRESCAN|FIRESPOTTER|AIRATTACK|PARKAIR)/.test(flight)) return { fireAircraft: true, fireCallsign: String(item.flight || '').trim(), fireRole: 'Fire and emergency aviation', fireMatchSource: 'Operational callsign' };
+  return { fireAircraft: false };
+}
+
 function parseFirmsCsv(csv, source) {
   var lines = String(csv || '').trim().split(/\r?\n/);
   if (lines.length < 2) return [];
@@ -2403,13 +2441,16 @@ router.route('/central-west/aircraft')
     }
     var timeoutMs = Math.min(Math.max(parseInt(piawareConfig.timeoutSeconds, 10) || 4, 1), 30) * 1000;
     var maximumAge = Math.min(Math.max(parseInt(piawareConfig.maximumAgeSeconds, 10) || 60, 5), 600);
-    axios.get(piawareConfig.aircraftUrl, { timeout: timeoutMs })
-      .then(function (response) {
+    Promise.all([axios.get(piawareConfig.aircraftUrl, { timeout: timeoutMs }), loadNafcAircraftRegistry()])
+      .then(function (results) {
+        var response = results[0];
+        var nafcRegistry = results[1];
         var data = response.data || {};
         var aircraft = (data.aircraft || []).filter(function (item) {
           return typeof item.lat === 'number' && typeof item.lon === 'number' && (Number(item.seen) || 0) <= maximumAge;
         }).map(function (item) {
-          return {
+          var fireIdentity = identifyFireAircraft(item, nafcRegistry);
+          return Object.assign({
             hex: item.hex,
             flight: String(item.flight || '').trim(),
             registration: item.r || '',
@@ -2424,7 +2465,7 @@ router.route('/central-west/aircraft')
             category: item.category || '',
             seen: item.seen || 0,
             messages: item.messages || 0
-          };
+          }, fireIdentity);
         });
         res.status(200).json({ now: data.now || Date.now() / 1000, aircraft: aircraft });
       }).catch(function (err) {
