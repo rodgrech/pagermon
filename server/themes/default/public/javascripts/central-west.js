@@ -220,7 +220,11 @@
       });
       if (best) {
         best.group.messages.push(message);
-        best.group.status = 'stopped';
+        var stopDetails = message.cwIncident || {};
+        var stoppedUnit = stopDetails.brigade || stopDetails.unit || stopDetails.callsign || message.alias || String(message.address || 'Unit');
+        best.group.stoppedBrigades = best.group.stoppedBrigades || [];
+        if (best.group.stoppedBrigades.indexOf(stoppedUnit) === -1) best.group.stoppedBrigades.push(stoppedUnit);
+        best.group.status = best.group.brigades.length && best.group.brigades.every(function (brigade) { return best.group.stoppedBrigades.indexOf(brigade) !== -1; }) ? 'stopped' : 'partial-stop';
         best.group.stoppedAt = new Date(stopTime * 1000);
         best.group.lastSeen = new Date(Math.max(best.group.lastSeen.getTime(), stopTime * 1000));
         if (message.agency && best.group.agencies.indexOf(message.agency) === -1) best.group.agencies.push(message.agency);
