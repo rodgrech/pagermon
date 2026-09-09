@@ -131,7 +131,7 @@
       "cacheMinutes": 10
     },
     "liveMap": {
-      "wheelPxPerZoomLevel": 180,
+      "wheelPxPerZoomLevel": 360,
       "centerLatitude": -32.65,
       "centerLongitude": 149.58,
       "initialZoom": 8,
