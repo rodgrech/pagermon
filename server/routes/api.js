@@ -81,6 +81,7 @@ var waterNswCache = { fetchedAt: 0, data: null };
 var nasaFirmsCache = { fetchedAt: 0, data: null, signature: '' };
 var npwsIncidentCache = { fetchedAt: 0, data: null };
 var nafcAircraftCache = { fetchedAt: 0, data: [] };
+var hexAircraftCache = {};
 var waterNswAttemptSlot = null;
 var waterNswGaugeCache = { fetchedAt: 0, data: null };
 var waterNswGaugeAttemptSlot = null;
@@ -1995,6 +1996,19 @@ function identifyFireAircraft(item, registry) {
   return { fireAircraft: false };
 }
 
+function lookupHexAircraft(hex) {
+  var key = aircraftIdentity(hex);
+  if (!key) return Promise.resolve({});
+  var cached = hexAircraftCache[key];
+  if (cached && Date.now() - cached.fetchedAt < 7 * 24 * 60 * 60 * 1000) return Promise.resolve(cached.data);
+  return axios.get('https://hexdb.io/api/v1/aircraft/' + encodeURIComponent(key), { timeout: 4000 }).then(function (response) {
+    var data = response.data || {};
+    var result = {registration: data.Registration || '', aircraftType: data.ICAOTypeCode || '', aircraftModel: data.Type || '', aircraftManufacturer: data.Manufacturer || '', aircraftOperator: data.RegisteredOwners || ''};
+    hexAircraftCache[key] = {fetchedAt: Date.now(), data: result};
+    return result;
+  }).catch(function () { return {}; });
+}
+
 function parseFirmsCsv(csv, source) {
   var lines = String(csv || '').trim().split(/\r?\n/);
   if (lines.length < 2) return [];
@@ -2448,8 +2462,10 @@ router.route('/central-west/aircraft')
         var data = response.data || {};
         var aircraft = (data.aircraft || []).filter(function (item) {
           return typeof item.lat === 'number' && typeof item.lon === 'number' && (Number(item.seen) || 0) <= maximumAge;
-        }).map(function (item) {
-          var fireIdentity = identifyFireAircraft(item, nafcRegistry);
+        });
+        return Promise.all(aircraft.map(function (item) {
+          return lookupHexAircraft(item.hex).then(function (hexIdentity) {
+          var fireIdentity = identifyFireAircraft(Object.assign({}, item, {r: item.r || hexIdentity.registration}), nafcRegistry);
           return Object.assign({
             hex: item.hex,
             flight: String(item.flight || '').trim(),
@@ -2465,9 +2481,9 @@ router.route('/central-west/aircraft')
             category: item.category || '',
             seen: item.seen || 0,
             messages: item.messages || 0
-          }, fireIdentity);
-        });
-        res.status(200).json({ now: data.now || Date.now() / 1000, aircraft: aircraft });
+          }, hexIdentity, fireIdentity, {registration: item.r || hexIdentity.registration || '', aircraftType: item.t || hexIdentity.aircraftType || ''});
+          });
+        })).then(function (enrichedAircraft) { res.status(200).json({ now: data.now || Date.now() / 1000, aircraft: enrichedAircraft }); });
       }).catch(function (err) {
         logger.main.warn('Unable to retrieve local PiAware feed: ' + err.message);
         res.status(502).json({ error: 'PiAware receiver is temporarily unavailable' });
