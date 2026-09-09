@@ -71,12 +71,12 @@
 
         <div class="cw-panel" ng-show="dashboardView == 'incidents'">
           <div class="cw-empty" ng-if="!incidents.length">No recent incidents could be grouped yet.</div>
-          <article class="cw-incident cw-priority-{{incident.priority}}" ng-repeat="incident in incidents">
+          <article class="cw-incident cw-priority-{{incident.priority}}" ng-repeat="incident in incidents | filter:incidentTimelineFilter">
             <div class="cw-incident-heading"><span class="cw-priority-label">{{incident.priority}}</span> <span class="label label-default" ng-if="incident.status == 'stopped'">STOP RECEIVED</span> <strong>{{incident.location || incident.agency || 'Unclassified incident'}}</strong><span class="pull-right">{{incident.messages.length}} page<span ng-if="incident.messages.length != 1">s</span></span></div>
             <div class="cw-incident-meta">{{incident.agency || 'Unknown agency'}} · {{incident.lastSeen | date:'dd MMM HH:mm'}}</div>
             <div class="cw-correlation cw-correlation-combined" ng-if="incident.rfsMatch"><i class="fa fa-link"></i> <strong>Combined with official RFS incident:</strong> <a ng-href="{{incident.rfsMatch.link}}" target="_blank" rel="noopener">{{incident.rfsMatch.title}}</a> · {{incident.rfsMatch.category}} · approximately {{incident.rfsMatch.distanceKm}} km<div ng-if="incident.rfsMatch.description">{{incident.rfsMatch.description}}</div></div>
             <div class="cw-incident-message">{{incident.messages[0].message}}</div>
-            <details ng-if="incident.timeline.length > 1"><summary>Show incident timeline</summary><div class="cw-timeline" ng-repeat="item in incident.timeline"><strong ng-if="item.kind == 'rss'"><i class="fa" ng-class="item.state == 'removed' ? 'fa-times-circle text-danger' : 'fa-rss text-success'"></i> {{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — {{item.label}}</strong><span ng-if="item.kind == 'pager'">{{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — <strong ng-if="item.agency">{{item.agency}}: </strong>{{item.message}}</span></div></details>
+            <details ng-if="incident.timeline.length > 1" ng-open="timelineIncidentFocus && incidentTimelineFilter(incident)"><summary>Show incident timeline</summary><div class="cw-timeline" ng-repeat="item in incident.timeline"><strong ng-if="item.kind == 'rss'"><i class="fa" ng-class="item.state == 'removed' ? 'fa-times-circle text-danger' : 'fa-rss text-success'"></i> {{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — {{item.label}}</strong><span ng-if="item.kind == 'pager'">{{item.timestamp * 1000 | date:'dd MMM HH:mm'}} — <strong ng-if="item.agency">{{item.agency}}: </strong>{{item.message}}</span></div></details>
           </article>
         </div>
 
@@ -425,6 +425,13 @@
         $scope.user="";
       <% } %>
       $scope.dashboardView = /(?:\?|&)view=incidents(?:&|$)/.test(window.location.search) ? 'incidents' : 'feed';
+      var timelineQuery = window.location.search.match(/(?:\?|&)incident=([^&]+)/);
+      $scope.timelineIncidentFocus = timelineQuery ? decodeURIComponent(timelineQuery[1].replace(/\+/g, ' ')).toLowerCase() : '';
+      $scope.incidentTimelineFilter = function (incident) {
+        if (!$scope.timelineIncidentFocus) return true;
+        try { return JSON.stringify(incident).toLowerCase().indexOf($scope.timelineIncidentFocus) !== -1; }
+        catch (err) { return true; }
+      };
       $scope.integrationFeatures = {bom: false, waterNsw: false, radio: false, piaware: false, weatherRadar: false, nasaFirms: false, npws: false};
       $scope.darkMode = localStorage.getItem('cw-dark-mode') === 'true';
       document.body.classList.toggle('cw-dark', $scope.darkMode);
