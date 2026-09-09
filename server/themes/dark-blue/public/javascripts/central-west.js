@@ -319,7 +319,7 @@
       if (incident.rfsMatch) {
         if (incident.rfsMatch.firstSeenAt) incident.rfsLifecycle.push({timestamp: incident.rfsMatch.firstSeenAt, label: 'Loaded into public RSS/ICON', state: 'loaded'});
         (rfsIncidents || []).forEach(function (rfs) {
-          if (rfs.link && incident.rfsMatch.link && rfs.link === incident.rfsMatch.link) rfs.pagerMatch = {location: incident.location, agency: incident.agency, pageCount: incident.messages.length, latestMessage: incident.messages[0] && incident.messages[0].message, brigades: incident.brigades || [], timelineKey: (incident.details && incident.details.incidentId) || incident.location || ''};
+          if (!rfs.pagerMatch && rfs.link && incident.rfsMatch.link && rfs.link === incident.rfsMatch.link && hasIncidentLocationEvidence(incident, rfs)) rfs.pagerMatch = {location: incident.location, agency: incident.agency, pageCount: incident.messages.length, latestMessage: incident.messages[0] && incident.messages[0].message, brigades: incident.brigades || [], timelineKey: (incident.details && incident.details.incidentId) || incident.location || ''};
         });
       } else {
         var removedMatch = null;
