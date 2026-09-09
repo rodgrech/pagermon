@@ -319,7 +319,7 @@
       if (incident.rfsMatch) {
         if (incident.rfsMatch.firstSeenAt) incident.rfsLifecycle.push({timestamp: incident.rfsMatch.firstSeenAt, label: 'Loaded into public RSS/ICON', state: 'loaded'});
         (rfsIncidents || []).forEach(function (rfs) {
-          if (rfs.link === incident.rfsMatch.link) rfs.pagerMatch = {location: incident.location, agency: incident.agency, pageCount: incident.messages.length, latestMessage: incident.messages[0] && incident.messages[0].message};
+          if (rfs.link === incident.rfsMatch.link) rfs.pagerMatch = {location: incident.location, agency: incident.agency, pageCount: incident.messages.length, latestMessage: incident.messages[0] && incident.messages[0].message, brigades: incident.brigades || [], timelineKey: (incident.details && incident.details.incidentId) || incident.location || ''};
         });
       } else {
         var removedMatch = null;
@@ -467,16 +467,19 @@
     ['pager', 'rfs', 'hotspots', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
-      var combined = incident.rfsMatch ? '<hr><strong>Official RFS incident</strong><br>' + escapeHtml(incident.rfsMatch.title) + '<br>' + escapeHtml(incident.rfsMatch.category) + '<br>' + escapeHtml(incident.rfsMatch.description || '') + '<br><a href="' + escapeHtml(incident.rfsMatch.link) + '" target="_blank" rel="noopener">View official incident</a>' : '';
-      L.marker([incident.coordinates.lat, incident.coordinates.lng]).addTo(layerGroups.pager).bindPopup(pagerPopup(incident) + combined, {maxWidth: 390, className: 'cw-popup-shell'});
+      // A confirmed official match represents the same job. Keep its pager
+      // details on the official marker instead of drawing a duplicate pin.
+      if (incident.rfsMatch) return;
+      L.marker([incident.coordinates.lat, incident.coordinates.lng]).addTo(layerGroups.pager).bindPopup(pagerPopup(incident), {maxWidth: 390, className: 'cw-popup-shell'});
     });
     (rfsIncidents || []).forEach(function (incident) {
       var hazard = incidentKind(incident);
       var severity = /emergency warning/i.test(incident.category) ? ' emergency' : /watch and act/i.test(incident.category) ? ' watch' : '';
       var incidentIcon = L.divIcon({className: 'cw-incident-marker cw-incident-' + hazard.kind + severity, html: '<span><i class="fa ' + hazard.icon + '"></i></span>', iconSize: [34, 31], iconAnchor: [17, 28]});
-      var pagerDetail = incident.pagerMatch ? '<hr><strong>Matching pager traffic</strong><br>' + escapeHtml(incident.pagerMatch.location || incident.pagerMatch.agency) + '<br>' + incident.pagerMatch.pageCount + ' page(s)<br>' + escapeHtml(incident.pagerMatch.latestMessage) : '';
+      var pagerUnits = incident.pagerMatch && incident.pagerMatch.brigades && incident.pagerMatch.brigades.length ? '<br><strong>Units paged:</strong> ' + incident.pagerMatch.brigades.map(escapeHtml).join(', ') : '';
+      var pagerDetail = incident.pagerMatch ? '<hr><strong>Matching pager traffic</strong><br>' + escapeHtml(incident.pagerMatch.location || incident.pagerMatch.agency) + '<br>' + incident.pagerMatch.pageCount + ' page(s)' + pagerUnits + '<br>' + escapeHtml(incident.pagerMatch.latestMessage) : '';
       var npwsDetail = incident.npwsMatches && incident.npwsMatches.length ? '<div class="cw-popup-source-match"><i class="fa fa-tree"></i><strong> Combined with NSW NPWS</strong><br>' + incident.npwsMatches.map(function(item) { return escapeHtml(item.title); }).join('<br>') + '</div>' : '';
-      var officialPopup = '<div class="cw-incident-popup"><div class="cw-popup-heading"><i class="fa ' + hazard.icon + '"></i><strong>' + escapeHtml(String(incident.category || 'Official incident').toUpperCase()) + '</strong></div><div class="cw-popup-title">' + escapeHtml(incident.title) + '</div><div class="cw-popup-pills"><span><small>Status</small>' + escapeHtml(incident.category || 'Published') + '</span><span><small>Type</small>' + escapeHtml(hazard.kind) + '</span></div><div class="cw-popup-description">' + escapeHtml(incident.description || '') + '</div>' + npwsDetail + pagerDetail + '<div class="cw-popup-actions"><a href="/?view=incidents&incident=' + encodeURIComponent(incident.title || incident.link || '') + '"><i class="fa fa-stream"></i> Timeline</a><a href="' + escapeHtml(incident.link) + '" target="_blank" rel="noopener">Official details</a></div></div>';
+      var officialPopup = '<div class="cw-incident-popup"><div class="cw-popup-heading"><i class="fa ' + hazard.icon + '"></i><strong>' + escapeHtml(String(incident.category || 'Official incident').toUpperCase()) + '</strong></div><div class="cw-popup-title">' + escapeHtml(incident.title) + '</div><div class="cw-popup-pills"><span><small>Status</small>' + escapeHtml(incident.category || 'Published') + '</span><span><small>Type</small>' + escapeHtml(hazard.kind) + '</span></div><div class="cw-popup-description">' + escapeHtml(incident.description || '') + '</div>' + npwsDetail + pagerDetail + '<div class="cw-popup-actions"><a href="/?view=incidents&incident=' + encodeURIComponent((incident.pagerMatch && incident.pagerMatch.timelineKey) || incident.title || incident.link || '') + '"><i class="fa fa-stream"></i> Timeline</a><a href="' + escapeHtml(incident.link) + '" target="_blank" rel="noopener">Official details</a></div></div>';
       L.marker([incident.latitude, incident.longitude], {icon: incidentIcon, zIndexOffset: 450}).addTo(layerGroups.rfs).bindPopup(officialPopup, {maxWidth: 390, className: 'cw-popup-shell'});
     });
     (satelliteHotspots || []).forEach(function(hotspot) {
