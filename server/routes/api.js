@@ -97,6 +97,24 @@ var centralWestGaugeMetadata = require('./central-west-gauges.json');
 var waterNswCacheDirectory = path.join(path.dirname(fs.realpathSync(confFile)), 'cache');
 var waterNswCacheFile = path.join(waterNswCacheDirectory, 'waternsw-dams.json');
 var waterNswGaugeCacheFile = path.join(waterNswCacheDirectory, 'waternsw-gauges.json');
+
+// The RFS feed uses Australian day/month/year values without a timezone, for
+// example "12/09/2026 9:17:00 AM". Date.parse() treats that ambiguous value as
+// month/day/year on Node, which can move an incident months into the future.
+function parseRfsPublishedDate(value) {
+  var text = String(value || '').trim();
+  var match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (!match) return Date.parse(text);
+
+  var hour = Number(match[4]);
+  var meridiem = String(match[7] || '').toUpperCase();
+  if (meridiem === 'AM' && hour === 12) hour = 0;
+  if (meridiem === 'PM' && hour !== 12) hour += 12;
+
+  // pubDate is expressed as UTC; the description's UPDATED value is rendered
+  // in NSW local time by the source feed.
+  return Date.UTC(Number(match[3]), Number(match[2]) - 1, Number(match[1]), hour, Number(match[5]), Number(match[6] || 0));
+}
 try {
   fs.mkdirSync(waterNswCacheDirectory, { recursive: true });
 } catch (waterNswCacheDirectoryError) {
@@ -2219,8 +2237,14 @@ router.route('/central-west/rfs-incidents')
       var currentIds = {};
       incidents.forEach(function (incident) {
         currentIds[incident.feedId] = true;
-        var publishedAt = Date.parse(incident.published || '');
-        var lifecycle = rfsLifecycle[incident.feedId] || {firstSeenAt: isNaN(publishedAt) ? Math.floor(now / 1000) : Math.floor(publishedAt / 1000)};
+        var publishedAt = parseRfsPublishedDate(incident.published || '');
+        var parsedFirstSeenAt = isNaN(publishedAt) ? Math.floor(now / 1000) : Math.floor(publishedAt / 1000);
+        var lifecycle = rfsLifecycle[incident.feedId] || {firstSeenAt: parsedFirstSeenAt};
+        // Repair lifecycle timestamps written by older builds that interpreted
+        // DD/MM/YYYY as MM/DD/YYYY.
+        if (!Number(lifecycle.firstSeenAt) || Number(lifecycle.firstSeenAt) > Math.floor(now / 1000) + 3600) {
+          lifecycle.firstSeenAt = parsedFirstSeenAt;
+        }
         lifecycle.lastSeenAt = Math.floor(now / 1000);
         lifecycle.removedAt = null;
         lifecycle.incident = incident;
