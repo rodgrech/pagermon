@@ -106,7 +106,7 @@
     var active = labels.indexOf(value); if (active < 0) active = 0;
     var colours = ['#e5e5e5', '#f6df3f', '#ef9a1a', '#d84b24', '#9f201b'];
     var paths = ['M12 74 A48 48 0 0 1 28 39 L39 50 A32 32 0 0 0 28 74 Z', 'M28 39 A48 48 0 0 1 50 27 L54 43 A32 32 0 0 0 39 50 Z', 'M50 27 A48 48 0 0 1 74 28 L65 43 A32 32 0 0 0 54 43 Z', 'M74 28 A48 48 0 0 1 92 44 L76 51 A32 32 0 0 0 65 43 Z', 'M92 44 A48 48 0 0 1 100 74 L84 74 A32 32 0 0 0 76 51 Z'];
-    return '<div class="cw-fire-gauge"><svg viewBox="0 0 112 82" role="img" aria-label="' + escapeHtml(value) + '">' + paths.map(function (path, index) { return '<path d="' + path + '" fill="' + colours[index] + '" opacity="' + (index === active ? '1' : '.3') + '" stroke="#fff" stroke-width="1"/>'; }).join('') + '<text x="56" y="71" text-anchor="middle" font-size="8" font-weight="bold" fill="#263238">' + escapeHtml(value) + '</text></svg></div>';
+    return '<div class="cw-fire-gauge"><svg viewBox="0 0 112 82" role="img" aria-label="' + escapeHtml(value) + '">' + paths.map(function (path, index) { return '<path d="' + path + '" fill="' + colours[index] + '" opacity="' + (index === active ? '1' : '.3') + '" stroke="#fff" stroke-width="1"/>'; }).join('') + '<text x="56" y="71" text-anchor="middle" font-size="8" font-weight="bold" fill="#ffffff" stroke="#263238" stroke-width=".7" paint-order="stroke">' + escapeHtml(value) + '</text></svg></div>';
   }
 
   function renderFireDangerLayer() {
