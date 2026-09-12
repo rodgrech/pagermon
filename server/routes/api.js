@@ -2299,11 +2299,17 @@ router.route('/central-west/rfs-incidents')
         if (latitude < -34.5 || latitude > -30.8 || longitude < 147.3 || longitude > 151.0) return null;
         var properties = feature.properties || {};
         var feedId = String(feature.id || properties.guid || properties.id || [properties.title, latitude.toFixed(4), longitude.toFixed(4)].join('|'));
+        var description = String(properties.description || '').replace(/<br\s*\/?\s*>/gi, ' · ').replace(/<[^>]+>/g, '');
+        var agencyMatch = description.match(/RESPONSIBLE\s+AGENCY\s*:\s*([^·]+)/i);
+        var responsibleAgency = agencyMatch ? agencyMatch[1].trim() : 'Rural Fire Service';
+        var agency = /fire\s+and\s+rescue/i.test(responsibleAgency) || /\bfrnsw\b/i.test(responsibleAgency) ? 'FRNSW' : /rural\s+fire|\brfs\b/i.test(responsibleAgency) ? 'NSW RFS' : responsibleAgency;
         return {
           feedId: feedId,
           title: properties.title || 'RFS incident',
           category: properties.category || 'Incident',
-          description: String(properties.description || '').replace(/<br\s*\/?\s*>/gi, ' · ').replace(/<[^>]+>/g, ''),
+          description: description,
+          agency: agency,
+          responsibleAgency: responsibleAgency,
           link: properties.link || 'https://www.rfs.nsw.gov.au/fire-information/fires-near-me',
           published: properties.pubDate || '',
           latitude: latitude,
