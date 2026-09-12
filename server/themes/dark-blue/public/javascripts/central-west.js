@@ -40,6 +40,8 @@
   var lastRadarEnabled = false;
   var recoveryTimer;
   var satelliteHotspots = [];
+  var fireDangerDistricts = [];
+  var fireDangerBoundaries = null;
 
   if (window.fetch) {
     window.fetch('/api/central-west/dashboard-config', {credentials: 'same-origin'})
@@ -54,6 +56,12 @@
         additionalPriorityKeywords.critical = parseKeywordList(config.additionalCriticalKeywords);
         additionalPriorityKeywords.high = parseKeywordList(config.additionalHighKeywords);
         additionalPriorityKeywords.medium = parseKeywordList(config.additionalMediumKeywords);
+        if (config.fireDangerEnabled) {
+          window.fetch('/api/central-west/fire-danger', {credentials: 'same-origin'}).then(function (response) { return response.ok ? response.json() : null; }).then(function (data) {
+            fireDangerDistricts = data && data.districts || [];
+            if (map) renderFireDangerLayer();
+          }).catch(function () {});
+        }
         if (map) {
           map.options.wheelPxPerZoomLevel = mapWheelPxPerZoomLevel;
           map.setView(mapCenter, mapInitialZoom);
@@ -85,6 +93,33 @@
     if (/MVA|MVC|GRASS FIRE|BUSH FIRE|BACKYARD FIRE|FIRECALL|FLOOD RESCUE|MISSING PERSON|HAZMAT|URGENT|ASSIST AMBULANCE/.test(text) || matchesAdditionalKeyword(text, 'high')) return 'high';
     if (/TREE DOWN|FLOOD|STORM|SMOKE|ALARM|BACKUP|ASSIST|INCIDENT/.test(text) || matchesAdditionalKeyword(text, 'medium')) return 'medium';
     return 'routine';
+  }
+
+  function fireDangerColour(rating) {
+    var value = String(rating || '').toUpperCase();
+    return value === 'CATASTROPHIC' ? '#8e1b1b' : value === 'EXTREME' ? '#d02b20' : value === 'HIGH' ? '#e58d16' : value === 'MODERATE' ? '#e6c229' : '#8aa0ad';
+  }
+
+  function renderFireDangerLayer() {
+    if (!map || !layerGroups || !window.L || !fireDangerDistricts.length) return;
+    layerGroups.fireDanger.clearLayers();
+    var ratings = {};
+    fireDangerDistricts.forEach(function (item) { ratings[String(item.name || '').toUpperCase()] = item; });
+    function draw(geojson) {
+      fireDangerBoundaries = geojson;
+      L.geoJSON(geojson, {style: function (feature) {
+        var name = String(feature.properties && (feature.properties.district || feature.properties.DISTRICT || feature.properties.name || '')).toUpperCase();
+        var rating = ratings[name] || fireDangerDistricts.filter(function (item) { return name.indexOf(String(item.name || '').toUpperCase()) >= 0 || String(item.name || '').toUpperCase().indexOf(name) >= 0; })[0];
+        var colour = fireDangerColour(rating && rating.today);
+        return {color: colour, weight: 2, opacity: .9, fillColor: colour, fillOpacity: .18};
+      }, onEachFeature: function (feature, layer) {
+        var name = String(feature.properties && (feature.properties.district || feature.properties.DISTRICT || feature.properties.name || 'RFS district'));
+        var rating = ratings[name.toUpperCase()] || fireDangerDistricts.filter(function (item) { return name.toUpperCase().indexOf(String(item.name || '').toUpperCase()) >= 0 || String(item.name || '').toUpperCase().indexOf(name.toUpperCase()) >= 0; })[0];
+        if (rating) layer.bindPopup('<strong>' + escapeHtml(name) + '</strong><br>Fire danger today: <strong>' + escapeHtml(rating.today) + '</strong><br>Tomorrow: <strong>' + escapeHtml(rating.tomorrow) + '</strong>');
+      }}).addTo(layerGroups.fireDanger);
+    }
+    if (fireDangerBoundaries) return draw(fireDangerBoundaries);
+    window.fetch('https://portal.data.nsw.gov.au/arcgis/rest/services/Hosted/FRNSW_Locations/FeatureServer/1/query?where=1%3D1&outFields=district&returnGeometry=true&outSR=4326&f=geojson').then(function (response) { return response.ok ? response.json() : null; }).then(function (data) { if (data) draw(data); }).catch(function () {});
   }
 
   function parseKeywordList(value) {
@@ -489,10 +524,11 @@
       if (element._leaflet_id) delete element._leaflet_id;
       map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel, zoomSnap: 0.5, zoomDelta: 0.5}).setView(mapCenter, mapInitialZoom);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), hotspots: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
+      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
       var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS / NPWS incidents': layerGroups.rfs};
       overlays['Forestry closures and notices'] = layerGroups.forestry;
+      overlays['Fire danger districts'] = layerGroups.fireDanger;
       if (features.nasaFirms !== false) overlays['Satellite hotspots (NASA FIRMS)'] = layerGroups.hotspots;
       if (features.piaware !== false) overlays['Live aircraft'] = layerGroups.aircraft;
       if (features.waterNsw !== false) {
@@ -508,7 +544,8 @@
         radarLayer.addTo(layerGroups.radar);
       }
     }
-    ['pager', 'rfs', 'forestry', 'hotspots', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
+    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
+    renderFireDangerLayer();
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
       if (hideTestPages && isTestPagerIncident(incident)) return;
