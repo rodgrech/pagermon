@@ -33,6 +33,7 @@
   var mapCenter = [-32.65, 149.58];
   var mapInitialZoom = 8;
   var stopMessageWindowMinutes = 30;
+  var hideTestPages = false;
   var lastRender;
   var lastRadarConfig;
   var lastRadarEnabled = false;
@@ -48,6 +49,7 @@
         mapCenter = [Number(config.mapCenterLatitude) || -32.65, Number(config.mapCenterLongitude) || 149.58];
         mapInitialZoom = Number(config.mapInitialZoom) || 8;
         stopMessageWindowMinutes = Math.min(Math.max(Number(config.stopMessageWindowMinutes) || 30, 1), 1440);
+        hideTestPages = config.hideTestPages === true;
         if (map) {
           map.options.wheelPxPerZoomLevel = mapWheelPxPerZoomLevel;
           map.setView(mapCenter, mapInitialZoom);
@@ -289,6 +291,12 @@
     return String(value || '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
+  function isTestPagerIncident(incident) {
+    return (incident.messages || []).some(function (message) {
+      return /\b(?:TEST(?:ING)?|TEST\s+PAGE|TEST\s+MESSAGE|SYSTEM\s+UNDER\s+TEST|DRILL|TRAINING|EXERCISE)\b/i.test(String(message.message || ''));
+    });
+  }
+
   function hasIncidentLocationEvidence(incident, rfs) {
     var official = correlationText((rfs.title || '') + ' ' + (rfs.description || ''));
     var locality = correlationText(incident.location || '');
@@ -491,6 +499,7 @@
     ['pager', 'rfs', 'forestry', 'hotspots', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
+      if (hideTestPages && isTestPagerIncident(incident)) return;
       // A confirmed official match represents the same job. Keep its pager
       // details on the official marker instead of drawing a duplicate pin.
       if (incident.rfsMatch) return;
@@ -501,7 +510,7 @@
       var severity = /emergency warning/i.test(incident.category) ? ' emergency' : /watch and act/i.test(incident.category) ? ' watch' : '';
       var incidentIcon = L.divIcon({className: 'cw-incident-marker cw-incident-' + hazard.kind + severity, html: '<span><i class="fa ' + hazard.icon + '"></i></span>', iconSize: [34, 31], iconAnchor: [17, 28]});
       var pagerUnits = incident.pagerMatch && incident.pagerMatch.brigades && incident.pagerMatch.brigades.length ? '<br><strong>Units paged:</strong> ' + incident.pagerMatch.brigades.map(escapeHtml).join(', ') : '';
-      var pagerDetail = incident.pagerMatch ? '<hr><strong>Matching pager traffic</strong><br>' + escapeHtml(incident.pagerMatch.location || incident.pagerMatch.agency) + '<br>' + incident.pagerMatch.pageCount + ' page(s)' + pagerUnits + '<br>' + escapeHtml(incident.pagerMatch.latestMessage) : '';
+      var pagerDetail = incident.pagerMatch && !(hideTestPages && /\b(?:TEST(?:ING)?|TEST\s+PAGE|TEST\s+MESSAGE|SYSTEM\s+UNDER\s+TEST|DRILL|TRAINING|EXERCISE)\b/i.test(String(incident.pagerMatch.latestMessage || ''))) ? '<hr><strong>Matching pager traffic</strong><br>' + escapeHtml(incident.pagerMatch.location || incident.pagerMatch.agency) + '<br>' + incident.pagerMatch.pageCount + ' page(s)' + pagerUnits + '<br>' + escapeHtml(incident.pagerMatch.latestMessage) : '';
       var npwsDetail = incident.npwsMatches && incident.npwsMatches.length ? '<div class="cw-popup-source-match"><i class="fa fa-tree"></i><strong> Combined with NSW NPWS</strong><br>' + incident.npwsMatches.map(function(item) { return escapeHtml(item.title); }).join('<br>') + '</div>' : '';
       var officialPopup = '<div class="cw-incident-popup"><div class="cw-popup-heading"><i class="fa ' + hazard.icon + '"></i><strong>' + escapeHtml(String(incident.category || 'Official incident').toUpperCase()) + '</strong></div><div class="cw-popup-title">' + escapeHtml(incident.title) + '</div><div class="cw-popup-pills"><span><small>Status</small>' + escapeHtml(incident.category || 'Published') + '</span><span><small>Type</small>' + escapeHtml(hazard.kind) + '</span></div><div class="cw-popup-description">' + escapeHtml(incident.description || '') + '</div>' + npwsDetail + pagerDetail + '<div class="cw-popup-actions"><a href="/?view=incidents&incident=' + encodeURIComponent((incident.pagerMatch && incident.pagerMatch.timelineKey) || incident.title || incident.link || '') + '"><i class="fa fa-stream"></i> Timeline</a><a href="' + escapeHtml(incident.link) + '" target="_blank" rel="noopener">Official details</a></div></div>';
       L.marker([incident.latitude, incident.longitude], {icon: incidentIcon, zIndexOffset: 450}).addTo(layerGroups.rfs).bindPopup(officialPopup, {maxWidth: 390, className: 'cw-popup-shell'});

@@ -136,6 +136,7 @@
       "centerLongitude": 149.58,
       "initialZoom": 8,
       "pagerIncidentExpiryHours": 24,
+      "hideTestPages": false,
       "stopMessageWindowMinutes": 30
     }
   },

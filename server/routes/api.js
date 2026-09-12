@@ -1948,7 +1948,7 @@ router.route('/central-west/dashboard-config')
     var radarConfig = integrationConfig('weatherRadar', { enabled: true, opacityPercent: 62, defaultVisible: false });
     var firmsConfig = integrationConfig('nasaFirms', { enabled: false, defaultVisible: false });
     var npwsConfig = integrationConfig('npws', { enabled: false, feedUrl: '' });
-    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 360, centerLatitude: -32.65, centerLongitude: 149.58, initialZoom: 8, pagerIncidentExpiryHours: 24, stopMessageWindowMinutes: 30 });
+    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 360, centerLatitude: -32.65, centerLongitude: 149.58, initialZoom: 8, pagerIncidentExpiryHours: 24, hideTestPages: false, stopMessageWindowMinutes: 30 });
     res.set('Cache-Control', 'private, no-store');
     res.status(200).json({
       waterNswEnabled: waterConfig.enabled !== false,
@@ -1967,6 +1967,7 @@ router.route('/central-west/dashboard-config')
       mapCenterLongitude: Math.min(Math.max(parseFloat(mapConfig.centerLongitude) || 149.58, -180), 180),
       mapInitialZoom: Math.min(Math.max(parseInt(mapConfig.initialZoom, 10) || 8, 3), 18),
       pagerIncidentExpiryHours: Math.min(Math.max(parseInt(mapConfig.pagerIncidentExpiryHours, 10) || 24, 1), 720),
+      hideTestPages: mapConfig.hideTestPages === true,
       stopMessageWindowMinutes: Math.min(Math.max(parseInt(mapConfig.stopMessageWindowMinutes, 10) || 30, 1), 1440)
     });
   });
