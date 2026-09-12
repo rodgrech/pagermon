@@ -1,7 +1,10 @@
 {
-  "version": "2026.09.09.1",
+  "version": "2026.09.12.1",
   "title": "What’s new",
   "changes": [
+    "Fixed WaterNSW dam storage retrieval and moved its cache into persistent application data so all visitors share the scheduled API refreshes.",
+    "Limited WaterNSW retries to one request per configured refresh window and kept current dam levels available if the optional trend request fails.",
+    "Limited the message search and pagination controls to the Feed page across every theme.",
     "Added optional NASA FIRMS satellite hotspots to the live map, with server-side caching and an independent layer switch.",
     "Added an optional NPWS incident source with automatic folding into matching RFS incidents.",
     "Redesigned incident map popups with warning status, incident details, units paged and a direct incident-timeline action.",

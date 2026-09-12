@@ -94,8 +94,14 @@ var receiverHeartbeats = {};
 var pagerGeocodes = {};
 var rfsLifecycle = {};
 var centralWestGaugeMetadata = require('./central-west-gauges.json');
-var waterNswCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-dams.json');
-var waterNswGaugeCacheFile = path.resolve('/home/rodgrech/Applications/pagermon/server/cache/waternsw-gauges.json');
+var waterNswCacheDirectory = path.join(path.dirname(fs.realpathSync(confFile)), 'cache');
+var waterNswCacheFile = path.join(waterNswCacheDirectory, 'waternsw-dams.json');
+var waterNswGaugeCacheFile = path.join(waterNswCacheDirectory, 'waternsw-gauges.json');
+try {
+  fs.mkdirSync(waterNswCacheDirectory, { recursive: true });
+} catch (waterNswCacheDirectoryError) {
+  logger.main.warn('Unable to create WaterNSW cache directory: ' + waterNswCacheDirectoryError.message);
+}
 try {
   receiverHeartbeats = JSON.parse(fs.readFileSync(receiverHeartbeatFile, 'utf8')) || {};
 } catch (receiverHeartbeatError) {
@@ -2257,6 +2263,12 @@ router.route('/central-west/waternsw-dams')
       var cachedSlot = configuredWaterSlot(waterNswCache.fetchedAt || Number(waterNswCache.data.fetchedAt || 0) * 1000, waterConfig.refreshHours);
       if (cachedSlot === currentSlot || waterNswAttemptSlot === currentSlot) return res.status(200).json(waterNswCache.data);
     }
+    // Without a cache, only the first visitor in a configured refresh slot may
+    // contact WaterNSW. This prevents concurrent page loads (or a persistent
+    // upstream error) from consuming the small Basic API allowance.
+    if (!waterNswCache.data && waterNswAttemptSlot === currentSlot) {
+      return res.status(503).json({ error: 'WaterNSW dam levels are awaiting the next scheduled refresh' });
+    }
     waterNswAttemptSlot = currentSlot;
     var subscriptionKey = waterConfig.subscriptionKey || process.env.WATERNSW_DATA_KEY || process.env.WATERNSW_SUBSCRIPTION_KEY;
     if (!subscriptionKey) return res.status(503).json({ error: 'WaterNSW API subscription is not configured' });
@@ -2270,13 +2282,20 @@ router.route('/central-west/waternsw-dams')
     };
     var latestRequest = axios.get(sourceUrl, {
       timeout: 20000,
-      params: { siteId: Object.keys(localDams).join(','), frequency: 'Latest', variable: 'ActiveStoragePercentage,TotalStorageVolume,StorageWaterLevel,SpillwayOutflow', pageNumber: 1 },
+      // WaterNSW rejects comma-separated values in the singular `variable`
+      // query parameter. Fetch the site's latest readings and select the
+      // storage variables locally below.
+      params: { siteId: Object.keys(localDams).join(','), frequency: 'Latest', pageNumber: 1 },
       headers: { 'Ocp-Apim-Subscription-Key': subscriptionKey, 'Accept': 'application/json', 'User-Agent': 'CentralWestAlerts/1.0 WaterNSW storage panel' }
     });
     var dailyRequest = axios.get(sourceUrl, {
       timeout: 60000,
       params: { siteId: Object.keys(localDams).join(','), frequency: 'Daily', dataType: 'AutoQC', variable: 'ActiveStoragePercentage', startDate: waterNswDateTime(now - 4 * 24 * 60 * 60 * 1000), endDate: waterNswDateTime(now - 10 * 60 * 1000), pageNumber: 1 },
       headers: { 'Ocp-Apim-Subscription-Key': subscriptionKey, 'Accept': 'application/json', 'User-Agent': 'CentralWestAlerts/1.0 WaterNSW daily storage trend' }
+    }).catch(function (err) {
+      // A trend failure must not hide otherwise valid current storage levels.
+      logger.main.warn('Unable to retrieve WaterNSW daily storage trend: ' + err.message);
+      return { data: { records: [] } };
     });
     Promise.all([latestRequest, dailyRequest]).then(function (responses) {
       var response = responses[0];

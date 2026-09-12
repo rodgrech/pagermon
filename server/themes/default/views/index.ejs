@@ -169,7 +169,7 @@
       </section>
 
       <% if (searchLocation === 'top') { %>
-        <div class="row">
+        <div class="row" ng-if="dashboardView == 'feed'">
           <div class="col-xs-offset-1 col-xs-10">
           <form action="/" method="get">
             <div class="input-group">
@@ -285,7 +285,7 @@
       </div>
     </div>
     <% if (searchLocation === 'bottom' || typeof searchLocation == 'undefined') { %>
-      <div class="row">
+      <div class="row" ng-if="dashboardView == 'feed'">
         <div class="col-xs-offset-1 col-xs-10">
         <form action="/" method="get">
           <div class="input-group">
@@ -300,7 +300,9 @@
         </div>
       </div>
     <% } %>
-    <%- include('global/pagination.ejs') %>
+    <div ng-if="dashboardView == 'feed'">
+      <%- include('global/pagination.ejs') %>
+    </div>
 
   </div>
   </script>
