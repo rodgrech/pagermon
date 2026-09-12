@@ -140,6 +140,8 @@ body.cw-dark .cw-incident-popup { color: #dce6ef; background: #172637; }
 body.cw-dark .cw-popup-heading { background: #22394f; }
 body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: #1b2c3e; border-color: #31465b; }
 @media (max-width: 600px) {
+  .cw-popup-shell { pointer-events: auto !important; }
+  .leaflet-popup-pane { z-index: 1100 !important; pointer-events: auto !important; }
   .cw-popup-shell { left: 8px !important; right: 8px !important; top: auto !important; bottom: 8px !important; width: calc(100vw - 16px) !important; max-width: calc(100vw - 16px) !important; margin: 0 !important; transform: none !important; }
   .cw-popup-shell .leaflet-popup-content-wrapper { width: 100% !important; max-width: none; max-height: min(62vh, 520px); overflow: hidden; box-sizing: border-box; }
   .cw-popup-shell .leaflet-popup-content { width: 100% !important; max-width: none; max-height: min(62vh, 520px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box; }

@@ -547,7 +547,7 @@
       // Angular/PWA navigation can replace the map element without unloading this
       // script. Clear Leaflet's orphaned container id before rebuilding the map.
       if (element._leaflet_id) delete element._leaflet_id;
-      map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel, zoomSnap: 0.5, zoomDelta: 0.5}).setView(mapCenter, mapInitialZoom);
+      map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel, zoomSnap: 0.5, zoomDelta: 0.5, closePopupOnClick: false, tap: true}).setView(mapCenter, mapInitialZoom);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
       layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
