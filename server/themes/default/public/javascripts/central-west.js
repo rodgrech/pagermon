@@ -299,7 +299,28 @@
     });
   }
 
+  function incidentReference(value) {
+    var match = String(value || '').match(/\b\d{2}-\d{5,}\b/);
+    return match ? match[0] : '';
+  }
+
+  function isCurrentRfsLifecycleMatch(incident, rfs) {
+    var pagerReference = incidentReference(incident.details && incident.details.incidentId);
+    var officialReference = incidentReference((rfs.incidentId || '') + ' ' + (rfs.title || '') + ' ' + (rfs.description || '') + ' ' + (rfs.link || ''));
+    if (pagerReference && officialReference && pagerReference !== officialReference) return false;
+
+    var pagerTime = incident.lastSeen instanceof Date ? incident.lastSeen.getTime() / 1000 : 0;
+    var firstSeenAt = Number(rfs.firstSeenAt || 0);
+    if (!pagerTime || !firstSeenAt) return true;
+
+    // RSS incidents normally appear within minutes of the initial page. Keep a
+    // modest allowance for delayed polling, but never attach an old retained
+    // pager group to a newly published nearby incident.
+    return pagerTime >= firstSeenAt - 21600 && pagerTime <= firstSeenAt + 86400;
+  }
+
   function isDefensibleRfsMatch(incident, rfs, km) {
+    if (!isCurrentRfsLifecycleMatch(incident, rfs)) return false;
     var textEvidence = hasIncidentLocationEvidence(incident, rfs);
     if (incident.coordinateAccuracy === 'exact') return km <= 5 && textEvidence;
     return km <= 25 && textEvidence;
