@@ -212,6 +212,13 @@
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Visible by default</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.weatherRadar.defaultVisible" ng-disabled="!settings.integrations.weatherRadar.enabled"> Turn the overlay on when the live map loads</label></div></div></div>
               </div>
             </div>
+            <div class="form-group">
+              <label for="global.whatsNewEnabled" class="col-xs-4 col-sm-3 control-label">Release updates</label>
+              <div class="col-xs-8 col-sm-9">
+                <div class="checkbox"><label><input type="checkbox" name="global.whatsNewEnabled" ng-model="settings.global.whatsNewEnabled"> Show “What’s new” once to each user after an update</label></div>
+                <span class="help-block">Turn this off to disable the release popup for everyone on this instance.</span>
+              </div>
+            </div>
 
             <div class="panel panel-default">
               <div class="panel-heading"><strong><i class="fa fa-satellite"></i> NASA FIRMS satellite hotspots</strong></div>

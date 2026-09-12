@@ -1,7 +1,8 @@
 {
-  "version": "2026.09.12.4",
+  "version": "2026.09.12.5",
   "title": "What’s new",
   "changes": [
+    "Added an administrator setting to disable the What’s New popup instance-wide.",
     "Started the settings-page redesign with a responsive category navigator and an always-accessible save and restart bar.",
     "Classified Backyard Fire and FIRECALL pager messages as High priority.",
     "Added administrator-defined Critical, High and Medium incident keywords, with comma or line-separated matching.",

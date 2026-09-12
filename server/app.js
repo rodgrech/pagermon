@@ -201,6 +201,7 @@ app.use(function (req, res, next) {
   res.locals.pwaIconVersion = nconf.get('global:pwaIconVersion') || 1;
   res.locals.publicBaseUrl = req.protocol + '://' + req.get('host');
   res.locals.whatsNew = whatsNew;
+  res.locals.whatsNewEnabled = nconf.get('global:whatsNewEnabled') !== false;
   next();
 });
 //Admin Socket

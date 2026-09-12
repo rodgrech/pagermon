@@ -33,6 +33,7 @@ router.route('/settingsData')
     .get(authHelper.isAdmin, function (req, res, next) {
         nconf.load();
         let settings = nconf.get();
+        settings.global = Object.assign({}, defaultConfig.global, settings.global || {});
         settings.integrations = Object.assign({}, integrationDefaults, settings.integrations || {});
         Object.keys(integrationDefaults).forEach(function (name) {
             settings.integrations[name] = Object.assign({}, integrationDefaults[name], settings.integrations[name] || {});
