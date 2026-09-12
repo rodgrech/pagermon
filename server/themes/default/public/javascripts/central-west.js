@@ -102,6 +102,8 @@
 
   function fireDangerGauge(rating) {
     var value = String(rating || 'NO RATING').toUpperCase();
+    var icons = {'CATASTROPHIC': 'https://www.rfs.nsw.gov.au/__data/assets/file/0011/242768/afdr-icon-catastrophic.svg', 'EXTREME': 'https://www.rfs.nsw.gov.au/__data/assets/file/0003/242769/afdr-icon-extreme.svg', 'HIGH': 'https://www.rfs.nsw.gov.au/__data/assets/file/0004/242770/afdr-icon-high.svg', 'MODERATE': 'https://www.rfs.nsw.gov.au/__data/assets/file/0005/242771/afdr-icon-moderate.svg', 'NO RATING': 'https://www.rfs.nsw.gov.au/__data/assets/file/0006/242772/afdr-icon-norating.svg'};
+    if (icons[value]) return '<div class="cw-fire-gauge"><img src="' + icons[value] + '" alt="' + escapeHtml(value) + ' fire danger rating" style="width:150px;height:100px;object-fit:contain;display:block;margin:0 auto;"></div>';
     var labels = ['NO RATING', 'MODERATE', 'HIGH', 'EXTREME', 'CATASTROPHIC'];
     var active = labels.indexOf(value); if (active < 0) active = 0;
     var colours = ['#e5e5e5', '#f6df3f', '#ef9a1a', '#d84b24', '#9f201b'];
