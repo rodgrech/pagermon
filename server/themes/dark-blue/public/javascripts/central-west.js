@@ -120,7 +120,7 @@
       }}).addTo(layerGroups.fireDanger);
     }
     if (fireDangerBoundaries) return draw(fireDangerBoundaries);
-    window.fetch('https://www.rfs.nsw.gov.au/_designs/geojson/fire-danger-ratings-geojson').then(function (response) { return response.ok ? response.json() : null; }).then(function (data) { if (data) draw(data); }).catch(function () {});
+    window.fetch('/api/central-west/fire-danger-boundaries', {credentials: 'same-origin'}).then(function (response) { return response.ok ? response.json() : null; }).then(function (data) { if (data) draw(data); }).catch(function () {});
   }
 
   function parseKeywordList(value) {

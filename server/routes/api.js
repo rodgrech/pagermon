@@ -76,6 +76,7 @@ var dbtype = nconf.get('database:type');
 var msgBuffer = [];
 var bomWarningCache = { fetchedAt: 0, data: null };
 var fireDangerCache = { fetchedAt: 0, data: null, signature: '' };
+var fireDangerBoundaryCache = { fetchedAt: 0, data: null };
 var rfsIncidentCache = { fetchedAt: 0, data: null };
 var radarCache = { fetchedAt: 0, data: null };
 var waterNswCache = { fetchedAt: 0, data: null };
@@ -2195,6 +2196,21 @@ router.route('/central-west/bom-warnings')
       logger.main.warn('Unable to retrieve BOM warning feed: ' + err.message);
       if (bomWarningCache.data) return res.status(200).json(bomWarningCache.data);
       res.status(502).json({ error: 'BOM warning feed is temporarily unavailable' });
+    });
+  });
+
+router.route('/central-west/fire-danger-boundaries')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var now = Date.now();
+    if (fireDangerBoundaryCache.data && now - fireDangerBoundaryCache.fetchedAt < 86400000) return res.status(200).json(fireDangerBoundaryCache.data);
+    axios.get('https://www.rfs.nsw.gov.au/_designs/geojson/fire-danger-ratings-geojson', { timeout: 20000, responseType: 'json', headers: { 'User-Agent': 'PagerMon fire danger map' } }).then(function (response) {
+      var data = response.data && response.data.type === 'FeatureCollection' ? response.data : { type: 'FeatureCollection', features: [] };
+      fireDangerBoundaryCache = { fetchedAt: now, data: data };
+      res.status(200).json(data);
+    }).catch(function (err) {
+      logger.main.warn('Unable to retrieve NSW RFS fire danger boundaries: ' + err.message);
+      if (fireDangerBoundaryCache.data) return res.status(200).json(fireDangerBoundaryCache.data);
+      res.status(502).json({ error: 'Fire danger boundaries are temporarily unavailable' });
     });
   });
 
