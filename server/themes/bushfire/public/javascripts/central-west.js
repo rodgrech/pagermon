@@ -537,6 +537,7 @@
 
   function renderMap(id, incidents, rfsIncidents, aircraft, dams, gauges, algaeSites) {
     if (!window.L) return;
+    if (window.L.Popup && window.L.Popup.prototype && window.L.Popup.prototype.options) window.L.Popup.prototype.options.autoPan = false;
     var features = window.CentralWestMapFeatures || {};
     var element = document.getElementById(id);
     if (!element) return;
