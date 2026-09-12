@@ -101,12 +101,13 @@
   }
 
   function renderFireDangerLayer() {
-    if (!map || !layerGroups || !window.L || !fireDangerDistricts.length) return;
+    if (!map || !layerGroups || !window.L) return;
     layerGroups.fireDanger.clearLayers();
     var ratings = {};
     fireDangerDistricts.forEach(function (item) { ratings[String(item.name || '').toUpperCase()] = item; });
     function draw(geojson) {
       fireDangerBoundaries = geojson;
+      if (layerEnabled('fireDanger') && !map.hasLayer(layerGroups.fireDanger)) layerGroups.fireDanger.addTo(map);
       L.geoJSON(geojson, {style: function (feature) {
         var name = String(feature.properties && (feature.properties.district || feature.properties.DISTRICT || feature.properties.name || '')).toUpperCase();
         var rating = ratings[name] || fireDangerDistricts.filter(function (item) { return name.indexOf(String(item.name || '').toUpperCase()) >= 0 || String(item.name || '').toUpperCase().indexOf(name) >= 0; })[0];
