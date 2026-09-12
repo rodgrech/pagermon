@@ -144,7 +144,7 @@ body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: 
   .cw-popup-shell .leaflet-popup-content-wrapper { max-width: none; }
   .cw-popup-shell .leaflet-popup-content { width: calc(100vw - 40px) !important; max-width: none; }
   .cw-popup-shell .leaflet-popup-content-wrapper { max-height: 62vh; }
-  .cw-popup-shell .leaflet-popup-content { width: calc(100vw - 76px) !important; max-width: 280px; max-height: 58vh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+  .cw-popup-shell .leaflet-popup-content { width: calc(100vw - 40px) !important; max-width: none; max-height: 62vh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
   .cw-incident-popup { padding: 12px; font-size: 11px; }
   .cw-popup-heading { margin: -12px -12px 9px; padding: 9px 12px; padding-right: 34px; }
   .cw-popup-heading i { width: 27px; height: 27px; font-size: 14px; }
@@ -284,7 +284,7 @@ body.cw-dark footer { background: #101d2a; border-color: #31465b; }
   .cw-toolbar .pull-right { margin-left: 0; }
   .cw-health { gap: 8px 14px; }
   .cw-health-note { width: 100%; margin-left: 0; }
-  #cw-incident-map { height: 520px; }
+  #cw-incident-map { height: min(520px, calc(100vh - 250px)); min-height: 360px; }
   .cw-radio-call { grid-template-columns: 1fr; gap: 9px; }
   .cw-radio-call-title { align-items: flex-start; flex-direction: column; gap: 2px; }
 }
