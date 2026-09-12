@@ -34,6 +34,7 @@
   var mapInitialZoom = 8;
   var stopMessageWindowMinutes = 30;
   var hideTestPages = false;
+  var additionalPriorityKeywords = {critical: [], high: [], medium: []};
   var lastRender;
   var lastRadarConfig;
   var lastRadarEnabled = false;
@@ -50,6 +51,9 @@
         mapInitialZoom = Number(config.mapInitialZoom) || 8;
         stopMessageWindowMinutes = Math.min(Math.max(Number(config.stopMessageWindowMinutes) || 30, 1), 1440);
         hideTestPages = config.hideTestPages === true;
+        additionalPriorityKeywords.critical = parseKeywordList(config.additionalCriticalKeywords);
+        additionalPriorityKeywords.high = parseKeywordList(config.additionalHighKeywords);
+        additionalPriorityKeywords.medium = parseKeywordList(config.additionalMediumKeywords);
         if (map) {
           map.options.wheelPxPerZoomLevel = mapWheelPxPerZoomLevel;
           map.setView(mapCenter, mapInitialZoom);
@@ -77,10 +81,18 @@
 
   function priority(message) {
     var text = String(message || '').toUpperCase();
-    if (/PERSONS? TRAPPED|ENTRAP|STRUCTURE FIRE|HOUSE FIRE|RESCUE REQUIRED|MAYDAY|LIFE THREAT|EMERGENCY/.test(text)) return 'critical';
-    if (/MVA|MVC|GRASS FIRE|BUSH FIRE|FLOOD RESCUE|MISSING PERSON|HAZMAT|URGENT|ASSIST AMBULANCE/.test(text)) return 'high';
-    if (/TREE DOWN|FLOOD|STORM|SMOKE|ALARM|BACKUP|ASSIST|INCIDENT/.test(text)) return 'medium';
+    if (/PERSONS? TRAPPED|ENTRAP|STRUCTURE FIRE|HOUSE FIRE|RESCUE REQUIRED|MAYDAY|LIFE THREAT|EMERGENCY/.test(text) || matchesAdditionalKeyword(text, 'critical')) return 'critical';
+    if (/MVA|MVC|GRASS FIRE|BUSH FIRE|BACKYARD FIRE|FIRECALL|FLOOD RESCUE|MISSING PERSON|HAZMAT|URGENT|ASSIST AMBULANCE/.test(text) || matchesAdditionalKeyword(text, 'high')) return 'high';
+    if (/TREE DOWN|FLOOD|STORM|SMOKE|ALARM|BACKUP|ASSIST|INCIDENT/.test(text) || matchesAdditionalKeyword(text, 'medium')) return 'medium';
     return 'routine';
+  }
+
+  function parseKeywordList(value) {
+    return String(value || '').split(/[,\n]/).map(function (keyword) { return keyword.trim().toUpperCase(); }).filter(Boolean);
+  }
+
+  function matchesAdditionalKeyword(text, level) {
+    return additionalPriorityKeywords[level].some(function (keyword) { return text.indexOf(keyword) !== -1; });
   }
 
   function isStopPage(message) {

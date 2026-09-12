@@ -137,6 +137,9 @@
       "initialZoom": 8,
       "pagerIncidentExpiryHours": 24,
       "hideTestPages": false,
+      "additionalCriticalKeywords": "",
+      "additionalHighKeywords": "",
+      "additionalMediumKeywords": "",
       "stopMessageWindowMinutes": 30
     }
   },

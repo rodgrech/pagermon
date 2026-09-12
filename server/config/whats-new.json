@@ -1,7 +1,9 @@
 {
-  "version": "2026.09.12.2",
+  "version": "2026.09.12.3",
   "title": "What’s new",
   "changes": [
+    "Classified Backyard Fire and FIRECALL pager messages as High priority.",
+    "Added administrator-defined Critical, High and Medium incident keywords, with comma or line-separated matching.",
     "Added an optional Live map setting that hides pager messages identified as tests, drills, training or exercises without removing them from Feed or Incidents.",
     "Fixed Australian RFS feed dates being interpreted as US dates, which prevented valid pager and official-incident matches.",
     "Fixed WaterNSW dam storage retrieval and moved its cache into persistent application data so all visitors share the scheduled API refreshes.",

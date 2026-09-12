@@ -1948,7 +1948,7 @@ router.route('/central-west/dashboard-config')
     var radarConfig = integrationConfig('weatherRadar', { enabled: true, opacityPercent: 62, defaultVisible: false });
     var firmsConfig = integrationConfig('nasaFirms', { enabled: false, defaultVisible: false });
     var npwsConfig = integrationConfig('npws', { enabled: false, feedUrl: '' });
-    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 360, centerLatitude: -32.65, centerLongitude: 149.58, initialZoom: 8, pagerIncidentExpiryHours: 24, hideTestPages: false, stopMessageWindowMinutes: 30 });
+    var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 360, centerLatitude: -32.65, centerLongitude: 149.58, initialZoom: 8, pagerIncidentExpiryHours: 24, hideTestPages: false, additionalCriticalKeywords: '', additionalHighKeywords: '', additionalMediumKeywords: '', stopMessageWindowMinutes: 30 });
     res.set('Cache-Control', 'private, no-store');
     res.status(200).json({
       waterNswEnabled: waterConfig.enabled !== false,
@@ -1968,6 +1968,9 @@ router.route('/central-west/dashboard-config')
       mapInitialZoom: Math.min(Math.max(parseInt(mapConfig.initialZoom, 10) || 8, 3), 18),
       pagerIncidentExpiryHours: Math.min(Math.max(parseInt(mapConfig.pagerIncidentExpiryHours, 10) || 24, 1), 720),
       hideTestPages: mapConfig.hideTestPages === true,
+      additionalCriticalKeywords: String(mapConfig.additionalCriticalKeywords || '').slice(0, 1000),
+      additionalHighKeywords: String(mapConfig.additionalHighKeywords || '').slice(0, 1000),
+      additionalMediumKeywords: String(mapConfig.additionalMediumKeywords || '').slice(0, 1000),
       stopMessageWindowMinutes: Math.min(Math.max(parseInt(mapConfig.stopMessageWindowMinutes, 10) || 30, 1), 1440)
     });
   });
