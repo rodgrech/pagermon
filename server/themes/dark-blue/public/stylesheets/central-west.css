@@ -287,6 +287,10 @@ body.cw-dark .btn-default:hover, body.cw-dark .btn-default:focus, body.cw-dark .
 body.cw-dark .cw-radio-player { color-scheme: dark; accent-color: #4e91c5; }
 body.cw-dark footer { background: #101d2a; border-color: #31465b; }
 body.cw-dark #footer { background: #101d2a !important; }
+body.cw-dark .whats-new-modal { background: #172637; color: #dce6ef; border: 1px solid #31465b; }
+body.cw-dark .whats-new-modal .modal-header, body.cw-dark .whats-new-modal .modal-footer { background: #22394f; border-color: #31465b; }
+body.cw-dark .whats-new-modal .modal-title, body.cw-dark .whats-new-modal .close { color: #edf4fa; }
+body.cw-dark .whats-new-modal .modal-body { color: #dce6ef; }
 
 @media (max-width: 767px) {
   .cw-dashboard { margin: 8px 0 12px; }
