@@ -109,18 +109,18 @@
       fireDangerBoundaries = geojson;
       if (layerEnabled('fireDanger') && !map.hasLayer(layerGroups.fireDanger)) layerGroups.fireDanger.addTo(map);
       L.geoJSON(geojson, {style: function (feature) {
-        var name = String(feature.properties && (feature.properties.district || feature.properties.DISTRICT || feature.properties.name || '')).toUpperCase();
+        var name = String(feature.properties && (feature.properties.FIREAREA || feature.properties.firearea || feature.properties.district || feature.properties.DISTRICT || feature.properties.name || '')).toUpperCase();
         var rating = ratings[name] || fireDangerDistricts.filter(function (item) { return (item.councils || []).some(function (council) { var c = String(council || '').toUpperCase(); return name === c || name.indexOf(c) >= 0 || c.indexOf(name) >= 0; }) || name.indexOf(String(item.name || '').toUpperCase()) >= 0 || String(item.name || '').toUpperCase().indexOf(name) >= 0; })[0];
         var colour = fireDangerColour(rating && rating.today);
         return {color: colour, weight: 2, opacity: .9, fillColor: colour, fillOpacity: .18};
       }, onEachFeature: function (feature, layer) {
-        var name = String(feature.properties && (feature.properties.district || feature.properties.DISTRICT || feature.properties.name || 'RFS district'));
+        var name = String(feature.properties && (feature.properties.FIREAREA || feature.properties.firearea || feature.properties.district || feature.properties.DISTRICT || feature.properties.name || 'RFS fire area'));
         var rating = ratings[name.toUpperCase()] || fireDangerDistricts.filter(function (item) { return (item.councils || []).some(function (council) { var c = String(council || '').toUpperCase(); return name.toUpperCase() === c || name.toUpperCase().indexOf(c) >= 0 || c.indexOf(name.toUpperCase()) >= 0; }) || name.toUpperCase().indexOf(String(item.name || '').toUpperCase()) >= 0 || String(item.name || '').toUpperCase().indexOf(name.toUpperCase()) >= 0; })[0];
         if (rating) layer.bindPopup('<strong>' + escapeHtml(name) + '</strong><br>Fire danger today: <strong>' + escapeHtml(rating.today) + '</strong><br>Tomorrow: <strong>' + escapeHtml(rating.tomorrow) + '</strong>');
       }}).addTo(layerGroups.fireDanger);
     }
     if (fireDangerBoundaries) return draw(fireDangerBoundaries);
-    window.fetch('https://maps.dubbo.nsw.gov.au/arcgis/rest/services/External/DRC_Base/MapServer/23/query?where=1%3D1&outFields=*&returnGeometry=true&outSR=4326&f=geojson').then(function (response) { return response.ok ? response.json() : null; }).then(function (data) { if (data) draw(data); }).catch(function () {});
+    window.fetch('https://www.rfs.nsw.gov.au/_designs/geojson/fire-danger-ratings-geojson').then(function (response) { return response.ok ? response.json() : null; }).then(function (data) { if (data) draw(data); }).catch(function () {});
   }
 
   function parseKeywordList(value) {
