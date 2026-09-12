@@ -112,7 +112,7 @@
             </div>
           </div>
           <div class="cw-empty" ng-if="integrationFeatures.fireDanger && !fireDangerLoading && !fireDangerError && !fireDangerDistricts.length">No official district matched the selected council names. Check the council list in Admin settings.</div>
-          <p class="cw-bom-attribution" ng-if="integrationFeatures.fireDanger && fireDangerFetchedAt">Source: <a href="https://www.rfs.nsw.gov.au/fire-information/fdr-and-tobans" target="_blank" rel="noopener">NSW Rural Fire Service</a>, using ratings received from BOM. Updated {{fireDangerFetchedAt | date:'dd MMM HH:mm'}}.</p>
+          <p class="cw-bom-attribution" ng-if="integrationFeatures.fireDanger && fireDangerFetchedAt">Source: <a href="https://www.rfs.nsw.gov.au/fire-information/fdr-and-tobans" target="_blank" rel="noopener">NSW Rural Fire Service</a>. Ratings published by NSW Rural Fire Service. Updated {{fireDangerFetchedAt | date:'dd MMM HH:mm'}}.</p>
           <div class="cw-warning-header"><strong>Central West weather warnings</strong><span class="pull-right">NSW land warnings: {{bomStatewideCount}}</span></div>
           <div class="cw-empty" ng-if="bomLoading">Checking the official BOM warning feed…</div>
           <div class="cw-empty" ng-if="!bomLoading && bomError">{{bomError}}</div>
