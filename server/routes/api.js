@@ -75,6 +75,7 @@ var dbtype = nconf.get('database:type');
 // dupe init
 var msgBuffer = [];
 var bomWarningCache = { fetchedAt: 0, data: null };
+var fireDangerCache = { fetchedAt: 0, data: null, signature: '' };
 var rfsIncidentCache = { fetchedAt: 0, data: null };
 var radarCache = { fetchedAt: 0, data: null };
 var waterNswCache = { fetchedAt: 0, data: null };
@@ -1953,6 +1954,7 @@ router.route('/central-west/dashboard-config')
     res.status(200).json({
       waterNswEnabled: waterConfig.enabled !== false,
       bomEnabled: bomConfig.enabled !== false,
+      fireDangerEnabled: bomConfig.enabled !== false && bomConfig.fireDangerEnabled !== false,
       radioEnabled: radioConfig.enabled !== false,
       piawareEnabled: piawareConfig.enabled !== false,
       piawarePollSeconds: Math.min(Math.max(parseInt(piawareConfig.pollSeconds, 10) || 10, 5), 300),
@@ -2193,6 +2195,59 @@ router.route('/central-west/bom-warnings')
       logger.main.warn('Unable to retrieve BOM warning feed: ' + err.message);
       if (bomWarningCache.data) return res.status(200).json(bomWarningCache.data);
       res.status(502).json({ error: 'BOM warning feed is temporarily unavailable' });
+    });
+  });
+
+router.route('/central-west/fire-danger')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var bomConfig = integrationConfig('bom', { enabled: true, fireDangerEnabled: true, fireDangerUrl: 'https://www.rfs.nsw.gov.au/feeds/fdrToban.xml', fireDangerCouncils: 'Mid-Western; Bathurst; Lithgow; Orange; Dubbo Regional', cacheMinutes: 60 });
+    if (bomConfig.enabled === false || bomConfig.fireDangerEnabled === false) return res.status(200).json({ disabled: true, districts: [] });
+    var selected = String(bomConfig.fireDangerCouncils || '').split(/[;,\n]/).map(function (value) { return value.trim(); }).filter(Boolean);
+    var signature = selected.join('|').toLowerCase() + '|' + bomConfig.fireDangerUrl;
+    var now = Date.now();
+    var cacheMilliseconds = Math.min(Math.max(parseInt(bomConfig.cacheMinutes, 10) || 60, 5), 1440) * 60000;
+    if (fireDangerCache.data && fireDangerCache.signature === signature && now - fireDangerCache.fetchedAt < cacheMilliseconds) return res.status(200).json(fireDangerCache.data);
+
+    axios.get(bomConfig.fireDangerUrl, { timeout: 12000, responseType: 'text', headers: { 'User-Agent': 'PagerMon fire danger panel' } }).then(function (response) {
+      var xml = String(response.data || '');
+      var districts = [];
+      var districtPattern = /<District>([\s\S]*?)<\/District>/gi;
+      var districtMatch;
+      function districtField(block, name) {
+        var match = new RegExp('<' + name + '>([\\s\\S]*?)<\\/' + name + '>', 'i').exec(block);
+        return match ? match[1].replace(/&amp;/g, '&').trim() : '';
+      }
+      function dangerRating(block, name) {
+        var value = districtField(block, name);
+        return !value || /^none$/i.test(value) ? 'NO RATING' : value.toUpperCase();
+      }
+      while ((districtMatch = districtPattern.exec(xml)) !== null) {
+        var block = districtMatch[1];
+        var councils = districtField(block, 'Councils').split(';').map(function (value) { return value.trim(); }).filter(Boolean);
+        var matchedCouncils = selected.filter(function (wanted) {
+          return councils.some(function (council) {
+            var a = council.toLowerCase(); var b = wanted.toLowerCase();
+            return a === b || a.indexOf(b) >= 0 || b.indexOf(a) >= 0;
+          });
+        });
+        if (!selected.length || matchedCouncils.length) districts.push({
+          name: districtField(block, 'Name'),
+          regionNumber: districtField(block, 'RegionNumber'),
+          councils: councils,
+          selectedCouncils: matchedCouncils,
+          today: dangerRating(block, 'DangerLevelToday'),
+          tomorrow: dangerRating(block, 'DangerLevelTomorrow'),
+          fireBanToday: /^yes$/i.test(districtField(block, 'FireBanToday')),
+          fireBanTomorrow: /^yes$/i.test(districtField(block, 'FireBanTomorrow'))
+        });
+      }
+      var payload = { fetchedAt: Math.floor(now / 1000), districts: districts, selectedCouncils: selected, sourceUrl: 'https://www.rfs.nsw.gov.au/fire-information/fdr-and-tobans' };
+      fireDangerCache = { fetchedAt: now, data: payload, signature: signature };
+      res.status(200).json(payload);
+    }).catch(function (err) {
+      logger.main.warn('Unable to retrieve NSW RFS fire danger feed: ' + err.message);
+      if (fireDangerCache.data) return res.status(200).json(Object.assign({}, fireDangerCache.data, { stale: true }));
+      res.status(502).json({ error: 'Fire danger ratings are temporarily unavailable' });
     });
   });
 

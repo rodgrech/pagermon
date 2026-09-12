@@ -93,6 +93,9 @@
     "bom": {
       "enabled": true,
       "warningsUrl": "https://www.bom.gov.au/fwo/IDZ00061.warnings_land_nsw.xml",
+      "fireDangerEnabled": true,
+      "fireDangerUrl": "https://www.rfs.nsw.gov.au/feeds/fdrToban.xml",
+      "fireDangerCouncils": "Mid-Western; Bathurst; Lithgow; Orange; Dubbo Regional",
       "localKeywords": "central west,central tablelands,central western slopes,mudgee,mid-western,gulgong,rylstone,kandos,wellington,dubbo,orange,bathurst,lithgow,oberon,cudgegong,macquarie river,castlereagh river",
       "cacheMinutes": 10
     },

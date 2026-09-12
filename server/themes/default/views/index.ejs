@@ -99,6 +99,20 @@
         </div><% } %>
 
         <div class="cw-panel cw-warnings" ng-show="dashboardView == 'warnings'">
+          <div class="cw-warning-header" ng-if="integrationFeatures.fireDanger"><strong><i class="fa fa-fire"></i> Fire Danger Ratings</strong><span class="pull-right">Selected council areas</span></div>
+          <div class="cw-empty" ng-if="integrationFeatures.fireDanger && fireDangerLoading">Checking official NSW ratings…</div>
+          <div class="alert alert-warning" ng-if="integrationFeatures.fireDanger && fireDangerError">{{fireDangerError}}</div>
+          <div class="row" ng-if="integrationFeatures.fireDanger && !fireDangerLoading">
+            <div class="col-sm-6" ng-repeat="district in fireDangerDistricts">
+              <div class="panel panel-default"><div class="panel-heading"><strong>{{district.name}}</strong></div><div class="panel-body">
+                <p><span class="label" ng-class="fireDangerClass(district.today)">Today: {{district.today}}</span> <span class="label" ng-class="fireDangerClass(district.tomorrow)">Tomorrow: {{district.tomorrow}}</span></p>
+                <p class="text-danger" ng-if="district.fireBanToday || district.fireBanTomorrow"><strong><i class="fa fa-ban"></i> Total Fire Ban: {{district.fireBanToday ? 'today' : ''}}{{district.fireBanToday && district.fireBanTomorrow ? ' and ' : ''}}{{district.fireBanTomorrow ? 'tomorrow' : ''}}</strong></p>
+                <small>Selected councils: {{district.selectedCouncils.join(', ')}}</small>
+              </div></div>
+            </div>
+          </div>
+          <div class="cw-empty" ng-if="integrationFeatures.fireDanger && !fireDangerLoading && !fireDangerError && !fireDangerDistricts.length">No official district matched the selected council names. Check the council list in Admin settings.</div>
+          <p class="cw-bom-attribution" ng-if="integrationFeatures.fireDanger && fireDangerFetchedAt">Source: <a href="https://www.rfs.nsw.gov.au/fire-information/fdr-and-tobans" target="_blank" rel="noopener">NSW Rural Fire Service</a>, using ratings received from BOM. Updated {{fireDangerFetchedAt | date:'dd MMM HH:mm'}}.</p>
           <div class="cw-warning-header"><strong>Central West weather warnings</strong><span class="pull-right">NSW land warnings: {{bomStatewideCount}}</span></div>
           <div class="cw-empty" ng-if="bomLoading">Checking the official BOM warning feed…</div>
           <div class="cw-empty" ng-if="!bomLoading && bomError">{{bomError}}</div>
@@ -389,6 +403,7 @@
                   PagerGeocodes: $resource('/api/central-west/pager-geocodes'),
                   DashboardConfig: $resource('/api/central-west/dashboard-config'),
                   BomWarnings: $resource('/api/central-west/bom-warnings'),
+                  FireDanger: $resource('/api/central-west/fire-danger'),
                   WaterNswDams: $resource('/api/central-west/waternsw-dams'),
                   WaterNswRylstoneGauges: $resource('/api/central-west/waternsw-rylstone-gauges'),
                   WaterNswAlgaeAlerts: $resource('/api/central-west/waternsw-algae-alerts'),
@@ -435,7 +450,7 @@
         try { return JSON.stringify(incident).toLowerCase().indexOf($scope.timelineIncidentFocus) !== -1; }
         catch (err) { return true; }
       };
-      $scope.integrationFeatures = {bom: false, waterNsw: false, radio: false, piaware: false, weatherRadar: false, nasaFirms: false, npws: false};
+      $scope.integrationFeatures = {bom: false, fireDanger: false, waterNsw: false, radio: false, piaware: false, weatherRadar: false, nasaFirms: false, npws: false};
       $scope.darkMode = localStorage.getItem('cw-dark-mode') === 'true';
       document.body.classList.toggle('cw-dark', $scope.darkMode);
       $scope.health = { state: 'loading', label: 'Checking receiver', lastSeen: 'Unknown', uptime: 'Unknown' };
@@ -445,6 +460,9 @@
       $scope.bomWarnings = [];
       $scope.bomStatewideCount = 0;
       $scope.bomLoading = true;
+      $scope.fireDangerDistricts = [];
+      $scope.fireDangerLoading = true;
+      $scope.fireDangerClass = function (rating) { var value = String(rating || '').toUpperCase(); return value === 'CATASTROPHIC' ? 'label-danger' : value === 'EXTREME' ? 'label-danger' : value === 'HIGH' ? 'label-warning' : value === 'MODERATE' ? 'label-success' : 'label-default'; };
       $scope.rfsIncidents = [];
       $scope.aircraft = [];
       $scope.dams = [];
@@ -471,6 +489,7 @@
         $scope.pagerIncidentExpiryHours = Math.max(1, Number(config.pagerIncidentExpiryHours) || 24);
         $scope.integrationFeatures = {
           bom: config.bomEnabled !== false,
+          fireDanger: config.fireDangerEnabled === true,
           waterNsw: config.waterNswEnabled !== false,
           radio: config.radioEnabled !== false,
           piaware: config.piawareEnabled !== false,
@@ -689,6 +708,11 @@
           if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
         });
       });
+      Api.FireDanger.get().$promise.then(function (data) {
+        $scope.fireDangerDistricts = data.districts || [];
+        $scope.fireDangerFetchedAt = Number(data.fetchedAt) * 1000;
+        $scope.fireDangerLoading = false;
+      }, function () { $scope.fireDangerError = 'Fire danger ratings are temporarily unavailable.'; $scope.fireDangerLoading = false; });
       Api.ForestryClosures.get().$promise.then(function(data) {
         CentralWestAlerts.setForestryClosures(data.features || []);
         if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
