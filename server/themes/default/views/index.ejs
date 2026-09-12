@@ -107,7 +107,7 @@
               <div class="panel panel-default"><div class="panel-heading"><strong>{{district.name}}</strong></div><div class="panel-body">
                 <p><span class="label" ng-class="fireDangerClass(district.today)">Today: {{district.today}}</span> <span class="label" ng-class="fireDangerClass(district.tomorrow)">Tomorrow: {{district.tomorrow}}</span></p>
                 <p class="text-danger" ng-if="district.fireBanToday || district.fireBanTomorrow"><strong><i class="fa fa-ban"></i> Total Fire Ban: {{district.fireBanToday ? 'today' : ''}}{{district.fireBanToday && district.fireBanTomorrow ? ' and ' : ''}}{{district.fireBanTomorrow ? 'tomorrow' : ''}}</strong></p>
-                <small>Selected councils: {{district.selectedCouncils.join(', ')}}</small>
+                <small><strong>Official district rating applying to selected councils:</strong> {{district.selectedCouncils.join(', ')}}</small>
               </div></div>
             </div>
           </div>

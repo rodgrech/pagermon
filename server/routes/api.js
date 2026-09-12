@@ -2200,15 +2200,16 @@ router.route('/central-west/bom-warnings')
 
 router.route('/central-west/fire-danger')
   .get(authHelper.isLoggedInMessages, function (req, res) {
-    var bomConfig = integrationConfig('bom', { enabled: true, fireDangerEnabled: true, fireDangerUrl: 'https://www.rfs.nsw.gov.au/feeds/fdrToban.xml', fireDangerCouncils: 'Mid-Western; Bathurst; Lithgow; Orange; Dubbo Regional', cacheMinutes: 60 });
+    var bomConfig = integrationConfig('bom', { enabled: true, fireDangerEnabled: true, fireDangerCouncils: 'Mid-Western; Bathurst; Lithgow; Orange; Dubbo Regional', cacheMinutes: 60 });
+    var officialFeedUrl = 'https://www.rfs.nsw.gov.au/feeds/fdrToban.xml';
     if (bomConfig.enabled === false || bomConfig.fireDangerEnabled === false) return res.status(200).json({ disabled: true, districts: [] });
     var selected = String(bomConfig.fireDangerCouncils || '').split(/[;,\n]/).map(function (value) { return value.trim(); }).filter(Boolean);
-    var signature = selected.join('|').toLowerCase() + '|' + bomConfig.fireDangerUrl;
+    var signature = selected.join('|').toLowerCase() + '|' + officialFeedUrl;
     var now = Date.now();
     var cacheMilliseconds = Math.min(Math.max(parseInt(bomConfig.cacheMinutes, 10) || 60, 5), 1440) * 60000;
     if (fireDangerCache.data && fireDangerCache.signature === signature && now - fireDangerCache.fetchedAt < cacheMilliseconds) return res.status(200).json(fireDangerCache.data);
 
-    axios.get(bomConfig.fireDangerUrl, { timeout: 12000, responseType: 'text', headers: { 'User-Agent': 'PagerMon fire danger panel' } }).then(function (response) {
+    axios.get(officialFeedUrl, { timeout: 12000, responseType: 'text', headers: { 'User-Agent': 'PagerMon fire danger panel' } }).then(function (response) {
       var xml = String(response.data || '');
       var districts = [];
       var districtPattern = /<District>([\s\S]*?)<\/District>/gi;
