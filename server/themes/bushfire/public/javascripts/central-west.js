@@ -99,7 +99,7 @@
 
   function fireDangerColour(rating) {
     var value = String(rating || '').toUpperCase();
-    return value === 'CATASTROPHIC' ? '#8e1b1b' : value === 'EXTREME' ? '#d02b20' : value === 'HIGH' ? '#e58d16' : value === 'MODERATE' ? '#e6c229' : '#8aa0ad';
+    return value === 'CATASTROPHIC' ? '#c62828' : value === 'EXTREME' ? '#ef7d22' : value === 'HIGH' ? '#f1c40f' : value === 'MODERATE' ? '#43a047' : '#8aa0ad';
   }
 
   function fireDangerGauge(rating) {
@@ -132,11 +132,11 @@
         if (rating) {
           var today = String(rating.today || 'NO RATING');
           var tomorrow = String(rating.tomorrow || 'NO RATING');
-          var advice = { 'NO RATING': 'No rating issued', MODERATE: 'Plan and prepare', HIGH: 'Be ready to act', EXTREME: 'Take action now to protect your life and property', CATASTROPHIC: 'For your survival, leave bush fire risk areas' }[today.toUpperCase()] || '';
+          var advice = { 'NO RATING': 'No rating issued', MODERATE: 'Plan and prepare', HIGH: 'Be ready to act', EXTREME: 'Take action now to protect your life and property', CATASTROPHIC: 'For your survival, leave bushfire risk areas' }[today.toUpperCase()] || '';
           var adviceTextColour = today.toUpperCase() === 'MODERATE' || today.toUpperCase() === 'NO RATING' ? '#263238' : '#fff';
           var ban = rating.fireBanToday || rating.fireBanTomorrow ? '<div class="cw-popup-description cw-fire-ban" style="text-align:center;font-weight:bold;color:#fff;background:#b52b32;padding:11px 8px;margin:10px 0;border-radius:6px;"><i class="fa fa-ban"></i> TOTAL FIRE BAN DECLARED<br><small>' + (rating.fireBanToday && rating.fireBanTomorrow ? 'Today and tomorrow' : rating.fireBanToday ? 'Today' : 'Tomorrow') + '</small></div>' : '';
           var updated = fireDangerFetchedAt ? new Date(fireDangerFetchedAt).toLocaleString([], {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'}) : 'Unavailable';
-          layer.bindPopup('<div class="cw-incident-popup cw-fire-danger-popup"><div class="cw-popup-heading"><i class="fa fa-fire"></i><strong>FIRE DANGER RATING</strong></div><div class="cw-popup-title">' + escapeHtml(name) + '</div>' + fireDangerGauge(today) + '<div class="cw-popup-pills"><span><small>Today</small>' + escapeHtml(today) + '</span><span><small>Tomorrow</small>' + escapeHtml(tomorrow) + '</span></div><div class="cw-popup-description cw-fire-safety-message" style="text-align:center;font-size:1.1em;padding:12px 8px;margin:10px 0;border-radius:6px;background:' + fireDangerColour(today) + ';color:' + adviceTextColour + ';"><strong>' + escapeHtml(advice) + '</strong></div>' + ban + '<div class="cw-popup-agency">NSW Rural Fire Service<small>Official fire danger area rating · Updated ' + escapeHtml(updated) + '</small></div><a class="cw-popup-action" href="https://www.rfs.nsw.gov.au/fire-information/fdr-and-tobans" target="_blank" rel="noopener"><i class="fa fa-external-link-alt"></i> Official details</a></div>', {maxWidth: 390, className: 'cw-popup-shell'});
+          layer.bindPopup('<div class="cw-incident-popup cw-fire-danger-popup"><div class="cw-popup-heading"><i class="fa fa-fire"></i><strong>FIRE DANGER RATING</strong></div><div class="cw-popup-title">' + escapeHtml(name) + '</div>' + fireDangerGauge(today) + '<div class="cw-popup-pills"><span><small>Today</small>' + escapeHtml(today) + '</span><span><small>Tomorrow</small>' + escapeHtml(tomorrow) + '</span></div><div class="cw-popup-description cw-fire-safety-message" style="text-align:center;font-size:1.1em;padding:12px 8px;margin:10px 0;border-radius:6px;background:' + fireDangerColour(today) + ';color:' + adviceTextColour + ';"><strong>' + escapeHtml(advice) + '</strong></div>' + ban + '<div class="cw-popup-agency">NSW Rural Fire Service<small>Official fire danger area rating · Updated ' + escapeHtml(updated) + '</small></div><a class="cw-popup-action" href="https://afdrs.com.au/#cta" target="_blank" rel="noopener"><i class="fa fa-info-circle"></i> More information</a><a class="cw-popup-action" href="https://www.rfs.nsw.gov.au/fire-information/fdr-and-tobans" target="_blank" rel="noopener"><i class="fa fa-external-link-alt"></i> Official details</a></div>', {maxWidth: 390, className: 'cw-popup-shell'});
         }
       }}).addTo(layerGroups.fireDanger);
     }
