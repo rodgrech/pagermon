@@ -1014,7 +1014,10 @@ body.cw-dark .pagerMessage, body.cw-dark .cw-health strong { color: #edf4fa; }
 body.cw-dark .cw-incident, body.cw-dark .cw-discovery { background: #1b2c3e; border-color: #31465b; }
 body.cw-dark .cw-warning-item { background: #35291f; border-color: #694a31; }
 body.cw-dark .cw-warning-item h4 { color: #ffb276; }
+body.cw-dark .cw-warning-item { color: #edf4fa; }
 body.cw-dark .cw-dam-card { background: #1b2c3e; border-color: #31465b; }
+body.cw-dark .cw-dam-card h4, body.cw-dark .cw-dam-card strong { color: #edf4fa; }
+body.cw-dark .cw-dam-card a { color: #78cce5; }
 body.cw-dark .cw-dam-level { background: rgba(45,160,195,.15); color: #78cce5; }
 body.cw-dark .cw-dam-algae-detail { background: rgba(44,155,89,.12); }
 body.cw-dark .cw-dam-flow-estimate { background: rgba(78,145,197,.12); }
