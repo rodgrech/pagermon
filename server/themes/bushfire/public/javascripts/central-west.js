@@ -635,7 +635,7 @@
       var kind = aircraftKind(plane);
       var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + (plane.fireAircraft ? ' cw-aircraft-fire' : '') + (emergency ? ' cw-plane-emergency' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
       var fireInfo = plane.fireAircraft ? '<br><strong>Fire aviation asset</strong>' + (plane.fireRole ? '<br>Role: ' + escapeHtml(plane.fireRole) : '') + (plane.fireManufacturer ? '<br>Manufacturer: ' + escapeHtml(plane.fireManufacturer) : '') + (plane.fireModel ? '<br>Model: ' + escapeHtml(plane.fireModel) : '') + '<br><small>Matched using ' + escapeHtml(plane.fireMatchSource || 'aircraft identity') + '</small>' : ((plane.aircraftManufacturer || plane.aircraftModel || plane.aircraftOperator) ? '<br>' + (plane.aircraftManufacturer ? escapeHtml(plane.aircraftManufacturer) + ' ' : '') + escapeHtml(plane.aircraftModel || '') + (plane.aircraftOperator ? '<br>Operator: ' + escapeHtml(plane.aircraftOperator) : '') : '');
-      var aircraftPopup = '<div class="cw-incident-popup cw-aircraft-popup"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + (plane.fireAircraft ? 'FIRE AVIATION' : 'AIRCRAFT') + '</strong></div><div class="cw-popup-title">' + escapeHtml(label) + '</div><div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span></div><div class="cw-popup-description"><strong>' + escapeHtml(kind.replace(/-/g, ' ')) + '</strong><br>ICAO type: ' + escapeHtml(plane.aircraftType || 'Unknown') + (plane.aircraftManufacturer || plane.aircraftModel ? '<br>' + escapeHtml((plane.aircraftManufacturer || '') + ' ' + (plane.aircraftModel || '')) : '') + (plane.aircraftOperator ? '<br>Operator: ' + escapeHtml(plane.aircraftOperator) : '') + '</div>' + (plane.fireCallsign && plane.flight && plane.fireCallsign !== plane.flight ? '<div class="cw-popup-description">Transmitted callsign: <strong>' + escapeHtml(plane.flight) + '</strong></div>' : '') + fireInfo + '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '</strong><br>Ground speed: <strong>' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '</strong><br>Track: <strong>' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago</div></div>';
+      var aircraftPopup = '<div class="cw-incident-popup cw-aircraft-popup"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + (plane.fireAircraft ? 'FIRE AVIATION' : 'AIRCRAFT') + '</strong></div><div class="cw-popup-title">' + escapeHtml(label) + '</div><div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span></div><div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong><br>ICAO type: ' + escapeHtml(plane.aircraftType || 'Unknown') + (plane.aircraftManufacturer || plane.aircraftModel ? '<br>' + escapeHtml((plane.aircraftManufacturer || '') + ' ' + (plane.aircraftModel || '')) : '') + (plane.aircraftOperator ? '<br>Operator: ' + escapeHtml(plane.aircraftOperator) : '') + '</div>' + (plane.fireCallsign && plane.flight && plane.fireCallsign !== plane.flight ? '<div class="cw-popup-description">Transmitted callsign: <strong>' + escapeHtml(plane.flight) + '</strong></div>' : '') + fireInfo + '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '</strong><br>Ground speed: <strong>' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '</strong><br>Track: <strong>' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago</div></div>';
       L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: plane.fireAircraft ? 650 : 500}).addTo(layerGroups.aircraft).bindPopup(aircraftPopup, {maxWidth: 390, autoPan: false, className: 'cw-popup-shell'});
     });
     queueMapRecovery(false);
@@ -679,6 +679,18 @@
     if (category === 'A5' || category === 'A4') return 'heavy';
     if (category === 'A6') return 'jet';
     return 'plane';
+  }
+
+  function aircraftDisplayType(plane, kind) {
+    var model = String(plane.aircraftModel || '').trim();
+    if (model) {
+      var manufacturer = String(plane.aircraftManufacturer || '').trim();
+      var display = manufacturer && model.toUpperCase().indexOf(manufacturer.toUpperCase()) !== 0 ? manufacturer + ' ' + model : model;
+      return display.replace(/\b([A-Z]\d{3})\s+(\d{3})\b/i, '$1-$2');
+    }
+    var type = String(plane.aircraftType || '').trim();
+    if (type) return type;
+    return String(kind || 'plane').replace(/-/g, ' ');
   }
 
   function aircraftSvg(kind, track) {
