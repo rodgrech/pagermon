@@ -100,6 +100,15 @@
     return value === 'CATASTROPHIC' ? '#8e1b1b' : value === 'EXTREME' ? '#d02b20' : value === 'HIGH' ? '#e58d16' : value === 'MODERATE' ? '#e6c229' : '#8aa0ad';
   }
 
+  function fireDangerGauge(rating) {
+    var value = String(rating || 'NO RATING').toUpperCase();
+    var labels = ['NO RATING', 'MODERATE', 'HIGH', 'EXTREME', 'CATASTROPHIC'];
+    var active = labels.indexOf(value); if (active < 0) active = 0;
+    var colours = ['#e5e5e5', '#f6df3f', '#ef9a1a', '#d84b24', '#9f201b'];
+    var paths = ['M12 74 A48 48 0 0 1 28 39 L39 50 A32 32 0 0 0 28 74 Z', 'M28 39 A48 48 0 0 1 50 27 L54 43 A32 32 0 0 0 39 50 Z', 'M50 27 A48 48 0 0 1 74 28 L65 43 A32 32 0 0 0 54 43 Z', 'M74 28 A48 48 0 0 1 92 44 L76 51 A32 32 0 0 0 65 43 Z', 'M92 44 A48 48 0 0 1 100 74 L84 74 A32 32 0 0 0 76 51 Z'];
+    return '<div class="cw-fire-gauge"><svg viewBox="0 0 112 82" role="img" aria-label="' + escapeHtml(value) + '">' + paths.map(function (path, index) { return '<path d="' + path + '" fill="' + colours[index] + '" opacity="' + (index === active ? '1' : '.3') + '" stroke="#fff" stroke-width="1"/>'; }).join('') + '<text x="56" y="71" text-anchor="middle" font-size="8" font-weight="bold" fill="#263238">' + escapeHtml(value) + '</text></svg></div>';
+  }
+
   function renderFireDangerLayer() {
     if (!map || !layerGroups || !window.L) return;
     layerGroups.fireDanger.clearLayers();
@@ -116,7 +125,13 @@
       }, onEachFeature: function (feature, layer) {
         var name = String(feature.properties && (feature.properties.FIREAREA || feature.properties.firearea || feature.properties.district || feature.properties.DISTRICT || feature.properties.name || 'RFS fire area'));
         var rating = ratings[name.toUpperCase()] || fireDangerDistricts.filter(function (item) { return (item.councils || []).some(function (council) { var c = String(council || '').toUpperCase(); return name.toUpperCase() === c || name.toUpperCase().indexOf(c) >= 0 || c.indexOf(name.toUpperCase()) >= 0; }) || name.toUpperCase().indexOf(String(item.name || '').toUpperCase()) >= 0 || String(item.name || '').toUpperCase().indexOf(name.toUpperCase()) >= 0; })[0];
-        if (rating) layer.bindPopup('<strong>' + escapeHtml(name) + '</strong><br>Fire danger today: <strong>' + escapeHtml(rating.today) + '</strong><br>Tomorrow: <strong>' + escapeHtml(rating.tomorrow) + '</strong>');
+        if (rating) {
+          var today = String(rating.today || 'NO RATING');
+          var tomorrow = String(rating.tomorrow || 'NO RATING');
+          var advice = { 'NO RATING': 'No rating issued', MODERATE: 'Plan and prepare', HIGH: 'Be ready to act', EXTREME: 'Take action now to protect your life and property', CATASTROPHIC: 'For your survival, leave bush fire risk areas' }[today.toUpperCase()] || '';
+          var ban = rating.fireBanToday || rating.fireBanTomorrow ? '<div class="cw-popup-description cw-fire-ban"><i class="fa fa-ban"></i> Total Fire Ban' + (rating.fireBanToday ? ' today' : '') + (rating.fireBanToday && rating.fireBanTomorrow ? ' and' : '') + (rating.fireBanTomorrow ? ' tomorrow' : '') + '</div>' : '';
+          layer.bindPopup('<div class="cw-incident-popup cw-fire-danger-popup"><div class="cw-popup-heading"><i class="fa fa-fire"></i><strong>FIRE DANGER RATING</strong></div><div class="cw-popup-title">' + escapeHtml(name) + '</div>' + fireDangerGauge(today) + '<div class="cw-popup-pills"><span><small>Today</small>' + escapeHtml(today) + '</span><span><small>Tomorrow</small>' + escapeHtml(tomorrow) + '</span></div><div class="cw-popup-description"><strong>' + escapeHtml(advice) + '</strong></div>' + ban + '<div class="cw-popup-agency">NSW Rural Fire Service<small>Official fire danger area rating</small></div><a class="cw-popup-action" href="https://www.rfs.nsw.gov.au/fire-information/fdr-and-tobans" target="_blank" rel="noopener"><i class="fa fa-external-link-alt"></i> Official details</a></div>', {maxWidth: 390, className: 'cw-popup-shell'});
+        }
       }}).addTo(layerGroups.fireDanger);
     }
     if (fireDangerBoundaries) return draw(fireDangerBoundaries);
