@@ -123,32 +123,14 @@
   }
 
   var centralWestUnitNames = {
-    CZORANG1: 'Orange 1', CZBOREN1: 'Borenore 1', CZDO: 'Canobolas Duty',
-    CGDO: 'Cudgegong Duty', CGCOMMS1: 'Cudgegong Comms 1'
+    CZORANG1: 'Orange 1', CZBOREN1: 'Borenore 1', CZDO: 'Canobolas Duty'
   };
 
-  function displayUnitName(unit, alias) {
+  function displayUnitName(unit) {
     var raw = String(unit || '').trim();
     var key = raw.toUpperCase().replace(/\s+/g, '');
     if (centralWestUnitNames[key]) return centralWestUnitNames[key];
-    // Callsign suffixes identify a crew/vehicle on the same brigade call sign:
-    // CZORANG1A is Orange 1A, not a separate unknown unit.
-    var suffixMatch = key.match(/^(CZ[A-Z]+\d+)([A-Z])$/);
-    if (suffixMatch && centralWestUnitNames[suffixMatch[1]]) return centralWestUnitNames[suffixMatch[1]] + suffixMatch[2];
-    var districtSuffix = key.match(/^(CG|CL)([A-Z]+\d+)([A-Z])$/);
-    if (districtSuffix) return (districtSuffix[1] === 'CG' ? 'Cudgegong ' : 'Chifley Lithgow ') + districtSuffix[2].replace(/(\d+)$/, ' $1') + districtSuffix[3];
-    // A configured capcode alias is often the clearest brigade name. Keep a
-    // callsign suffix when the alias names the base unit.
-    var aliasName = String(alias || '').trim();
-    if (/^[A-Za-z][A-Za-z0-9 &'/-]{1,40}$/.test(aliasName) && !/^(?:RFS|FRNSW|NSW RFS|TEST|PAGER|CAPCODE)$/i.test(aliasName)) {
-      if (suffixMatch && !/[A-Z]$/i.test(aliasName)) return aliasName + suffixMatch[2];
-      if (suffixMatch) return aliasName + suffixMatch[2];
-      if (/^CZ[A-Z0-9]+$/.test(key)) return aliasName;
-    }
     if (/^CZ[A-Z0-9]+$/.test(key)) return 'CZ ' + key.slice(2);
-    if (/^CG[A-Z0-9]+$/.test(key)) return 'Cudgegong ' + key.slice(2).replace(/(\d+)$/, ' $1');
-    if (/^CL[A-Z0-9]+$/.test(key)) return 'Chifley Lithgow ' + key.slice(2).replace(/(\d+)$/, ' $1');
-    if (/^VR[A-Z0-9]+$/.test(key)) return 'VRA ' + key.slice(2).replace(/(\d+)$/, ' $1');
     return raw;
   }
 
@@ -242,14 +224,10 @@
     return cleanPagerField(value).toLowerCase().replace(/\b[a-z]/g, function (letter) { return letter.toUpperCase(); });
   }
 
-  function brigadeName(callsign, alias) {
+  function brigadeName(callsign) {
     var value = cleanPagerField(callsign).toUpperCase();
     var known = {CGCOMMS1: 'CG Comms 1', CGDO: 'Cudgegong Duty', CGLAWSO7A: 'Lawson 7', CGMUDGE1: 'Mudgee 1', CGMUDGE: 'Mudgee'};
     if (known[value]) return known[value];
-    var aliasName = cleanPagerField(alias);
-    var suffix = value.match(/[A-Z]$/);
-    if (aliasName && suffix && !/^(?:RFS|FRNSW|NSW RFS|TEST|PAGER|CAPCODE)$/i.test(aliasName)) return aliasName + suffix[0];
-    if (aliasName && /^C(?:G|L|Z)/.test(value) && !/^\d+$/.test(aliasName)) return aliasName;
     return value || '';
   }
 
@@ -304,7 +282,7 @@
     if (incidentIndex >= 0 && (isSharedFireNetworkAgency(agency) || details.coordinates)) {
       details.format = 'rfs';
       details.callsign = parts[incidentIndex - 1] || '';
-      details.brigade = brigadeName(details.callsign, message.alias);
+      details.brigade = brigadeName(details.callsign);
       details.incidentId = parts[incidentIndex];
       details.type = parts[incidentIndex + 1] || '';
       details.subtype = parts[incidentIndex + 2] || '';
