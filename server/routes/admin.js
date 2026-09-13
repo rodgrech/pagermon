@@ -20,6 +20,15 @@ var confFile = './config/config.json';
 var conf_backup = './config/backup.json';
 var defaultConfig = require('../config/default.json');
 var integrationDefaults = defaultConfig.integrations;
+var supportedThemes = ['default', 'dark-blue', 'bushfire'];
+
+function installedSupportedThemes() {
+    return supportedThemes.filter(function (theme) {
+        var themePath = './themes/' + theme;
+        try { return fs.statSync(themePath).isDirectory(); }
+        catch (error) { return false; }
+    });
+}
 
 nconf.file({ file: confFile });
 nconf.load();
@@ -53,10 +62,7 @@ router.route('/settingsData')
                     plugins.push(pConf);
             }
         });
-        let themes = [];
-        fs.readdirSync('./themes').forEach(file => {
-            themes.push(file)
-        });
+        let themes = installedSupportedThemes();
         // logger.main.debug(util.format('Plugin Config:\n\n%o',plugins));
         let data = { "settings": settings, "plugins": plugins, "themes": themes, "pwaIconThemes": themes }
         res.json(data);
@@ -71,11 +77,11 @@ router.route('/settingsData')
             var currentPwaIconTheme = (currentConfig.global && currentConfig.global.pwaIconTheme) || 'theme';
             var requestedPwaIconTheme = (req.body.global && req.body.global.pwaIconTheme) || 'theme';
 
-            if (!/^[a-zA-Z0-9_-]+$/.test(requestedTheme) || !fs.existsSync(requestedThemePath)) {
+            if (supportedThemes.indexOf(requestedTheme) === -1 || !fs.existsSync(requestedThemePath)) {
                 return res.status(400).send({ error: 'Selected theme is not installed.' });
             }
             if (requestedPwaIconTheme !== 'theme' &&
-                (!/^[a-zA-Z0-9_-]+$/.test(requestedPwaIconTheme) || !fs.existsSync('./themes/' + requestedPwaIconTheme))) {
+                (supportedThemes.indexOf(requestedPwaIconTheme) === -1 || !fs.existsSync('./themes/' + requestedPwaIconTheme))) {
                 return res.status(400).send({ error: 'Selected PWA icon set is not installed.' });
             }
 
