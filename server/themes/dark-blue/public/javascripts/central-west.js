@@ -34,6 +34,7 @@
   var mapInitialZoom = 8;
   var stopMessageWindowMinutes = 30;
   var hideTestPages = false;
+  var suppressTestIncidents = false;
   var additionalPriorityKeywords = {critical: [], high: [], medium: []};
   var lastRender;
   var lastRadarConfig;
@@ -54,6 +55,7 @@
         mapInitialZoom = Number(config.mapInitialZoom) || 8;
         stopMessageWindowMinutes = Math.min(Math.max(Number(config.stopMessageWindowMinutes) || 30, 1), 1440);
         hideTestPages = config.hideTestPages === true;
+        suppressTestIncidents = config.suppressTestIncidents === true;
         additionalPriorityKeywords.critical = parseKeywordList(config.additionalCriticalKeywords);
         additionalPriorityKeywords.high = parseKeywordList(config.additionalHighKeywords);
         additionalPriorityKeywords.medium = parseKeywordList(config.additionalMediumKeywords);
@@ -339,6 +341,7 @@
     var stopPages = [];
     (messages || []).forEach(function (message) {
       decorateMessage(message);
+      if (suppressTestIncidents && isTestPagerMessage(message)) return;
       if (isStopPage(message.message)) {
         stopPages.push(message);
         return;
@@ -437,8 +440,12 @@
 
   function isTestPagerIncident(incident) {
     return (incident.messages || []).some(function (message) {
-      return /\b(?:TEST(?:ING)?|TEST\s+PAGE|TEST\s+MESSAGE|SYSTEM\s+UNDER\s+TEST|DRILL|TRAINING|EXERCISE)\b/i.test(String(message.message || ''));
+      return isTestPagerMessage(message);
     });
+  }
+
+  function isTestPagerMessage(message) {
+    return /\b(?:DAILY\s+TEST|TEST(?:ING)?|TEST\s+PAGE|TEST\s+MESSAGE|SYSTEM\s+UNDER\s+TEST|DRILL|TRAINING|EXERCISE)\b/i.test(String(message && message.message || ''));
   }
 
   function hasIncidentLocationEvidence(incident, rfs) {
