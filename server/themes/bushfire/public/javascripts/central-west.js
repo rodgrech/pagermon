@@ -130,6 +130,8 @@
     var raw = String(unit || '').trim();
     var key = raw.toUpperCase().replace(/\s+/g, '');
     if (centralWestUnitNames[key]) return centralWestUnitNames[key];
+    var knownSuffix = key.match(/^(CZORANG1|CZBOREN1)([A-Z])$/);
+    if (knownSuffix) return centralWestUnitNames[knownSuffix[1]] + knownSuffix[2];
     if (/^CZ[A-Z0-9]+$/.test(key)) return 'CZ ' + key.slice(2);
     return raw;
   }
@@ -224,10 +226,31 @@
     return cleanPagerField(value).toLowerCase().replace(/\b[a-z]/g, function (letter) { return letter.toUpperCase(); });
   }
 
-  function brigadeName(callsign) {
-    var value = cleanPagerField(callsign).toUpperCase();
-    var known = {CGCOMMS1: 'CG Comms 1', CGDO: 'Cudgegong Duty', CGLAWSO7A: 'Lawson 7', CGMUDGE1: 'Mudgee 1', CGMUDGE: 'Mudgee'};
+  function stationNameFromAlias(alias) {
+    var value = cleanPagerField(alias);
+    if (!value || /^(?:RFS|NSW RFS|FRNSW|VRA|TEST|PAGER|CAPCODE)$/i.test(value)) return '';
+    value = value.split(/\s+-\s+/)[0]
+      .replace(/^NSW\s+RFS\s+/i, '')
+      .replace(/\s+(?:RFB|RURAL FIRE BRIGADE|FIRE BRIGADE|BRIGADE)\b.*$/i, '')
+      .replace(/\s+(?:CUDGEGONG|CANOBOLAS(?:\s+ZONE)?|CHIFLEY(?:\s+LITHGOW)?|CENTRAL\s+WEST)\s*$/i, '');
+    value = cleanPagerField(value);
+    return value && /[A-Za-z]/.test(value) ? titleCase(value) : '';
+  }
+
+  function brigadeName(callsign, alias) {
+    var value = cleanPagerField(callsign).toUpperCase().replace(/\s+/g, '');
+    var known = {CGCOMMS1: 'Cudgegong Comms 1', CGDO: 'Cudgegong Duty', CZDO: 'Canobolas Duty'};
     if (known[value]) return known[value];
+    var parsed = value.match(/^([A-Z]{2})([A-Z]+)(\d+)([A-Z]?)$/);
+    var station = stationNameFromAlias(alias);
+    if (parsed && station) {
+      var agencyPrefix = parsed[1] === 'VR' ? 'VRA ' : '';
+      return agencyPrefix + station + ' ' + parsed[3] + parsed[4];
+    }
+    if (centralWestUnitNames[value]) return centralWestUnitNames[value];
+    var knownSuffix = value.match(/^(CZORANG1|CZBOREN1)([A-Z])$/);
+    if (knownSuffix) return centralWestUnitNames[knownSuffix[1]] + knownSuffix[2];
+    if (/^[A-Z]{2}[A-Z0-9]+$/.test(value)) return value.slice(0, 2) + ' ' + value.slice(2);
     return value || '';
   }
 
@@ -282,7 +305,7 @@
     if (incidentIndex >= 0 && (isSharedFireNetworkAgency(agency) || details.coordinates)) {
       details.format = 'rfs';
       details.callsign = parts[incidentIndex - 1] || '';
-      details.brigade = brigadeName(details.callsign);
+      details.brigade = brigadeName(details.callsign, message.alias);
       details.incidentId = parts[incidentIndex];
       details.type = parts[incidentIndex + 1] || '';
       details.subtype = parts[incidentIndex + 2] || '';
