@@ -56,7 +56,7 @@
               <div class="col-xs-8 col-sm-9">
                 <select name="global.pwaIconTheme" ng-model="settings.global.pwaIconTheme" class="form-control">
                   <option value="theme">Match active theme</option>
-                  <option ng-repeat="iconTheme in pwaIconThemes" value="{{iconTheme}}">{{iconTheme === 'dark-blue' ? 'Dark Blue' : (iconTheme === 'bushfire' ? 'Bushfire' : (iconTheme === 'default' ? 'Default' : iconTheme))}}</option>
+                  <option ng-repeat="iconTheme in pwaIconThemes" value="{{iconTheme}}">{{iconTheme === 'dark-blue' ? 'CW Alerts' : (iconTheme === 'bushfire' ? 'Bushfire Pager' : (iconTheme === 'default' ? 'PagerMon Default' : iconTheme))}}</option>
                 </select>
                 <span class="help-block">Select an installed theme's icon set. PagerMon versions the manifest immediately; iOS may require removing and re-adding an existing Home Screen app.</span>
               </div>
