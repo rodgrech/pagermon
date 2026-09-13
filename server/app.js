@@ -1,4 +1,4 @@
-var version = "1.0.0";
+var version = "1.0.2";
 
 var debug = require('debug')('pagermon:server');
 var io = require('@pm2/io').init({
