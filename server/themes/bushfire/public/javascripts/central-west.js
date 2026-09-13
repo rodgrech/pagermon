@@ -122,6 +122,32 @@
     return {maxWidth: Number(maxWidth) || 390, autoPan: false, className: 'cw-popup-shell'};
   }
 
+  // Desktop/tablet popups are docked to the map rather than to the marker.
+  // Leaflet positions popup panes inside its translated map pane, so offset
+  // by the pane translation to keep the panel fixed at the map's left edge.
+  function dockMapPopup() {
+    if (!map || phoneMapPopup()) return;
+    var popup = map._popup;
+    var container = popup && popup._container;
+    if (!container || !container.classList.contains('cw-popup-shell')) return;
+    var panePosition = window.L && L.DomUtil && L.DomUtil.getPosition ? L.DomUtil.getPosition(map._mapPane) : {x: 0, y: 0};
+    var mapHeight = map.getSize ? map.getSize().y : 600;
+    var wrapper = container.querySelector('.leaflet-popup-content-wrapper');
+    var content = container.querySelector('.leaflet-popup-content');
+    var maxHeight = Math.max(180, mapHeight - 110);
+    if (wrapper) wrapper.style.maxHeight = maxHeight + 'px';
+    if (content) content.style.maxHeight = maxHeight + 'px';
+    container.style.setProperty('left', (6 - panePosition.x) + 'px', 'important');
+    container.style.setProperty('top', (92 - panePosition.y) + 'px', 'important');
+    container.style.setProperty('bottom', 'auto', 'important');
+    container.style.setProperty('transform', 'none', 'important');
+  }
+
+  function queueDockMapPopup() {
+    if (!map || phoneMapPopup()) return;
+    window.requestAnimationFrame(dockMapPopup);
+  }
+
   function renderFireDangerLayer() {
     if (!map || !layerGroups || !window.L) return;
     layerGroups.fireDanger.clearLayers();
@@ -576,6 +602,8 @@
       if (features.weatherRadar !== false) overlays['Weather radar'] = layerGroups.radar;
       L.control.layers(null, overlays, {collapsed: true, position: 'topright'}).addTo(map);
       map.on('overlayadd overlayremove', saveLayerState);
+      map.on('popupopen', queueDockMapPopup);
+      map.on('move zoom resize', queueDockMapPopup);
       if (lastRadarEnabled && lastRadarConfig && lastRadarConfig.tileUrl && features.weatherRadar !== false) {
         radarLayer = L.tileLayer(lastRadarConfig.tileUrl, {opacity: Number(lastRadarConfig.opacity) || 0.62, maxNativeZoom: 7, maxZoom: 18, zIndex: 250, attribution: '<a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>'});
         radarLayer.addTo(layerGroups.radar);
