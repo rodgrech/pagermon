@@ -10,12 +10,12 @@
           <h4 style="padding-left: 15px;"><a href="/admin/">Admin</a> / Settings</h4>
           <hr />
           <nav class="settings-section-nav" aria-label="Settings sections">
-            <a href="#settings-general"><i class="fa fa-palette"></i><span>Appearance</span></a>
-            <a href="#settings-integrations"><i class="fa fa-cloud"></i><span>Integrations</span></a>
-            <a href="#settings-data"><i class="fa fa-database"></i><span>Data &amp; messages</span></a>
-            <a href="#settings-access"><i class="fa fa-user-shield"></i><span>Accounts</span></a>
-            <a href="#settings-monitoring"><i class="fa fa-heartbeat"></i><span>Monitoring</span></a>
-            <a href="#settings-plugins"><i class="fa fa-plug"></i><span>Plugins</span></a>
+            <a href="#settings-general" ng-click="scrollSettingsSection('settings-general', $event)"><i class="fa fa-palette"></i><span>Appearance</span></a>
+            <a href="#settings-integrations" ng-click="scrollSettingsSection('settings-integrations', $event)"><i class="fa fa-cloud"></i><span>Integrations</span></a>
+            <a href="#settings-data" ng-click="scrollSettingsSection('settings-data', $event)"><i class="fa fa-database"></i><span>Data &amp; messages</span></a>
+            <a href="#settings-access" ng-click="scrollSettingsSection('settings-access', $event)"><i class="fa fa-user-shield"></i><span>Accounts</span></a>
+            <a href="#settings-monitoring" ng-click="scrollSettingsSection('settings-monitoring', $event)"><i class="fa fa-heartbeat"></i><span>Monitoring</span></a>
+            <a href="#settings-plugins" ng-click="scrollSettingsSection('settings-plugins', $event)"><i class="fa fa-plug"></i><span>Plugins</span></a>
           </nav>
           <style>
             .settings-section-nav { background:rgba(239,243,247,.97); box-shadow:0 5px 12px rgba(26,45,64,.08); display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin:0 0 18px; padding:8px 0; position:sticky; top:54px; z-index:1020; }

@@ -47,6 +47,11 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
     .controller('AliasController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', 'FileSaver', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout, FileSaver) {
       $scope.loading = true;
       $scope.alertMessage = {};
+      $scope.scrollSettingsSection = function(id, event) {
+        if (event) event.preventDefault();
+        var section = document.getElementById(id);
+        if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
+      };
       $scope.aliasPage = 1;
       $scope.aliasPageSize = 100;
       $scope.aliasPageCount = function () {
