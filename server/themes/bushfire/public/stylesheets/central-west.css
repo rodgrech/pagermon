@@ -144,18 +144,23 @@ body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: 
 @media (max-width: 600px) {
   .cw-popup-shell { pointer-events: auto !important; }
   .leaflet-popup-pane { z-index: 1100 !important; pointer-events: auto !important; }
-  .cw-popup-shell .leaflet-popup-content-wrapper { width: calc(100vw - 40px) !important; max-width: 330px; max-height: 62vh; overflow: hidden; box-sizing: border-box; }
-  .cw-popup-shell .leaflet-popup-content { width: 100% !important; max-width: 100%; max-height: 62vh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; box-sizing: border-box; }
-  .cw-popup-shell .leaflet-popup-close-button { z-index: 2; top: 7px !important; right: 8px !important; width: 28px !important; height: 28px !important; padding: 0 !important; color: #31424d !important; font-size: 22px !important; line-height: 28px !important; text-align: center; }
+  .cw-popup-shell .leaflet-popup-content-wrapper { width: calc(100vw - 56px) !important; max-width: 300px; max-height: 55vh; overflow: hidden; border-radius: 7px; box-sizing: border-box; }
+  .cw-popup-shell .leaflet-popup-content { width: 100% !important; max-width: 100%; max-height: 55vh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; box-sizing: border-box; }
+  .cw-popup-shell .leaflet-popup-close-button { z-index: 2; top: 3px !important; right: 4px !important; width: 24px !important; height: 24px !important; padding: 0 !important; color: #31424d !important; font-size: 20px !important; line-height: 24px !important; text-align: center; }
   body.cw-dark .cw-popup-shell .leaflet-popup-close-button { color: #edf4fa !important; }
-  .cw-incident-popup { padding: 12px; font-size: 11px; }
-  .cw-popup-heading { margin: -12px -12px 9px; padding: 9px 12px; padding-right: 34px; }
-  .cw-popup-heading i { width: 27px; height: 27px; font-size: 14px; }
-  .cw-popup-title { margin-bottom: 8px; padding: 8px 9px; font-size: 13px; }
-  .cw-popup-label { margin-top: 8px; }
-  .cw-popup-agency { margin-top: 9px; padding-top: 7px; }
+  .cw-popup-shell .leaflet-popup-tip-container { display: block; }
+  .cw-incident-popup { padding: 10px 11px; font-size: 11px; line-height: 1.35; }
+  .cw-popup-heading { margin: 0 24px 6px 0; padding: 0; border-radius: 0; background: transparent !important; gap: 5px; }
+  .cw-popup-heading i { display: none; }
+  .cw-popup-heading strong { font-size: 10px; letter-spacing: .25px; }
+  .cw-popup-title { margin: 0 0 7px; padding: 0; border: 0; border-radius: 0; background: transparent !important; font-size: 13px; }
+  .cw-popup-pills, .cw-popup-units { gap: 4px; }
+  .cw-popup-pills > span, .cw-popup-units > span { padding: 3px 6px; border-radius: 4px; }
+  .cw-popup-address, .cw-popup-description { margin: 7px 0; }
+  .cw-popup-label { margin-top: 7px; }
+  .cw-popup-agency { margin-top: 7px; padding-top: 6px; }
   .cw-popup-actions { display: block; }
-  .cw-popup-action, .cw-popup-actions a { box-sizing: border-box; width: 100%; margin-top: 7px; padding: 9px 8px; }
+  .cw-popup-action, .cw-popup-actions a { box-sizing: border-box; width: 100%; margin-top: 6px; padding: 7px 8px; }
 }
 .cw-incident-marker.emergency span { background: #cf3f4d; color: #fff; animation: cw-incident-pulse 1.15s infinite; }
 @keyframes cw-incident-pulse { 50% { filter: drop-shadow(0 0 7px rgba(207,63,77,.9)); } }
