@@ -157,6 +157,16 @@ function selectedPwaTheme() {
   return selected;
 }
 
+function selectedPwaVersion() {
+  var configured = Number(nconf.get('global:pwaIconVersion')) || 1;
+  try {
+    var icon = path.join(__dirname, 'themes', selectedPwaTheme(), 'public', 'android-chrome-192x192.png');
+    return Math.max(configured, Math.floor(fs.statSync(icon).mtimeMs));
+  } catch (error) {
+    return configured;
+  }
+}
+
 function sendPwaAsset(filename, contentType) {
   return function (req, res, next) {
     var asset = path.join(__dirname, 'themes', selectedPwaTheme(), 'public', filename);
@@ -184,7 +194,7 @@ app.get('/pwa-manifest.json', function (req, res, next) {
   var manifestPath = path.join(__dirname, 'themes', selectedPwaTheme(), 'public', 'manifest.json');
   try {
     var manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    var version = nconf.get('global:pwaIconVersion') || 1;
+    var version = selectedPwaVersion();
     manifest.icons = [
       { src: '/pwa-icon-192.png?v=' + version, sizes: '192x192', type: 'image/png' },
       { src: '/pwa-icon-512.png?v=' + version, sizes: '512x512', type: 'image/png' }
@@ -198,7 +208,7 @@ app.get('/pwa-manifest.json', function (req, res, next) {
 
 app.use(function (req, res, next) {
   nconf.load();
-  res.locals.pwaIconVersion = nconf.get('global:pwaIconVersion') || 1;
+  res.locals.pwaIconVersion = selectedPwaVersion();
   res.locals.publicBaseUrl = req.protocol + '://' + req.get('host');
   res.locals.whatsNew = whatsNew;
   res.locals.whatsNewEnabled = nconf.get('global:whatsNewEnabled') !== false;
