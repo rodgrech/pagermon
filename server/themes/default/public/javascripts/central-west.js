@@ -694,9 +694,16 @@
     if (category === 'A7' || /^(R22|R44|B06|B407|EC35|EC45|AS50|AS55|S76|A139|BK17|H125|H135|H145|H160|H175)/.test(type)) return 'helicopter';
     if (category === 'B1') return 'glider';
     if (category === 'B6') return 'drone';
-    if (category === 'A5' || category === 'A4') return 'heavy';
-    if (category === 'A6') return 'jet';
-    return 'plane';
+    if (category === 'A5') return 'heavy-four';
+    if (category === 'A4') return 'heavy';
+    if (category === 'A6') return 'high-performance';
+    if (category === 'A3') return 'airliner';
+    if (category === 'A2') return 'jet';
+    if (category === 'A1') return 'light-aircraft';
+    if (/^(C130|C30J|L188|P3|DHC6|B350|BE20|BE30|BE40|BE9|PA31|PA34|PAY|SW[234]|AT[467]|CL2T)/.test(type)) return 'twin';
+    if (/^(A3|B7|B8|B9|B2|B3|B6|E1[79]|E2|CRJ|F100|MD)/.test(type)) return 'airliner';
+    if (/^(C1[257]|C17[25]|C18[025]|C20[678]|C21[012]|PA2[478]|SR2[02]|DA4[02]|DA62|BE3[356]|M20|P28|P32)/.test(type)) return 'light-aircraft';
+    return 'unknown-aircraft';
   }
 
   function aircraftDisplayType(plane, kind) {
@@ -712,17 +719,23 @@
   }
 
   function aircraftSvg(kind, track) {
+    // Silhouettes follow the visual categories used by FlightAware SkyAware/PiAware.
     var paths = {
-      helicopter: '<path d="M3 11h7l2-3h5l2 3h2v2h-7l-2 5h-2l1-5H3zm8-5V3h2v3h5v1H6V6z"/>',
+      helicopter: '<path d="M12 3c1.1 0 2 1.5 2.4 3.7L21 2l1.2 1.5-7.4 5.3v1.4l7.3 5.2-1.1 1.5-6.7-4.7c-.3 1.7-.8 3-1.3 3.7v3.6c1.5.3 2.4 1 2.4 1.8 0 1-1.5 1.7-3.4 1.7s-3.4-.7-3.4-1.7c0-.8.9-1.5 2.4-1.8v-3.6c-.6-.8-1-2-1.3-3.7L3 17l-1.1-1.5 7.3-5.2V8.8L1.8 3.5 3 2l6.6 4.7C10 4.5 10.9 3 12 3z"/>',
       'fire-helicopter': '<path d="M3 11h7l2-3h5l2 3h2v2h-7l-2 5h-2l1-5H3zm8-5V3h2v3h5v1H6V6zm9 10c1.5 1.6 1.5 3.1 0 4.4-1.5-1.3-1.5-2.8 0-4.4z"/>',
       'air-tanker': '<path d="M12 2l2.2 7.2L22 12v2.5l-7.7-.9-1 5.7 3.2 2.2V23L12 21.8 7.5 23v-1.5l3.2-2.2-1-5.7-7.7.9V12l7.8-2.8zM5 16h3v2H5zm11 0h3v2h-3z"/>',
       'air-attack': '<path d="M12 2l1.7 7.6L22 13v2l-8-1.4-.8 6 3 2V23L12 22l-4.2 1v-1.4l3-2-.8-6L2 15v-2l8.3-3.4zM4 7h5v1H4zm11 0h5v1h-5z"/>',
       'fire-plane': '<path d="M12 2l2 8 8 3v2l-8-1-1 6 3 2v1l-4-1-4 1v-1l3-2-1-6-8 1v-2l8-3zm7 15c1.3 1.4 1.3 2.7 0 3.9-1.3-1.2-1.3-2.5 0-3.9z"/>',
       glider: '<path d="M12 2l1.4 7 8.6 3-8.6 1.4L12 22l-1.4-8.6L2 12l8.6-3z"/>',
       drone: '<path d="M7 9h10v6H7zM3 5h6v2H3zm12 0h6v2h-6zM3 17h6v2H3zm12 0h6v2h-6zM6 7l3 3m9-3-3 3M6 17l3-3m9 3-3-3" fill="none" stroke="currentColor" stroke-width="1.8"/>',
-      heavy: '<path d="M12 2l2 7 8 4v2l-8-2-1 7 3 2v1l-4-1-4 1v-1l3-2-1-7-8 2v-2l8-4z"/>',
-      jet: '<path d="M12 2l2 8 7 4v2l-7-2-1 6 3 2v1l-4-1-4 1v-1l3-2-1-6-7 2v-2l7-4z"/>',
-      plane: '<path d="M12 2l2 8 8 3v2l-8-1-1 6 3 2v1l-4-1-4 1v-1l3-2-1-6-8 1v-2l8-3z"/>'
+      'light-aircraft': '<path d="M12 2c1 0 1.5 2.3 1.6 7.1l3.7.2V7.5h1.5v1.9l4.2.7v2.4l-9.2 1.2-.6 5.3 3.5 1.2v1.7l-4.7-.4-4.7.4v-1.7l3.5-1.2-.6-5.3L1 12.5v-2.4l4.2-.7V7.5h1.5v1.8l3.7-.2C10.5 4.3 11 2 12 2z"/>',
+      twin: '<path d="M12 2c1.1 0 1.7 2.2 1.7 7.3l3.2.2c-.1-2.2.3-3.3 1-3.3s1.1 1.2 1 3.5l4.1.6v2.3l-4.3.4c-.1 2-.4 3-1 3s-.9-.9-1-2.8l-3-.1-.5 5.7 3.5 1.3v1.8l-4.7-.5-4.7.5v-1.8l3.5-1.3-.5-5.7-3 .1c-.1 1.9-.4 2.8-1 2.8s-.9-1-1-3L1 12.6v-2.3l4.1-.6c-.1-2.3.3-3.5 1-3.5s1.1 1.1 1 3.3l3.2-.2C10.3 4.2 10.9 2 12 2z"/>',
+      airliner: '<path d="M12 1c1.2 0 1.8 3 1.8 9l2.1 1.1c-.1-1.7.2-2.6.9-2.6s1.1 1.1.8 3.5l5.4 3v2.1l-9.1-2.4c.1 4.2-.1 6.6-.6 7.3l3.3 1.4v1.4L12 24l-4.6.8v-1.4l3.3-1.4c-.5-.7-.7-3.1-.6-7.3L1 17.1V15l5.4-3c-.3-2.4 0-3.5.8-3.5s1 .9.9 2.6l2.1-1.1c0-6 .6-9 1.8-9z"/>',
+      heavy: '<path d="M12 1c1.2 0 1.8 3 1.8 9l2.1 1.2c-.2-2 .2-3 1-3s1.1 1.2.8 3.9L23 16v2l-9.1-2.7c.1 3.8-.1 6-.7 6.8l3.5 1.5V25L12 24.1 7.3 25v-1.4l3.5-1.5c-.6-.8-.8-3-.7-6.8L1 18v-2l5.3-3.9c-.3-2.7 0-3.9.8-3.9s1.2 1 1 3L10.2 10c0-6 .6-9 1.8-9z"/>',
+      'heavy-four': '<path d="M12 1c1.2 0 1.8 2.7 1.8 8.2l2 1.8c-.2-2 .1-3 .9-3s1.1 1.2.8 3.8l1.8 1.7c-.2-1.8.1-2.7.8-2.7s1 1.1.8 3.5l2.1 2.1V19l-9.2-4c.1 3.7-.1 6-.7 7l3.4 1.4V25L12 24l-4.5 1v-1.6l3.4-1.4c-.6-1-.8-3.3-.7-7L1 19v-2.6l2.1-2.1c-.2-2.4.1-3.5.8-3.5s1 .9.8 2.7l1.8-1.7C6.2 9.2 6.5 8 7.3 8s1.1 1 .9 3l2-1.8C10.2 3.7 10.8 1 12 1z"/>',
+      jet: '<path d="M12 2c1.1 0 1.7 2.4 1.7 7.2L23 14v2.2l-9-2.1-.7 5.7 3.4 2V23L12 22l-4.7 1v-1.2l3.4-2-.7-5.7-9 2.1V14l9.3-4.8C10.3 4.4 10.9 2 12 2z"/>',
+      'high-performance': '<path d="M12 1l2.8 9.1L22 15v2l-7.6-2.2-.7 5 3 2.2v2H7.3v-2l3-2.2-.7-5L2 17v-2l7.2-4.9z"/>',
+      'unknown-aircraft': '<path d="M12 2c1 0 1.5 2.3 1.5 6.8L23 14v2.2l-9.3-1.5v5l3.3 1.8V23l-5-1-5 1v-1.5l3.3-1.8v-5L1 16.2V14l9.5-5.2C10.5 4.3 11 2 12 2z"/>'
     };
     return '<svg class="cw-aircraft-svg" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(' + Number(track || 0) + 'deg)">' + paths[kind] + '</svg>';
   }
