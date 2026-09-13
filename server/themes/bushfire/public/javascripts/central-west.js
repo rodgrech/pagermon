@@ -122,6 +122,18 @@
     return {maxWidth: Number(maxWidth) || 390, autoPan: false, className: 'cw-popup-shell'};
   }
 
+  var centralWestUnitNames = {
+    CZORANG1: 'Orange 1', CZBOREN1: 'Borenore 1', CZDO: 'Canobolas Duty'
+  };
+
+  function displayUnitName(unit) {
+    var raw = String(unit || '').trim();
+    var key = raw.toUpperCase().replace(/\s+/g, '');
+    if (centralWestUnitNames[key]) return centralWestUnitNames[key];
+    if (/^CZ[A-Z0-9]+$/.test(key)) return 'CZ ' + key.slice(2);
+    return raw;
+  }
+
   // Desktop/tablet popups are docked to the map rather than to the marker.
   // Leaflet positions popup panes inside its translated map pane, so offset
   // by the pane translation to keep the panel fixed at the map's left edge.
@@ -562,7 +574,7 @@
     var units = (incident.brigades || []).slice();
     if (!units.length && details.unit) units.push(details.unit);
     if (!units.length && details.callsign) units.push(details.callsign);
-    var chips = units.length ? '<div class="cw-popup-label">Units paged</div><div class="cw-popup-units">' + units.map(function(unit) { return '<span>' + escapeHtml(unit) + '</span>'; }).join('') + '</div>' : '';
+    var chips = units.length ? '<div class="cw-popup-label">Units paged</div><div class="cw-popup-units">' + units.map(function(unit) { return '<span>' + escapeHtml(displayUnitName(unit)) + '</span>'; }).join('') + '</div>' : '';
     var timelineKey = details.incidentId || incident.location || '';
     return '<div class="cw-incident-popup">' +
       '<div class="cw-popup-heading"><i class="fa ' + hazard.icon + '"></i><strong>' + escapeHtml(String(level).toUpperCase()) + '</strong></div>' +
@@ -624,7 +636,7 @@
       var hazard = incidentKind(incident);
       var severity = /emergency warning/i.test(incident.category) ? ' emergency' : /watch and act/i.test(incident.category) ? ' watch' : '';
       var incidentIcon = L.divIcon({className: 'cw-incident-marker cw-incident-' + hazard.kind + severity, html: '<span><i class="fa ' + hazard.icon + '"></i></span>', iconSize: [34, 31], iconAnchor: [17, 28]});
-      var pagerUnits = incident.pagerMatch && incident.pagerMatch.brigades && incident.pagerMatch.brigades.length ? '<br><strong>Units paged:</strong> ' + incident.pagerMatch.brigades.map(escapeHtml).join(', ') : '';
+      var pagerUnits = incident.pagerMatch && incident.pagerMatch.brigades && incident.pagerMatch.brigades.length ? '<br><strong>Units paged:</strong> ' + incident.pagerMatch.brigades.map(function(unit) { return escapeHtml(displayUnitName(unit)); }).join(', ') : '';
       var pagerDetail = incident.pagerMatch && !(hideTestPages && /\b(?:TEST(?:ING)?|TEST\s+PAGE|TEST\s+MESSAGE|SYSTEM\s+UNDER\s+TEST|DRILL|TRAINING|EXERCISE)\b/i.test(String(incident.pagerMatch.latestMessage || ''))) ? '<hr><strong>Matching pager traffic</strong><br>' + escapeHtml(incident.pagerMatch.location || incident.pagerMatch.agency) + '<br>' + incident.pagerMatch.pageCount + ' page(s)' + pagerUnits + '<br>' + escapeHtml(incident.pagerMatch.latestMessage) : '';
       var npwsDetail = incident.npwsMatches && incident.npwsMatches.length ? '<div class="cw-popup-source-match"><i class="fa fa-tree"></i><strong> Combined with NSW NPWS</strong><br>' + incident.npwsMatches.map(function(item) { return escapeHtml(item.title); }).join('<br>') + '</div>' : '';
       var officialAgency = incident.agency || 'NSW RFS';
