@@ -18,13 +18,13 @@
             <a href="#settings-plugins"><i class="fa fa-plug"></i><span>Plugins</span></a>
           </nav>
           <style>
-            .settings-section-nav { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin:0 0 18px; }
+            .settings-section-nav { background:rgba(239,243,247,.97); box-shadow:0 5px 12px rgba(26,45,64,.08); display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin:0 0 18px; padding:8px 0; position:sticky; top:54px; z-index:1020; }
             .settings-section-nav a { align-items:center; background:#fff; border:1px solid #d9e0e7; border-radius:5px; color:#34495e; display:flex; flex-direction:column; gap:5px; justify-content:center; min-height:68px; padding:9px 6px; text-align:center; text-decoration:none; }
             .settings-section-nav a:hover,.settings-section-nav a:focus { border-color:#337ab7; box-shadow:0 2px 8px rgba(0,0,0,.09); color:#23527c; }
             .settings-section-nav i { font-size:19px; }
-            .settings-anchor { scroll-margin-top:90px; }
+            .settings-anchor { scroll-margin-top:150px; }
             .settings-save-bar { align-items:center; background:rgba(255,255,255,.96); border-top:1px solid #d9e0e7; bottom:0; box-shadow:0 -2px 10px rgba(0,0,0,.08); display:flex; gap:8px; justify-content:flex-end; left:0; padding:10px max(15px,calc((100vw - 1170px)/2 + 15px)); position:fixed; right:0; z-index:1025; }
-            @media (max-width:767px) { .settings-section-nav { grid-template-columns:repeat(2,minmax(0,1fr)); } .settings-save-bar .btn { flex:1; } }
+            @media (max-width:767px) { .settings-section-nav { display:flex; gap:6px; margin-left:-15px; margin-right:-15px; overflow-x:auto; padding:6px 15px; top:50px; -webkit-overflow-scrolling:touch; } .settings-section-nav a { flex:0 0 108px; min-height:48px; padding:6px 4px; } .settings-section-nav i { font-size:15px; } .settings-anchor { scroll-margin-top:120px; } .settings-save-bar .btn { flex:1; } }
           </style>
           <form ng-submit="settingsSubmit()" class="form-horizontal" style="padding-bottom: 70px;">
 
