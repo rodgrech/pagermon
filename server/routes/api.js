@@ -2245,11 +2245,12 @@ router.route('/central-west/fire-danger-boundaries')
 
 router.route('/central-west/fire-danger')
   .get(authHelper.isLoggedInMessages, function (req, res) {
-    var bomConfig = integrationConfig('bom', { enabled: true, fireDangerEnabled: true, fireDangerCouncils: 'Mid-Western; Bathurst; Lithgow; Orange; Dubbo Regional', cacheMinutes: 60 });
+    var bomConfig = integrationConfig('bom', { enabled: true, fireDangerEnabled: true, fireDangerAllAreas: false, fireDangerCouncils: 'Mid-Western; Bathurst; Lithgow; Orange; Dubbo Regional', cacheMinutes: 60 });
     var officialFeedUrl = 'https://www.rfs.nsw.gov.au/feeds/fdrToban.xml';
     if (bomConfig.enabled === false || bomConfig.fireDangerEnabled === false) return res.status(200).json({ disabled: true, districts: [] });
-    var selected = String(bomConfig.fireDangerCouncils || '').split(/[;,\n]/).map(function (value) { return value.trim(); }).filter(Boolean);
-    var signature = selected.join('|').toLowerCase() + '|' + officialFeedUrl;
+    var allAreas = bomConfig.fireDangerAllAreas === true;
+    var selected = allAreas ? [] : String(bomConfig.fireDangerCouncils || '').split(/[;,\n]/).map(function (value) { return value.trim(); }).filter(Boolean);
+    var signature = (allAreas ? 'all' : 'selected:' + selected.join('|').toLowerCase()) + '|' + officialFeedUrl;
     var now = Date.now();
     var cacheMilliseconds = Math.min(Math.max(parseInt(bomConfig.cacheMinutes, 10) || 60, 5), 1440) * 60000;
     if (fireDangerCache.data && fireDangerCache.signature === signature && now - fireDangerCache.fetchedAt < cacheMilliseconds) return res.status(200).json(fireDangerCache.data);
@@ -2287,7 +2288,7 @@ router.route('/central-west/fire-danger')
           fireBanTomorrow: /^yes$/i.test(districtField(block, 'FireBanTomorrow'))
         });
       }
-      var payload = { fetchedAt: Math.floor(now / 1000), districts: districts, selectedCouncils: selected, sourceUrl: 'https://www.rfs.nsw.gov.au/fire-information/fdr-and-tobans' };
+      var payload = { fetchedAt: Math.floor(now / 1000), districts: districts, selectedCouncils: selected, allAreas: allAreas, sourceUrl: 'https://www.rfs.nsw.gov.au/fire-information/fdr-and-tobans' };
       fireDangerCache = { fetchedAt: now, data: payload, signature: signature };
       res.status(200).json(payload);
     }).catch(function (err) {

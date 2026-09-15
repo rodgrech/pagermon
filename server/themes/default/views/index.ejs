@@ -99,7 +99,7 @@
         </div><% } %>
 
         <div class="cw-panel cw-warnings" ng-show="dashboardView == 'warnings'">
-          <div class="cw-warning-header" ng-if="integrationFeatures.fireDanger"><strong><i class="fa fa-fire"></i> Fire Danger Ratings</strong><span class="pull-right">Selected council areas</span></div>
+          <div class="cw-warning-header" ng-if="integrationFeatures.fireDanger"><strong><i class="fa fa-fire"></i> Fire Danger Ratings</strong><span class="pull-right">{{fireDangerAllAreas ? 'All NSW areas' : 'Selected council areas'}}</span></div>
           <div class="cw-empty" ng-if="integrationFeatures.fireDanger && fireDangerLoading">Checking official NSW ratings…</div>
           <div class="alert alert-warning" ng-if="integrationFeatures.fireDanger && fireDangerError">{{fireDangerError}}</div>
           <div class="row" ng-if="integrationFeatures.fireDanger && !fireDangerLoading">
@@ -107,7 +107,8 @@
               <div class="panel panel-default"><div class="panel-heading"><strong>{{district.name}}</strong></div><div class="panel-body">
                 <p><span class="label" ng-class="fireDangerClass(district.today)">Today: {{district.today}}</span> <span class="label" ng-class="fireDangerClass(district.tomorrow)">Tomorrow: {{district.tomorrow}}</span></p>
                 <p class="text-danger" ng-if="district.fireBanToday || district.fireBanTomorrow"><strong><i class="fa fa-ban"></i> Total Fire Ban: {{district.fireBanToday ? 'today' : ''}}{{district.fireBanToday && district.fireBanTomorrow ? ' and ' : ''}}{{district.fireBanTomorrow ? 'tomorrow' : ''}}</strong></p>
-                <small><strong>Official district rating applying to selected councils:</strong> {{district.selectedCouncils.join(', ')}}</small>
+                <small ng-if="!fireDangerAllAreas"><strong>Official district rating applying to selected councils:</strong> {{district.selectedCouncils.join(', ')}}</small>
+                <small ng-if="fireDangerAllAreas"><strong>Official NSW RFS fire-weather district</strong></small>
               </div></div>
             </div>
           </div>
@@ -701,6 +702,7 @@
       });
       Api.FireDanger.get().$promise.then(function (data) {
         $scope.fireDangerDistricts = data.districts || [];
+        $scope.fireDangerAllAreas = data.allAreas === true;
         $scope.fireDangerFetchedAt = Number(data.fetchedAt) * 1000;
         $scope.fireDangerLoading = false;
       }, function () { $scope.fireDangerError = 'Fire danger ratings are temporarily unavailable.'; $scope.fireDangerLoading = false; });
