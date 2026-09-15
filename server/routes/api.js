@@ -31,11 +31,11 @@ function redactAustralianPhoneNumbers(message) {
     /(^|[^\d])04(?:[\s().\/-]*\d){8}(?!\d)/g,
     /(^|[^\d])(?:\+61|0061)[\s().\/-]*[2378](?:[\s().\/-]*\d){8}(?!\d)/g,
     /(^|[^\d])(?:0[\s.\/-]*[2378]|\(0[2378]\))(?:[\s().\/-]*\d){8}(?!\d)/g,
-    /(\b(?:PHONE|PH|TEL|MOBILE|MOB|CONTACT|CALL)\s*(?::|=|-)?\s*)(?:\d[\s().\/-]*){8,10}(?!\d)/gi
+    /(\b(?:PHONE|PH|TEL|MOBILE|MOB|CONTACT(?:ED)?(?:\s+ON)?|CALL(?:ED)?(?:\s+ON)?)\s*(?::|=|-)?\s*)(?:\d[\s().\/-]*){8,10}(?!\d)/gi
   ];
 
   return phonePatterns.reduce(function (redacted, pattern) {
-    return redacted.replace(pattern, '$1XXXXXXXXXX');
+    return redacted.replace(pattern, '$1XXXX XXXX');
   }, message);
 }
 
