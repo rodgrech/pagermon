@@ -27,15 +27,31 @@ function redactAustralianPhoneNumbers(message) {
   if (typeof message !== 'string') return message;
 
   var phonePatterns = [
-    /(^|[^\d])(?:\+61|0061)[\s().-]*4(?:[\s().-]*\d){8}(?!\d)/g,
-    /(^|[^\d])04(?:[\s().-]*\d){8}(?!\d)/g,
-    /(^|[^\d])(?:\+61|0061)[\s().-]*[2378](?:[\s().-]*\d){8}(?!\d)/g,
-    /(^|[^\d])(?:0[\s.-]*[2378]|\(0[2378]\))(?:[\s().-]*\d){8}(?!\d)/g
+    /(^|[^\d])(?:\+61|0061)[\s().\/-]*4(?:[\s().\/-]*\d){8}(?!\d)/g,
+    /(^|[^\d])04(?:[\s().\/-]*\d){8}(?!\d)/g,
+    /(^|[^\d])(?:\+61|0061)[\s().\/-]*[2378](?:[\s().\/-]*\d){8}(?!\d)/g,
+    /(^|[^\d])(?:0[\s.\/-]*[2378]|\(0[2378]\))(?:[\s().\/-]*\d){8}(?!\d)/g,
+    /(\b(?:PHONE|PH|TEL|MOBILE|MOB|CONTACT|CALL)\s*(?::|=|-)?\s*)(?:\d[\s().\/-]*){8,10}(?!\d)/gi
   ];
 
   return phonePatterns.reduce(function (redacted, pattern) {
     return redacted.replace(pattern, '$1XXXXXXXXXX');
   }, message);
+}
+
+function redactPhoneNumbersInPayload(value, key) {
+  if (typeof value === 'string') {
+    return /^(?:message|latestMessage)$/i.test(String(key || '')) ? redactAustralianPhoneNumbers(value) : value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(function (item) { return redactPhoneNumbersInPayload(item, key); });
+  }
+  if (value && typeof value === 'object') {
+    Object.keys(value).forEach(function (property) {
+      value[property] = redactPhoneNumbersInPayload(value[property], property);
+    });
+  }
+  return value;
 }
 
 var nconf = require('nconf');
@@ -48,6 +64,18 @@ router.use(bodyParser.json());       // to support JSON-encoded bodies
 router.use(bodyParser.urlencoded({     // to support URL-encoded bodies
   extended: true
 }));
+
+// Redact on output as well as ingestion so enabling the setting immediately
+// protects historical messages already present in the database.
+router.use(function (req, res, next) {
+  var originalJson = res.json;
+  res.json = function (payload) {
+    nconf.load();
+    if (nconf.get('messages:redactPhoneNumbers')) redactPhoneNumbersInPayload(payload);
+    return originalJson.call(this, payload);
+  };
+  next();
+});
 
 const passport = require('../auth/local');
 var authHelper = require('../middleware/authhelper')
