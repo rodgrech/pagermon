@@ -2300,8 +2300,12 @@ router.route('/central-west/fire-danger')
 
 router.route('/central-west/rfs-incidents')
   .get(authHelper.isLoggedInMessages, function (req, res) {
+    var mapConfig = integrationConfig('liveMap', { rfsAllNsw: false, rfsAdditionalAreas: '' });
+    var includeAllNsw = mapConfig.rfsAllNsw === true;
+    var additionalAreas = String(mapConfig.rfsAdditionalAreas || '').split(/[;,\n]/).map(function (value) { return value.trim().toLowerCase(); }).filter(Boolean);
+    var coverageSignature = (includeAllNsw ? 'all-nsw' : 'central-west+' + additionalAreas.join('|'));
     var now = Date.now();
-    if (rfsIncidentCache.data && now - rfsIncidentCache.fetchedAt < 10 * 60 * 1000) {
+    if (rfsIncidentCache.data && rfsIncidentCache.signature === coverageSignature && now - rfsIncidentCache.fetchedAt < 10 * 60 * 1000) {
       return res.status(200).json(rfsIncidentCache.data);
     }
     axios.get('https://www.rfs.nsw.gov.au/feeds/majorIncidents.json', {
@@ -2324,12 +2328,15 @@ router.route('/central-west/rfs-incidents')
         if (!point) return null;
         var longitude = Number(point[0]);
         var latitude = Number(point[1]);
+        var properties = feature.properties || {};
+        var description = String(properties.description || '').replace(/<br\s*\/?\s*>/gi, ' · ').replace(/<[^>]+>/g, '');
         // Broad Central West window: includes neighbouring incidents that may
         // affect travel or response without filling the map with all of NSW.
-        if (latitude < -34.5 || latitude > -30.8 || longitude < 147.3 || longitude > 151.0) return null;
-        var properties = feature.properties || {};
+        var inCentralWest = latitude >= -34.5 && latitude <= -30.8 && longitude >= 147.3 && longitude <= 151.0;
+        var areaText = String((properties.title || '') + ' ' + description).toLowerCase();
+        var inAdditionalArea = additionalAreas.some(function (area) { return areaText.indexOf(area) !== -1; });
+        if (!includeAllNsw && !inCentralWest && !inAdditionalArea) return null;
         var feedId = String(feature.id || properties.guid || properties.id || [properties.title, latitude.toFixed(4), longitude.toFixed(4)].join('|'));
-        var description = String(properties.description || '').replace(/<br\s*\/?\s*>/gi, ' · ').replace(/<[^>]+>/g, '');
         var agencyMatch = description.match(/RESPONSIBLE\s+AGENCY\s*:\s*([^·]+)/i);
         var responsibleAgency = agencyMatch ? agencyMatch[1].trim() : 'Rural Fire Service';
         var agency = /fire\s+and\s+rescue/i.test(responsibleAgency) || /\bfrnsw\b/i.test(responsibleAgency) ? 'FRNSW' : /rural\s+fire|\brfs\b/i.test(responsibleAgency) ? 'NSW RFS' : responsibleAgency;
@@ -2379,8 +2386,8 @@ router.route('/central-west/rfs-incidents')
         if (!lifecycle.removedAt || !lifecycle.incident) return null;
         return Object.assign({}, lifecycle.incident, {firstSeenAt: lifecycle.firstSeenAt, removedAt: lifecycle.removedAt});
       }).filter(Boolean);
-      var payload = { fetchedAt: Math.floor(now / 1000), incidents: incidents, removedIncidents: removedIncidents };
-      rfsIncidentCache = { fetchedAt: now, data: payload };
+      var payload = { fetchedAt: Math.floor(now / 1000), incidents: incidents, removedIncidents: removedIncidents, allNsw: includeAllNsw, additionalAreas: additionalAreas };
+      rfsIncidentCache = { fetchedAt: now, data: payload, signature: coverageSignature };
       res.status(200).json(payload);
     }).catch(function (err) {
       logger.main.warn('Unable to retrieve RFS incident feed: ' + err.message);

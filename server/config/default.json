@@ -142,6 +142,8 @@
       "pagerIncidentExpiryHours": 24,
       "hideTestPages": false,
       "suppressTestIncidents": false,
+      "rfsAllNsw": false,
+      "rfsAdditionalAreas": "",
       "additionalCriticalKeywords": "",
       "additionalHighKeywords": "",
       "additionalMediumKeywords": "",
