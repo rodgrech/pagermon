@@ -22,10 +22,17 @@ function removeExpired(endpoint, error) {
 function sendSubscriptions(subscriptions, payload) {
   if (!configure()) return Promise.resolve([]);
   return Promise.all(subscriptions.map(function(row) {
+    const startedAt = Date.now();
     return webpush.sendNotification({
       endpoint: row.endpoint,
       keys: {p256dh: row.p256dh, auth: row.auth}
-    }, JSON.stringify(payload), {TTL: 300}).catch(function(error) {
+    }, JSON.stringify(payload), {
+      TTL: 300,
+      urgency: 'high'
+    }).then(function(response) {
+      logger.main.info('Web push accepted by provider in ' + (Date.now() - startedAt) + ' ms' + (payload.messageId ? ' for message ' + payload.messageId : ''));
+      return response;
+    }).catch(function(error) {
       return removeExpired(row.endpoint, error);
     });
   }));
