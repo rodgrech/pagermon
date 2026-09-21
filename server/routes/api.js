@@ -1983,7 +1983,7 @@ router.route('/central-west/dashboard-config')
     res.status(200).json({
       waterNswEnabled: waterConfig.enabled !== false,
       bomEnabled: bomConfig.enabled !== false,
-      fireDangerEnabled: bomConfig.enabled !== false && bomConfig.fireDangerEnabled !== false,
+      fireDangerEnabled: bomConfig.fireDangerEnabled !== false,
       radioEnabled: radioConfig.enabled !== false,
       piawareEnabled: piawareConfig.enabled !== false,
       piawarePollSeconds: Math.min(Math.max(parseInt(piawareConfig.pollSeconds, 10) || 10, 5), 300),
@@ -2247,7 +2247,7 @@ router.route('/central-west/fire-danger')
   .get(authHelper.isLoggedInMessages, function (req, res) {
     var bomConfig = integrationConfig('bom', { enabled: true, fireDangerEnabled: true, fireDangerAllAreas: false, fireDangerCouncils: 'Mid-Western; Bathurst; Lithgow; Orange; Dubbo Regional', cacheMinutes: 60 });
     var officialFeedUrl = 'https://www.rfs.nsw.gov.au/feeds/fdrToban.xml';
-    if (bomConfig.enabled === false || bomConfig.fireDangerEnabled === false) return res.status(200).json({ disabled: true, districts: [] });
+    if (bomConfig.fireDangerEnabled === false) return res.status(200).json({ disabled: true, districts: [] });
     var allAreas = bomConfig.fireDangerAllAreas === true;
     var selected = allAreas ? [] : String(bomConfig.fireDangerCouncils || '').split(/[;,\n]/).map(function (value) { return value.trim(); }).filter(Boolean);
     var signature = (allAreas ? 'all' : 'selected:' + selected.join('|').toLowerCase()) + '|' + officialFeedUrl;
