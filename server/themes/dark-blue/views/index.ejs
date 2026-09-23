@@ -242,10 +242,11 @@
               <img ng-if="message.agency == 'NSW SES'" class="agency-logo agency-logo-ses" src="/images/agencies/ses.svg" alt="NSW SES">
               <img ng-if="message.agency == 'NSW VRA'" class="agency-logo agency-logo-vra" src="/images/agencies/vra.png" alt="NSW VRA">
               <img ng-if="message.agency == 'FRNSW' || message.agency == 'Fire and Rescue NSW'" class="agency-logo agency-logo-frnsw" src="/images/agencies/frnsw.png" alt="Fire and Rescue NSW">
+              <img ng-if="message.agency == 'Marine Rescue NSW'" class="agency-logo agency-logo-mrnsw" src="https://www.marinerescuensw.com.au/wp-content/uploads/2023/11/logo-profile-180x180.png" alt="Marine Rescue NSW">
               <% if (iconsize == 'small') { %>
-              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA' && message.agency !== 'FRNSW' && message.agency !== 'Fire and Rescue NSW'" class="fa-stack fa-fw" style="color: {{message.color || 'grey'}};">
+              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA' && message.agency !== 'FRNSW' && message.agency !== 'Fire and Rescue NSW' && message.agency !== 'Marine Rescue NSW'" class="fa-stack fa-fw" style="color: {{message.color || 'grey'}};">
               <% } else { %>
-              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA' && message.agency !== 'FRNSW' && message.agency !== 'Fire and Rescue NSW'" class="fa-stack fa-lg fa-fw" style="color: {{message.color || 'grey'}};">
+              <span ng-if="message.agency !== 'NSW RFS' && message.agency !== 'NSW SES' && message.agency !== 'NSW VRA' && message.agency !== 'FRNSW' && message.agency !== 'Fire and Rescue NSW' && message.agency !== 'Marine Rescue NSW'" class="fa-stack fa-lg fa-fw" style="color: {{message.color || 'grey'}};">
               <% } %>
                 <i class="fa fa-circle fa-stack-2x"></i>
                 <i ng-if="message.icon" class="fa fa-{{message.icon}} fa-stack-1x fa-inverse"></i>
