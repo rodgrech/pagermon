@@ -125,7 +125,8 @@
   }
 
   var centralWestUnitNames = {
-    CZORANG1: 'Orange 1', CZBOREN1: 'Borenore 1', CZDO: 'Canobolas Duty'
+    CZORANG1: 'Orange 1', CZBOREN1: 'Borenore 1', CZBARRY: 'Barryrenie',
+    CZBARRY7: 'Barryrenie 7', CZDO: 'Canobolas Duty'
   };
 
   function displayUnitName(unit) {
