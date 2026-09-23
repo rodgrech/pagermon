@@ -9,26 +9,58 @@
   <div class="col-xs-12">
           <h4 style="padding-left: 15px;"><a href="/admin/">Admin</a> / Settings</h4>
           <hr />
+          <div class="settings-layout">
+          <div class="settings-mobile-select">
+            <label for="settings-mobile-page">Settings page</label>
+            <select id="settings-mobile-page" class="form-control" ng-model="activeSettingsSection" ng-change="setSettingsSection(activeSettingsSection)">
+              <option value="appearance">Appearance</option>
+              <optgroup label="Integrations — Agency Specific"><option value="integration-rfs">NSW RFS</option><option value="integration-npws">NSW NPWS</option><option value="integration-bom">BOM</option><option value="integration-water">WaterNSW</option></optgroup>
+              <optgroup label="Integrations — Other"><option value="integration-aircraft">Aircraft</option><option value="integration-radio">Radio</option><option value="integration-radar">Weather radar</option><option value="integration-firms">NASA FIRMS</option><option value="integration-map">Live map</option><option value="plugins">Plugins</option></optgroup>
+              <option value="data">Data &amp; messages</option><option value="accounts">Accounts</option><option value="monitoring">Monitoring</option>
+            </select>
+          </div>
           <nav class="settings-section-nav" aria-label="Settings sections">
-            <a href="#settings-general" ng-click="scrollSettingsSection('settings-general', $event)"><i class="fa fa-palette"></i><span>Appearance</span></a>
-            <a href="#settings-integrations" ng-click="scrollSettingsSection('settings-integrations', $event)"><i class="fa fa-cloud"></i><span>Integrations</span></a>
-            <a href="#settings-data" ng-click="scrollSettingsSection('settings-data', $event)"><i class="fa fa-database"></i><span>Data &amp; messages</span></a>
-            <a href="#settings-access" ng-click="scrollSettingsSection('settings-access', $event)"><i class="fa fa-user-shield"></i><span>Accounts</span></a>
-            <a href="#settings-monitoring" ng-click="scrollSettingsSection('settings-monitoring', $event)"><i class="fa fa-heartbeat"></i><span>Monitoring</span></a>
-            <a href="#settings-plugins" ng-click="scrollSettingsSection('settings-plugins', $event)"><i class="fa fa-plug"></i><span>Plugins</span></a>
+            <button type="button" ng-class="{active: activeSettingsSection == 'appearance'}" ng-click="setSettingsSection('appearance')"><i class="fa fa-palette"></i><span>Appearance</span></button>
+            <button type="button" ng-class="{active: activeSettingsSection.indexOf('integration-') == 0 || activeSettingsSection == 'plugins'}" ng-click="setSettingsSection('integration-rfs')"><i class="fa fa-cloud"></i><span>Integrations</span><i class="fa settings-nav-chevron" ng-class="(activeSettingsSection.indexOf('integration-') == 0 || activeSettingsSection == 'plugins') ? 'fa-chevron-up' : 'fa-chevron-down'"></i></button>
+            <div class="settings-nav-group" ng-show="activeSettingsSection.indexOf('integration-') == 0 || activeSettingsSection == 'plugins'"><span><i class="fa fa-building"></i> Agency Specific</span>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-rfs'}" ng-click="setSettingsSection('integration-rfs')"><i class="fa fa-fire"></i> NSW RFS</button>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-npws'}" ng-click="setSettingsSection('integration-npws')"><i class="fa fa-tree"></i> NSW NPWS</button>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-bom'}" ng-click="setSettingsSection('integration-bom')"><i class="fa fa-cloud-bolt"></i> BOM</button>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-water'}" ng-click="setSettingsSection('integration-water')"><i class="fa fa-water"></i> WaterNSW</button>
+            </div>
+            <div class="settings-nav-group" ng-show="activeSettingsSection.indexOf('integration-') == 0 || activeSettingsSection == 'plugins'"><span><i class="fa fa-puzzle-piece"></i> Other Integrations</span>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-aircraft'}" ng-click="setSettingsSection('integration-aircraft')"><i class="fa fa-plane"></i> Aircraft</button>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-radio'}" ng-click="setSettingsSection('integration-radio')"><i class="fa fa-broadcast-tower"></i> Radio</button>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-radar'}" ng-click="setSettingsSection('integration-radar')"><i class="fa fa-cloud-rain"></i> Weather radar</button>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-firms'}" ng-click="setSettingsSection('integration-firms')"><i class="fa fa-satellite"></i> NASA FIRMS</button>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-map'}" ng-click="setSettingsSection('integration-map')"><i class="fa fa-map"></i> Live map</button>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'plugins'}" ng-click="setSettingsSection('plugins')"><i class="fa fa-plug"></i> Plugins</button>
+            </div>
+            <button type="button" ng-class="{active: activeSettingsSection == 'data'}" ng-click="setSettingsSection('data')"><i class="fa fa-database"></i><span>Data &amp; messages</span></button>
+            <button type="button" ng-class="{active: activeSettingsSection == 'accounts'}" ng-click="setSettingsSection('accounts')"><i class="fa fa-user-shield"></i><span>Accounts</span></button>
+            <button type="button" ng-class="{active: activeSettingsSection == 'monitoring'}" ng-click="setSettingsSection('monitoring')"><i class="fa fa-heartbeat"></i><span>Monitoring</span></button>
           </nav>
           <style>
-            .settings-section-nav { background:rgba(239,243,247,.97); box-shadow:0 5px 12px rgba(26,45,64,.08); display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin:0 0 18px; padding:8px 0; position:sticky; top:54px; z-index:1020; }
-            .settings-section-nav a { align-items:center; background:#fff; border:1px solid #d9e0e7; border-radius:5px; color:#34495e; display:flex; flex-direction:column; gap:5px; justify-content:center; min-height:68px; padding:9px 6px; text-align:center; text-decoration:none; }
-            .settings-section-nav a:hover,.settings-section-nav a:focus { border-color:#337ab7; box-shadow:0 2px 8px rgba(0,0,0,.09); color:#23527c; }
+            .settings-layout { display:grid; grid-template-columns:220px minmax(0,1fr); gap:18px; align-items:start; }
+            .settings-mobile-select { display:none; }
+            .settings-content { min-width:0; }
+            .settings-section-nav { background:#fff; border:1px solid #d9e0e7; border-radius:6px; box-shadow:0 5px 12px rgba(26,45,64,.08); display:flex; flex-direction:column; gap:4px; padding:8px; position:sticky; top:70px; z-index:1020; }
+            .settings-section-nav button { background:transparent; border:0; border-radius:4px; color:#34495e; display:flex; gap:9px; align-items:center; min-height:42px; padding:9px 11px; text-align:left; width:100%; }
+            .settings-section-nav button:hover,.settings-section-nav button:focus { background:#edf4fa; color:#23527c; outline:0; }
+            .settings-section-nav button.active { background:#337ab7; color:#fff; font-weight:600; }
             .settings-section-nav i { font-size:19px; }
+            .settings-nav-group { border-top:1px solid #e4e9ee; margin-top:2px; padding:8px 0 2px; }
+            .settings-nav-group > span { color:#788897; display:block; font-size:11px; font-weight:700; letter-spacing:.04em; padding:0 11px 5px; text-transform:uppercase; }
+            .settings-section-nav .settings-nav-child { min-height:38px; padding-left:25px; }
+            .settings-nav-chevron { font-size:11px !important; margin-left:auto; }
             .settings-anchor { scroll-margin-top:150px; }
             .settings-save-bar { align-items:center; background:rgba(255,255,255,.97); border:1px solid #d9e0e7; border-radius:6px; bottom:16px; box-shadow:0 4px 18px rgba(0,0,0,.22); display:flex; gap:8px; padding:10px; position:fixed; right:18px; z-index:9990; }
-            @media (max-width:767px) { .settings-section-nav { display:flex; gap:6px; margin-left:-15px; margin-right:-15px; overflow-x:auto; padding:6px 15px; top:50px; -webkit-overflow-scrolling:touch; } .settings-section-nav a { flex:0 0 108px; min-height:48px; padding:6px 4px; } .settings-section-nav i { font-size:15px; } .settings-anchor { scroll-margin-top:120px; } .settings-save-bar .btn { flex:1; } }
+            @media (max-width:767px) { .settings-layout { display:block; } .settings-section-nav { display:none; } .settings-mobile-select { background:#fff; border:1px solid #d9e0e7; border-radius:6px; display:block; margin:0 0 14px; padding:10px; position:sticky; top:50px; z-index:1020; } .settings-mobile-select label { color:#34495e; font-size:12px; margin-bottom:5px; } .settings-save-bar { bottom:8px; left:8px; right:8px; } .settings-save-bar .btn { flex:1; } }
           </style>
+          <div class="settings-content">
           <form ng-submit="settingsSubmit()" class="form-horizontal" style="padding-bottom: 70px;">
 
-            <div class="panel panel-default settings-anchor" id="settings-general">
+            <div class="panel panel-default settings-anchor" id="settings-general" ng-show="activeSettingsSection == 'appearance'">
               <div class="panel-heading"><strong><i class="fa fa-cog"></i> General appearance and behaviour</strong></div>
               <div class="panel-body">
             <div class="form-group">
@@ -164,10 +196,29 @@
               </div>
             </div>
 
-            <h4 class="settings-anchor" id="settings-integrations">Self-hosted integrations and third-party APIs</h4>
-            <p class="help-block">Manage optional local services and external data sources used by PagerMon. Changes take effect on the next request; restart PagerMon after changing the radio database path.</p>
+            <section class="settings-anchor" id="settings-rfs" ng-show="activeSettingsSection == 'integration-rfs'">
+              <h4><i class="fa fa-fire"></i> NSW Rural Fire Service integration</h4>
+              <p class="help-block">Configure the official incident feed separately from Fire Danger Ratings and Total Fire Bans.</p>
+              <div class="panel panel-default">
+                <div class="panel-heading"><strong>Incident RSS feed</strong><span class="label label-info pull-right">Live incidents</span></div>
+                <div class="panel-body">
+                  <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Coverage</label><div class="col-xs-8 col-sm-9"><label class="checkbox-inline"><input type="checkbox" ng-model="settings.integrations.liveMap.rfsAllNsw"> Include all NSW incidents from the RFS feed</label><span class="help-block">Leave this off to use the Central West coverage area plus any additional areas below.</span></div></div>
+                  <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Additional areas</label><div class="col-xs-8 col-sm-9"><textarea rows="2" class="form-control" ng-model="settings.integrations.liveMap.rfsAdditionalAreas" ng-disabled="settings.integrations.liveMap.rfsAllNsw" placeholder="Orana; Tamworth; Coonamble"></textarea><span class="help-block">Council, locality or district names separated by semicolons, commas or new lines.</span></div></div>
+                </div>
+              </div>
+              <div class="panel panel-default">
+                <div class="panel-heading"><strong>Fire Danger Ratings and Total Fire Bans</strong><span class="label label-warning pull-right">AFDRS</span></div>
+                <div class="panel-body">
+                  <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable fire danger</label><div class="col-xs-8 col-sm-9"><label class="checkbox-inline"><input type="checkbox" ng-model="settings.integrations.bom.fireDangerEnabled"> Show official ratings and Total Fire Bans</label></div></div>
+                  <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Coverage</label><div class="col-xs-8 col-sm-9"><label class="checkbox-inline"><input type="checkbox" ng-model="settings.integrations.bom.fireDangerAllAreas" ng-disabled="!settings.integrations.bom.fireDangerEnabled"> Show all NSW fire danger areas</label><span class="help-block">Displays every district in the RFS feed and shades all available districts on the map.</span></div></div>
+                  <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Council areas</label><div class="col-xs-8 col-sm-9"><textarea rows="2" class="form-control" ng-model="settings.integrations.bom.fireDangerCouncils" ng-disabled="!settings.integrations.bom.fireDangerEnabled || settings.integrations.bom.fireDangerAllAreas" placeholder="Mid-Western; Bathurst; Lithgow; Orange; Dubbo Regional"></textarea><span class="help-block">Used when all NSW areas is off. Separate councils with semicolons, commas or new lines.</span></div></div>
+                </div>
+              </div>
+            </section>
 
-            <div class="panel panel-default">
+            <h4 class="settings-anchor" id="settings-integrations" ng-show="activeSettingsSection.indexOf('integration-') == 0 && activeSettingsSection != 'integration-rfs'">Integration settings</h4>
+
+            <div class="panel panel-default" ng-show="activeSettingsSection == 'integration-water'">
               <div class="panel-heading"><strong>WaterNSW</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable WaterNSW</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.waterNsw.enabled"> Show dam and river-gauge data</label></div></div></div>
@@ -177,7 +228,7 @@
               </div>
             </div>
 
-            <div class="panel panel-default">
+            <div class="panel panel-default" ng-show="activeSettingsSection == 'integration-bom'">
               <div class="panel-heading"><strong>BOM warnings</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable BOM warnings</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.bom.enabled"> Show official warning data</label></div></div></div>
@@ -187,21 +238,7 @@
               </div>
             </div>
 
-            <div class="panel panel-default">
-              <div class="panel-heading"><strong><i class="fa fa-fire"></i> NSW RFS</strong></div>
-              <div class="panel-body">
-                <h4>Incident RSS feed</h4>
-                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Coverage</label><div class="col-xs-8 col-sm-9"><label class="checkbox-inline"><input type="checkbox" ng-model="settings.integrations.liveMap.rfsAllNsw"> Include all NSW incidents from the RFS feed</label><span class="help-block">Leave this off to use the Central West coverage area plus any additional areas below.</span></div></div>
-                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Additional areas</label><div class="col-xs-8 col-sm-9"><textarea rows="2" class="form-control" ng-model="settings.integrations.liveMap.rfsAdditionalAreas" ng-disabled="settings.integrations.liveMap.rfsAllNsw" placeholder="Orana; Tamworth; Coonamble"></textarea><span class="help-block">Council, locality or district names separated by semicolons, commas or new lines.</span></div></div>
-                <hr>
-                <h4>Fire Danger Ratings and Total Fire Bans</h4>
-                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable fire danger</label><div class="col-xs-8 col-sm-9"><label class="checkbox-inline"><input type="checkbox" ng-model="settings.integrations.bom.fireDangerEnabled"> Show official ratings and Total Fire Bans</label></div></div>
-                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Coverage</label><div class="col-xs-8 col-sm-9"><label class="checkbox-inline"><input type="checkbox" ng-model="settings.integrations.bom.fireDangerAllAreas" ng-disabled="!settings.integrations.bom.fireDangerEnabled"> Show all NSW fire danger areas</label><span class="help-block">Displays every district in the RFS feed and shades all available districts on the map.</span></div></div>
-                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Council areas</label><div class="col-xs-8 col-sm-9"><textarea rows="2" class="form-control" ng-model="settings.integrations.bom.fireDangerCouncils" ng-disabled="!settings.integrations.bom.fireDangerEnabled || settings.integrations.bom.fireDangerAllAreas" placeholder="Mid-Western; Bathurst; Lithgow; Orange; Dubbo Regional"></textarea><span class="help-block">Used when all NSW areas is off. Separate councils with semicolons, commas or new lines.</span></div></div>
-              </div>
-            </div>
-
-            <div class="panel panel-default">
+            <div class="panel panel-default" ng-show="activeSettingsSection == 'integration-aircraft'">
               <div class="panel-heading"><strong>PiAware aircraft</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable PiAware</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.piaware.enabled"> Show live aircraft on the map</label></div></div></div>
@@ -211,7 +248,7 @@
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Maximum aircraft age</label><div class="col-xs-8 col-sm-9"><input type="number" min="5" max="600" class="form-control" ng-model="settings.integrations.piaware.maximumAgeSeconds" ng-disabled="!settings.integrations.piaware.enabled"><span class="help-block">Hide aircraft not seen within this many seconds.</span></div></div>
               </div>
             </div>
-            <div class="panel panel-default">
+            <div class="panel panel-default" ng-show="activeSettingsSection == 'integration-radio'">
               <div class="panel-heading"><strong>Radio integration</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable radio</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.radio.enabled"> Show authenticated users the Rdio Scanner call feed</label></div></div></div>
@@ -223,7 +260,7 @@
               </div>
             </div>
 
-            <div class="panel panel-default">
+            <div class="panel panel-default" ng-show="activeSettingsSection == 'integration-radar'">
               <div class="panel-heading"><strong>Weather radar</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable radar</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.weatherRadar.enabled"> Offer the RainViewer radar overlay on the live map</label></div></div></div>
@@ -233,7 +270,7 @@
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Visible by default</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.weatherRadar.defaultVisible" ng-disabled="!settings.integrations.weatherRadar.enabled"> Turn the overlay on when the live map loads</label></div></div></div>
               </div>
             </div>
-            <div class="panel panel-default">
+            <div class="panel panel-default" ng-show="activeSettingsSection == 'integration-firms'">
               <div class="panel-heading"><strong><i class="fa fa-satellite"></i> NASA FIRMS satellite hotspots</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable hotspots</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.nasaFirms.enabled"> Show near-real-time satellite thermal detections on the live map</label></div></div></div>
@@ -246,7 +283,7 @@
               </div>
             </div>
 
-            <div class="panel panel-default">
+            <div class="panel panel-default" ng-show="activeSettingsSection == 'integration-npws'">
               <div class="panel-heading"><strong><i class="fa fa-tree"></i> NSW NPWS incidents</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable NPWS</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.npws.enabled"> Add a compatible NPWS GeoJSON/JSON incident feed</label></div></div></div>
@@ -256,7 +293,7 @@
               </div>
             </div>
 
-            <div class="panel panel-default" ng-repeat="plugin in plugins" ng-if="plugin.name == 'SimpleWebhook' || plugin.name == 'AdvancedWebhook'">
+            <div class="panel panel-default" ng-show="activeSettingsSection == 'plugins'" ng-repeat="plugin in plugins" ng-if="plugin.name == 'SimpleWebhook' || plugin.name == 'AdvancedWebhook'">
               <div class="panel-heading"><strong><i class="fa fa-exchange-alt"></i> {{plugin.name == 'SimpleWebhook' ? 'Simple Webhook' : 'Advanced Webhook'}}</strong></div>
               <div class="panel-body">
                 <p class="help-block" ng-bind-html="plugin.description"></p>
@@ -273,7 +310,7 @@
               </div>
             </div>
 
-            <div class="panel panel-default">
+            <div class="panel panel-default" ng-show="activeSettingsSection == 'integration-map'">
               <div class="panel-heading"><strong><i class="fa fa-map"></i> Live map</strong></div>
               <div class="panel-body">
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Scroll sensitivity</label><div class="col-xs-8 col-sm-9"><input type="number" min="60" max="600" step="10" class="form-control" ng-model="settings.integrations.liveMap.wheelPxPerZoomLevel"><span class="help-block">Higher values make mouse-wheel and trackpad zoom less sensitive. Recommended: 360.</span></div></div>
@@ -291,6 +328,7 @@
               </div>
             </div>
 
+            <section ng-show="activeSettingsSection == 'data'">
             <div class="panel panel-default settings-anchor" id="settings-data">
               <div class="panel-heading"><strong><i class="fa fa-database"></i> Database</strong> <span class="text-warning pull-right">Restart required</span></div>
               <div class="panel-body">
@@ -629,6 +667,8 @@
               </div>
             </div>
 
+            </section>
+            <section ng-show="activeSettingsSection == 'accounts'">
             <div class="panel panel-default settings-anchor" id="settings-access">
               <div class="panel-heading"><strong><i class="fa fa-user-shield"></i> Accounts and access</strong></div>
               <div class="panel-body">
@@ -733,6 +773,8 @@
               </div>
             </div>
 
+            </section>
+            <section ng-show="activeSettingsSection == 'monitoring'">
             <h4 class="settings-anchor" id="settings-monitoring">Monitoring and diagnostics</h4>
             <div class="panel panel-default">
               <div class="panel-heading"><strong><i class="fa fa-heartbeat"></i> Service status</strong></div>
@@ -802,6 +844,8 @@
 
 
 
+            </section>
+            <section ng-show="activeSettingsSection == 'plugins'">
             <h4 class="settings-anchor" id="settings-plugins">Message processing and delivery plugins</h4>
             <div class="panel panel-default plugin-group" ng-repeat="plugin in plugins" ng-if="plugin.name != 'SimpleWebhook' && plugin.name != 'AdvancedWebhook'">
               <div class="panel-heading"><strong><i class="fa fa-plug"></i> {{plugin.name}}</strong></div>
@@ -842,10 +886,13 @@
               </div>
               </div>
             </div>
+            </section>
             <div class="settings-save-bar">
               <button type="submit" class="btn btn-success ">Save</button>
               <button type="button" class="btn btn-warning" ng-if="restartRequired" ng-click="restartPagerMon()">Restart PagerMon</button>
             </div>
           </form>
+          </div>
+          </div>
         </div>
 </div>

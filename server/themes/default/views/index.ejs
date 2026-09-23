@@ -282,6 +282,7 @@
               <span>{{message.alias || ''}}</span>
             </td>
             <td class="expand">
+                <span ng-if="message.cwInformational" class="label label-info"><i class="fa fa-info-circle"></i> INFORMATION</span>
                 <span ng-if="message.cwPriority != 'routine'" class="cw-priority-label">{{message.cwPriority}}</span>
                 <div highlight="message.message" replacement="init.replaceText" class="pagerMessage"></div>
             </td>

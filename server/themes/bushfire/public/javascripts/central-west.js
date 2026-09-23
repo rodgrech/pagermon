@@ -99,6 +99,11 @@
     return 'routine';
   }
 
+  function isInformationalPagerMessage(message) {
+    var text = String(message && message.message !== undefined ? message.message : message || '');
+    return /\b(?:PLANNED|SCHEDULED)\s+(?:POWER\s+)?OUTAGE\b|\bPLANNED\s+MAINTENANCE\b|\bSCHEDULED\s+MAINTENANCE\b|\bSERVICE\s+INTERRUPTION\b/i.test(text);
+  }
+
   function fireDangerColour(rating) {
     var value = String(rating || '').toUpperCase();
     return value === 'CATASTROPHIC' ? '#c62828' : value === 'EXTREME' ? '#ef7d22' : value === 'HIGH' ? '#f1c40f' : value === 'MODERATE' ? '#43a047' : '#8aa0ad';
@@ -331,6 +336,7 @@
 
   function decorateMessage(message) {
     message.cwIncident = parsePagerIncident(message);
+    message.cwInformational = isInformationalPagerMessage(message);
     message.cwPriority = priority(message.message);
     message.cwLocation = message.cwIncident.coordinates || location((message.cwIncident.locality || '') + ' ' + message.message + ' ' + (message.alias || ''));
     if (message.cwLocation && !message.cwLocation.name) message.cwLocation.name = message.cwIncident.locality || 'Incident location';
@@ -342,6 +348,7 @@
     var stopPages = [];
     (messages || []).forEach(function (message) {
       decorateMessage(message);
+      if (message.cwInformational) return;
       if (suppressTestIncidents && isTestPagerMessage(message)) return;
       if (isStopPage(message.message)) {
         stopPages.push(message);
@@ -813,5 +820,5 @@
   }
 
   function setForestryClosures(features) { forestryClosures = features || []; queueMapRecovery(false); }
-  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots, setForestryClosures: setForestryClosures};
+  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, isInformationalPagerMessage: isInformationalPagerMessage, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots, setForestryClosures: setForestryClosures};
 })(window);

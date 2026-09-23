@@ -47,11 +47,6 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
     .controller('AliasController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', 'FileSaver', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout, FileSaver) {
       $scope.loading = true;
       $scope.alertMessage = {};
-      $scope.scrollSettingsSection = function(id, event) {
-        if (event) event.preventDefault();
-        var section = document.getElementById(id);
-        if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
-      };
       $scope.aliasPage = 1;
       $scope.aliasPageSize = 100;
       $scope.aliasPageCount = function () {
@@ -925,6 +920,15 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
     // needs cleanup
     .controller('SettingsController', ['$scope', '$routeParams', 'Api', 'uuid', '$uibModal', '$filter', '$timeout', '$sanitize', function ($scope, $routeParams, Api, uuid, $uibModal, $filter, $timeout, $sanitize) {
       $scope.alertMessage = {};
+      var validSettingsSections = ['appearance', 'integration-rfs', 'integration-npws', 'integration-bom', 'integration-water', 'integration-aircraft', 'integration-radio', 'integration-radar', 'integration-firms', 'integration-map', 'plugins', 'data', 'accounts', 'monitoring'];
+      var storedSettingsSection = window.sessionStorage.getItem('pagermon-settings-section');
+      $scope.activeSettingsSection = validSettingsSections.indexOf(storedSettingsSection) !== -1 ? storedSettingsSection : 'appearance';
+      $scope.setSettingsSection = function(section) {
+        if (validSettingsSections.indexOf(section) === -1) section = 'appearance';
+        $scope.activeSettingsSection = section;
+        window.sessionStorage.setItem('pagermon-settings-section', section);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+      };
       Api.Settings.get(null, function(results) {
         if (!results.settings.messages.replaceText)
           results.settings.messages.replaceText = [{}];
