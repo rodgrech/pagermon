@@ -310,6 +310,12 @@ body.cw-dark .whats-new-modal .modal-body { color: #dce6ef; }
   .cw-radio-call { grid-template-columns: 1fr; gap: 9px; }
   .cw-radio-call-title { align-items: flex-start; flex-direction: column; gap: 2px; }
 }
+.cw-incident-archive-search { display: grid; grid-template-columns: minmax(260px, 1fr) 150px auto; gap: 8px; margin-bottom: 12px; align-items: center; }
+.cw-incident-archive-search .form-control { width: 100%; }
+.cw-archive-summary { margin: -2px 0 12px; color: #9eb3cc; font-size: 12px; }
+.cw-incident-expired { opacity: .82; border-style: dashed; }
+.cw-expired-label { margin-right: 5px; background: #697586; color: #fff; }
+@media (max-width: 700px) { .cw-incident-archive-search { grid-template-columns: 1fr; } .cw-incident-archive-search .input-group { width: 100%; } }
 /* Keep agency artwork aligned with the standard unknown-agency icon. */
 .agency-logo,
 .agency-logo-rfs,

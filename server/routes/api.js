@@ -1838,6 +1838,53 @@ router.route('/central-west/dashboard')
       });
   });
 
+// Search historical pager traffic for incidents that have fallen outside the
+// active incident window. Keeping this separate from the live dashboard means
+// an archive search cannot make the normal incident page noisy or expensive.
+router.route('/central-west/incident-archive')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var queryText = String(req.query.q || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+    var days = Math.max(1, Math.min(parseInt(req.query.days, 10) || 30, 365));
+    var limit = Math.max(1, Math.min(parseInt(req.query.limit, 10) || 1000, 3000));
+    var since = Math.floor(Date.now() / 1000) - (days * 86400);
+    var hideAddresses = HideCapcode && (!req.isAuthenticated() || req.user.role !== 'admin');
+    var pattern = '%' + queryText + '%';
+    var archiveQuery = db.from('messages')
+      .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
+      .select('messages.id', 'messages.timestamp', 'messages.message', 'messages.source',
+        'messages.address', 'messages.alias_id', 'capcodes.alias', 'capcodes.agency',
+        'capcodes.icon', 'capcodes.color')
+      .where('messages.timestamp', '>=', since);
+
+    if (queryText) {
+      archiveQuery.andWhere(function () {
+        this.where('messages.message', 'like', pattern)
+          .orWhere('messages.source', 'like', pattern)
+          .orWhere('messages.address', 'like', pattern)
+          .orWhere('capcodes.alias', 'like', pattern)
+          .orWhere('capcodes.agency', 'like', pattern);
+      });
+    }
+
+    archiveQuery.orderBy('messages.timestamp', 'desc').limit(limit + 1)
+      .then(function (rows) {
+        var truncated = rows.length > limit;
+        rows = rows.slice(0, limit);
+        if (hideAddresses) rows.forEach(function (row) { delete row.address; });
+        res.set('Cache-Control', 'private, no-store');
+        res.status(200).json({
+          query: queryText,
+          days: days,
+          truncated: truncated,
+          messages: rows
+        });
+      })
+      .catch(function (err) {
+        logger.main.error(err);
+        res.status(500).send(err);
+      });
+  });
+
 // Resolve pager-supplied street addresses once on the server. Results are
 // persisted beside config.json so browsers never contact the geocoder and a
 // busy incident does not generate one lookup per viewer.

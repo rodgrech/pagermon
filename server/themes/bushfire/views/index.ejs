@@ -70,9 +70,16 @@
         </div>
 
         <div class="cw-panel" ng-show="dashboardView == 'incidents'">
-          <div class="cw-empty" ng-if="!incidents.length">No recent incidents could be grouped yet.</div>
-          <article class="cw-incident cw-priority-{{incident.priority}}" ng-repeat="incident in incidents | filter:incidentTimelineFilter">
-            <div class="cw-incident-heading"><span class="cw-priority-label">{{incident.priority}}</span> <span class="label label-default" ng-if="incident.status == 'stopped'">ALL PAGED UNITS STOPPED</span> <span class="label label-default" ng-if="incident.status == 'partial-stop'">{{incident.stoppedBrigades.join(', ')}} STOPPED</span> <strong>{{incident.location || incident.agency || 'Unclassified incident'}}</strong><span class="pull-right">{{incident.messages.length}} page<span ng-if="incident.messages.length != 1">s</span></span></div>
+          <form class="cw-incident-archive-search" ng-submit="searchIncidentArchive()">
+            <div class="input-group"><input class="form-control" type="search" ng-model="incidentArchiveQuery" placeholder="Search current and expired incidents" aria-label="Search incident archive"><span class="input-group-btn"><button class="btn btn-primary" type="submit" ng-disabled="incidentArchiveLoading"><i class="fa" ng-class="incidentArchiveLoading ? 'fa-spinner fa-spin' : 'fa-search'"></i> Search archive</button></span></div>
+            <select class="form-control" ng-model="incidentArchiveDays" aria-label="Archive period"><option value="7">Past 7 days</option><option value="30">Past 30 days</option><option value="90">Past 90 days</option><option value="365">Past year</option></select>
+            <button class="btn btn-default" type="button" ng-if="incidentArchiveMode" ng-click="clearIncidentArchive()"><i class="fa fa-times"></i> Back to active</button>
+          </form>
+          <div class="cw-archive-summary" ng-if="incidentArchiveMode"><strong>{{displayedIncidents.length}}</strong> matching incident<span ng-if="displayedIncidents.length != 1">s</span><span ng-if="incidentArchiveTruncated"> · showing the newest matches only</span></div>
+          <div class="cw-empty" ng-if="incidentArchiveError">{{incidentArchiveError}}</div>
+          <div class="cw-empty" ng-if="!incidentArchiveLoading && !displayedIncidents.length">{{incidentArchiveMode ? 'No matching incidents were found in that period.' : 'No recent incidents could be grouped yet.'}}</div>
+          <article class="cw-incident cw-priority-{{incident.priority}}" ng-class="{'cw-incident-expired': incident.expired}" ng-repeat="incident in displayedIncidents | filter:incidentTimelineFilter">
+            <div class="cw-incident-heading"><span class="cw-priority-label">{{incident.priority}}</span> <span class="label label-default cw-expired-label" ng-if="incident.expired">EXPIRED</span> <span class="label label-default" ng-if="incident.status == 'stopped'">ALL PAGED UNITS STOPPED</span> <span class="label label-default" ng-if="incident.status == 'partial-stop'">{{incident.stoppedBrigades.join(', ')}} STOPPED</span> <strong>{{incident.location || incident.agency || 'Unclassified incident'}}</strong><span class="pull-right">{{incident.messages.length}} page<span ng-if="incident.messages.length != 1">s</span></span></div>
             <div class="cw-incident-meta">{{incident.agency || 'Unknown agency'}} · {{incident.lastSeen | date:'dd MMM HH:mm'}}</div>
             <div class="cw-correlation cw-correlation-combined" ng-if="incident.rfsMatch"><i class="fa fa-link"></i> <strong>Combined with official RFS incident:</strong> <a ng-href="{{incident.rfsMatch.link}}" target="_blank" rel="noopener">{{incident.rfsMatch.title}}</a> · {{incident.rfsMatch.category}} · approximately {{incident.rfsMatch.distanceKm}} km<div ng-if="incident.rfsMatch.description">{{incident.rfsMatch.description}}</div></div>
             <div class="cw-incident-message">{{incident.messages[0].message}}</div>
@@ -393,6 +400,7 @@
                   MessageSearch: $resource('/api/messageSearch/'),
                   Agencies: $resource('/api/capcodes/agency'),
                   Dashboard: $resource('/api/central-west/dashboard'),
+                  IncidentArchive: $resource('/api/central-west/incident-archive'),
                   PagerGeocodes: $resource('/api/central-west/pager-geocodes'),
                   DashboardConfig: $resource('/api/central-west/dashboard-config'),
                   BomWarnings: $resource('/api/central-west/bom-warnings'),
@@ -449,6 +457,12 @@
       $scope.health = { state: 'loading', label: 'Checking receiver', lastSeen: 'Unknown', uptime: 'Unknown' };
       $scope.receivers = [];
       $scope.incidents = [];
+      $scope.displayedIncidents = [];
+      $scope.incidentArchiveQuery = '';
+      $scope.incidentArchiveDays = '30';
+      $scope.incidentArchiveMode = false;
+      $scope.incidentArchiveLoading = false;
+      $scope.incidentArchiveError = '';
       $scope.unknownCapcodes = [];
       $scope.bomWarnings = [];
       $scope.bomStatewideCount = 0;
@@ -589,7 +603,20 @@
         $scope.incidents = incidents.filter(function(incident) {
           return !!incident.rfsMatch || (incident.lastSeen && incident.lastSeen.getTime() >= cutoff);
         });
+        if (!$scope.incidentArchiveMode) $scope.displayedIncidents = $scope.incidents;
       }
+      $scope.searchIncidentArchive = function () {
+        $scope.incidentArchiveLoading = true; $scope.incidentArchiveError = '';
+        Api.IncidentArchive.get({q: $scope.incidentArchiveQuery || '', days: Number($scope.incidentArchiveDays) || 30, limit: 1000}).$promise.then(function(data) {
+          angular.forEach(data.messages || [], CentralWestAlerts.decorateMessage);
+          var results = CentralWestAlerts.groupIncidents(data.messages || []);
+          CentralWestAlerts.correlateIncidents(results, $scope.rfsIncidents || [], $scope.removedRfsIncidents || []);
+          var cutoff = Date.now() - Math.max(1, Number($scope.pagerIncidentExpiryHours) || 24) * 60 * 60 * 1000;
+          angular.forEach(results, function(incident) { incident.expired = !incident.rfsMatch && (!incident.lastSeen || incident.lastSeen.getTime() < cutoff); incident.timeline = (incident.messages || []).map(function(message) { return {kind: 'pager', timestamp: Number(message.timestamp), agency: message.agency, message: message.message}; }).sort(function(a, b) { return a.timestamp - b.timestamp; }); });
+          $scope.displayedIncidents = results; $scope.incidentArchiveTruncated = data.truncated === true; $scope.incidentArchiveMode = true;
+        }, function() { $scope.displayedIncidents = []; $scope.incidentArchiveMode = true; $scope.incidentArchiveError = 'The incident archive could not be searched right now.'; }).finally(function() { $scope.incidentArchiveLoading = false; });
+      };
+      $scope.clearIncidentArchive = function () { $scope.incidentArchiveMode = false; $scope.incidentArchiveError = ''; $scope.incidentArchiveTruncated = false; $scope.displayedIncidents = $scope.incidents; };
       function radioKeys() {
         return ($scope.radioCalls || []).map(function(call) { return itemKey(call, [call.timestamp, call.source, call.talkgroup].join('|')); }).filter(Boolean);
       }
