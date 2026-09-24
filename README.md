@@ -8,13 +8,27 @@ This fork preserves the original PagerMon workflow while modernising its depende
 
 ## Screenshots
 
-### Administration dashboard
+### Operations dashboard
 
-![PagerMon administration dashboard](docs/images/admin-dashboard.png)
+| Pager feed | Grouped incidents |
+| --- | --- |
+| ![Central West Alerts pager feed with sensitive identifiers redacted](docs/images/feed-redacted.png) | ![Central West Alerts grouped incident timeline with street addresses redacted](docs/images/incidents-redacted.png) |
 
-### Self-hosted integrations and third-party APIs
+### Situational-awareness views
 
-![PagerMon integration settings](docs/images/integration-settings.png)
+| Live multi-layer map | Fire danger ratings |
+| --- | --- |
+| ![Central West Alerts live map with incident, fire danger, lightning, aircraft, water and radar layers](docs/images/live-map.png) | ![NSW fire danger district ratings in Central West Alerts](docs/images/fire-danger-dashboard.png) |
+
+![WaterNSW dam storage and algae alerts in Central West Alerts](docs/images/waternsw-dashboard.png)
+
+### Administration
+
+| Appearance and PWA settings | Receiver monitoring |
+| --- | --- |
+| ![Central West Alerts appearance settings with secrets redacted](docs/images/admin-appearance-redacted.png) | ![Central West Alerts receiver monitoring with receiver identifiers redacted](docs/images/admin-monitoring-redacted.png) |
+
+![Pager capcode alias administration with capcodes redacted](docs/images/admin-aliases-redacted.png)
 
 ## Highlights
 
@@ -25,7 +39,7 @@ This fork preserves the original PagerMon workflow while modernising its depende
 - Duplicate filtering, text highlighting and regex replacement
 - Optional Australian phone-number redaction
 - Incident grouping, discovery queue and locality detection
-- Live map with optional RFS, BOM, WaterNSW, NASA FIRMS, PiAware and weather-radar data
+- Live map with optional RFS, BOM, WaterNSW, Xweather lightning, NASA FIRMS, PiAware and weather-radar data
 - Rdio Scanner call-feed integration
 - Browser/PWA support with selectable icons and installable themes
 - Default, Dark Blue and Bushfire themes
