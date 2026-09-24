@@ -1,7 +1,8 @@
 {
-  "version": "1.9.0",
-  "title": "Central West Alerts 1.9.0",
+  "version": "1.9.1",
+  "title": "Central West Alerts 1.9.1",
   "changes": [
+    "Added an optional Xweather lightning layer with age-coloured detections, responsive details, secure single-key configuration, shared server caching and Vaisala attribution.",
     "Added archive search for current and expired incidents, with 7-day, 30-day, 90-day and one-year ranges.",
     "Classified planned outage and maintenance notices as informational pages so they remain in Feed without being attached to incidents or map jobs.",
     "Moved NSW RFS controls into a dedicated settings category with separate Incident RSS Feed and Fire Danger sections.",
