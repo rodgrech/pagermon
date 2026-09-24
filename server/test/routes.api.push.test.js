@@ -26,19 +26,19 @@ describe('Web Push API', () => {
     });
   });
 
-  it('stores one capcode preference and a device subscription', done => {
+  it('stores multiple capcode preferences and a device subscription', done => {
     passportStub.login({id: 2, username: 'useractive', role: 'user'});
     nconf.set('notifications:webPush:enabled', true);
     nconf.set('notifications:webPush:publicKey', 'test-public-key');
     nconf.save();
     chai.request(server).post('/api/push/subscription').send({
-      capcode: '9999999',
+      capcodes: ['9999999', '8888888', '7777777'],
       subscription: {endpoint: 'https://push.example/device', keys: {p256dh: 'key', auth: 'secret'}}
     }).end((err, res) => {
       should.not.exist(err);
       res.status.should.eql(200);
-      db('users').where('id', 2).first().then(user => {
-        user.pushcapcode.should.eql('9999999');
+      db('user_push_capcodes').where('user_id', 2).orderBy('id').then(capcodes => {
+        capcodes.map(row => row.capcode).should.deep.eql(['9999999', '8888888', '7777777']);
         return db('push_subscriptions').where('user_id', 2).first();
       }).then(subscription => {
         subscription.endpoint.should.eql('https://push.example/device');

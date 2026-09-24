@@ -42,10 +42,12 @@ function sendForMessage(message) {
   if (!configure() || !message || !message.address) return Promise.resolve([]);
   return db('push_subscriptions')
     .join('users', 'users.id', 'push_subscriptions.user_id')
+    .join('user_push_capcodes', 'user_push_capcodes.user_id', 'users.id')
+    .distinct()
     .select('push_subscriptions.endpoint', 'push_subscriptions.p256dh', 'push_subscriptions.auth')
     .where('users.status', 'active')
     .where('users.approvalpending', false)
-    .where('users.pushcapcode', String(message.address))
+    .where('user_push_capcodes.capcode', String(message.address))
     .then(function(subscriptions) {
       return sendSubscriptions(subscriptions, {
         title: message.alias || message.agency || ('Capcode ' + message.address),

@@ -42,6 +42,8 @@ This fork preserves the original PagerMon workflow while modernising its depende
 - Live map with optional RFS, BOM, WaterNSW, Xweather lightning, NASA FIRMS, PiAware and weather-radar data
 - Rdio Scanner call-feed integration
 - Browser/PWA support with selectable icons and installable themes
+- Account-based new-user welcome with iPhone/Android installation guidance and a mandatory operational-safety reminder
+- Web push alerts for up to three pager capcodes per account, shared across subscribed devices
 - Default, Dark Blue and Bushfire themes
 - Per-member Web Push notifications for a selected capcode
 - Optional administrator approval for new accounts

@@ -2,6 +2,7 @@ var confFile = './config/config.json';
 var express = require('express');
 var router = express.Router();
 var nconf = require('nconf');
+var db = require('../knex/knex.js');
 
 nconf.file({ file: confFile });
 nconf.load();
@@ -51,6 +52,24 @@ router.get('/service-status', function (req, res) {
     }
 
     res.render('service-status', { pageTitle: 'Service Status' });
+});
+
+router.get('/pwa-help', function (req, res) {
+    if (!req.isAuthenticated()) {
+        req.flash('loginMessage', 'You need to be logged in to view the app setup guide');
+        return res.redirect('/auth/login');
+    }
+    res.render('pwa-help', { pageTitle: 'App setup', suppressAutomaticModals: true });
+});
+
+router.post('/welcome/acknowledge', function (req, res) {
+    if (!req.isAuthenticated()) return res.status(401).json({error: 'Authentication required.'});
+    db('users').where('id', req.user.id).update({welcome_acknowledged: true}).then(function () {
+        req.user.welcome_acknowledged = true;
+        res.json({status: 'ok'});
+    }).catch(function (error) {
+        res.status(500).json({error: error.message});
+    });
 });
 
 module.exports = router;

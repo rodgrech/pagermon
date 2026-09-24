@@ -156,6 +156,12 @@ function selectedPwaTheme() {
   }
   return selected;
 }
+if (typeof nconf.get('global:newUserWelcomeEnabled') === 'undefined') {
+  nconf.set('global:newUserWelcomeEnabled', true);
+  nconf.set('global:newUserWelcomeTitle', 'Welcome to ' + (nconf.get('global:monitorName') || 'PagerMon'));
+  nconf.set('global:newUserWelcomeContent', 'This service provides supplementary situational awareness from pager and public data feeds.');
+  nconf.save();
+}
 
 function selectedPwaVersion() {
   var configured = Number(nconf.get('global:pwaIconVersion')) || 1;
@@ -212,6 +218,10 @@ app.use(function (req, res, next) {
   res.locals.publicBaseUrl = req.protocol + '://' + req.get('host');
   res.locals.whatsNew = whatsNew;
   res.locals.whatsNewEnabled = nconf.get('global:whatsNewEnabled') !== false;
+  res.locals.newUserWelcomeEnabled = nconf.get('global:newUserWelcomeEnabled') !== false;
+  res.locals.newUserWelcomeTitle = nconf.get('global:newUserWelcomeTitle') || 'Welcome to PagerMon';
+  res.locals.newUserWelcomeContent = nconf.get('global:newUserWelcomeContent') || 'This service provides supplementary situational awareness from pager and public data feeds.';
+  res.locals.suppressAutomaticModals = false;
   next();
 });
 //Admin Socket

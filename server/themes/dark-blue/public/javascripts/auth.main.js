@@ -202,22 +202,34 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
     .controller('ProfileController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', '$window', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout, $window) {
         $scope.alertMessage = {};
         $scope.loading = true;
-        $scope.push = {supported: 'serviceWorker' in navigator && 'PushManager' in window, enabled: false, subscribed: false, capcode: '', capcodes: []};
+        $scope.push = {supported: 'serviceWorker' in navigator && 'PushManager' in window, enabled: false, subscribed: false, capcode: '', selectedCapcodes: [], capcodes: []};
 
         $scope.filteredPushCapcodes = function() {
             var query = String($scope.push.capcodeSearch || '').toLowerCase().trim();
-            var selected = String($scope.push.capcode || '');
             var rows = $scope.push.capcodes || [];
             var result = [];
-            for (var selectedIndex = 0; selected && selectedIndex < rows.length; selectedIndex += 1) {
-                if (String(rows[selectedIndex].address) === selected) { result.push(rows[selectedIndex]); break; }
-            }
             for (var i = 0; i < rows.length && result.length < 100; i += 1) {
                 var item = rows[i];
                 var matches = !query || [item.address, item.alias, item.agency].join(' ').toLowerCase().indexOf(query) !== -1;
-                if (matches && String(item.address) !== selected) result.push(item);
+                if (matches && $scope.push.selectedCapcodes.indexOf(String(item.address)) === -1) result.push(item);
             }
             return result;
+        };
+
+        $scope.addPushCapcode = function() {
+            var capcode = String($scope.push.capcode || '');
+            if (!capcode || $scope.push.selectedCapcodes.indexOf(capcode) !== -1) return;
+            if ($scope.push.selectedCapcodes.length >= 3) return pushMessage('You can follow up to three pagers.', 'alert-warning');
+            $scope.push.selectedCapcodes.push(capcode);
+            $scope.push.capcode = '';
+            $scope.push.capcodeSearch = '';
+        };
+        $scope.removePushCapcode = function(capcode) {
+            $scope.push.selectedCapcodes = $scope.push.selectedCapcodes.filter(function(value) { return value !== capcode; });
+        };
+        $scope.pushCapcodeLabel = function(capcode) {
+            var match = ($scope.push.capcodes || []).find(function(item) { return String(item.address) === String(capcode); });
+            return match ? capcode + ' — ' + (match.alias || 'Unknown') : capcode;
         };
 
         function pushMessage(text, type) {
@@ -236,7 +248,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
             Api.PushConfig.get().$promise.then(function(config) {
                 $scope.push.enabled = config.enabled;
                 $scope.push.publicKey = config.publicKey;
-                $scope.push.capcode = config.capcode || '';
+                $scope.push.selectedCapcodes = config.capcodes || (config.capcode ? [config.capcode] : []);
                 if (!$scope.push.supported || !config.enabled) return;
                 Api.PushCapcodes.query().$promise.then(function(rows) { $scope.push.capcodes = rows; });
                 navigator.serviceWorker.ready.then(function(registration) {
@@ -248,7 +260,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         }
 
         $scope.enablePush = function() {
-            if (!$scope.push.capcode) return pushMessage('Select one capcode first.', 'alert-warning');
+            if (!$scope.push.selectedCapcodes.length) return pushMessage('Add at least one pager first.', 'alert-warning');
             Notification.requestPermission().then(function(permission) {
                 if (permission !== 'granted') throw new Error('Notification permission was not granted.');
                 return navigator.serviceWorker.ready;
@@ -257,10 +269,10 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                     return existing || registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: applicationServerKey($scope.push.publicKey)});
                 });
             }).then(function(subscription) {
-                return Api.PushSubscription.save({subscription: subscription.toJSON(), capcode: $scope.push.capcode}).$promise;
+                return Api.PushSubscription.save({subscription: subscription.toJSON(), capcodes: $scope.push.selectedCapcodes}).$promise;
             }).then(function() {
                 $scope.push.subscribed = true;
-                pushMessage('Push notifications saved for capcode ' + $scope.push.capcode + '.', 'alert-success');
+                pushMessage('Push notifications saved for ' + $scope.push.selectedCapcodes.length + ' pager' + ($scope.push.selectedCapcodes.length === 1 ? '.' : 's.'), 'alert-success');
             }).catch(function(error) {
                 $scope.$evalAsync(function() { pushMessage(error.data && error.data.error || error.message || 'Unable to enable push notifications.', 'alert-danger'); });
             });

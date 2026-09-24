@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<%- include('global/header.ejs') %>
+</head>
+<body id="pwa-help-body">
+<%- include('global/menu.ejs') %>
+<div id="content" class="container-fluid">
+  <main class="cw-guide-page">
+    <h2><i class="fa fa-mobile"></i> Install <%= monitorName || 'PagerMon' %></h2>
+    <p class="lead">Add the dashboard to your Home Screen for app-like access. You must install and open the Home Screen app before enabling notifications on an iPhone.</p>
+    <div class="row">
+      <div class="col-sm-6"><section class="panel panel-default"><div class="panel-heading"><strong><i class="fa fa-apple"></i> iPhone or iPad</strong></div><div class="panel-body"><ol><li>Open this site in <strong>Safari</strong>.</li><li>Tap the <strong>Share</strong> button.</li><li>Scroll down and tap <strong>Add to Home Screen</strong>.</li><li>Confirm with <strong>Add</strong>, then open the new Home Screen icon.</li><li>Sign in, open <strong>My Profile</strong>, and enable pager push notifications if offered.</li></ol></div></section></div>
+      <div class="col-sm-6"><section class="panel panel-default"><div class="panel-heading"><strong><i class="fa fa-android"></i> Android</strong></div><div class="panel-body"><ol><li>Open this site in <strong>Chrome</strong>.</li><li>Tap the browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li><li>Confirm the installation, then open the app icon.</li><li>Sign in, open <strong>My Profile</strong>, and enable pager push notifications.</li><li>Allow notifications when Android asks.</li></ol></div></section></div>
+    </div>
+    <div class="alert alert-danger"><strong><i class="fa fa-exclamation-triangle"></i> Never rely on this service alone.</strong> Pager, map, aircraft, weather and public-feed information may be delayed, incomplete or inaccurate. Do not use it as the primary source for emergency information or for safety, operational or deployment decisions. Confirm information with official emergency services and follow their directions.</div>
+    <p><a class="btn btn-primary" href="/"><i class="fa fa-arrow-left"></i> Return to dashboard</a></p>
+  </main>
+</div>
+<%- include('global/footer.ejs') %>

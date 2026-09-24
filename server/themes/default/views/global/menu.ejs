@@ -27,6 +27,8 @@
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="fa fa-fw fa-user"></span> <%= user.username%> <span class="caret"></span></a>
             <ul class="dropdown-menu">
               <li><a href="/auth/profile"><span class="fa fa-fw fa-cogs"></span> My Profile</a></li>
+              <li><a href="/pwa-help"><span class="fa fa-fw fa-mobile"></span> App setup guide</a></li>
+              <li><a href="#" data-toggle="modal" data-target="#newUserWelcomeModal"><span class="fa fa-fw fa-info-circle"></span> Welcome &amp; safety</a></li>
               <li><a href="/service-status"><span class="fa fa-fw fa-heartbeat"></span> Service Status</a></li>
               <li><a href="/auth/reset"><span class="fa fa-fw fa-key"></span> Reset Password</a></li>
             </ul>
@@ -43,6 +45,17 @@
   </div>
 </nav>
 
+<% if (login) { %>
+<div class="modal fade" id="newUserWelcomeModal" tabindex="-1" role="dialog" aria-labelledby="newUserWelcomeTitle" data-backdrop="static" data-keyboard="false">
+  <div class="modal-dialog" role="document"><div class="modal-content whats-new-modal welcome-modal">
+    <div class="modal-header"><h4 class="modal-title" id="newUserWelcomeTitle"><i class="fa fa-hand-paper-o"></i> <%= newUserWelcomeTitle %></h4></div>
+    <div class="modal-body"><p><%= newUserWelcomeContent %></p><div class="alert alert-danger welcome-safety"><strong><i class="fa fa-exclamation-triangle"></i> Important safety notice</strong><br>This service is supplementary only. Do not use it as your primary source for emergency information or to make safety, operational or deployment decisions. Information may be delayed, incomplete or inaccurate. Always confirm conditions with official emergency services and follow their directions.</div><h5><strong><i class="fa fa-mobile"></i> Install the app</strong></h5><p>Add this site to your Home Screen for quicker access and to enable supported push notifications.</p><p><a class="btn btn-default" href="/pwa-help"><i class="fa fa-book"></i> iPhone &amp; Android setup instructions</a></p></div>
+    <div class="modal-footer"><button type="button" class="btn btn-primary" id="acknowledgeWelcome">I understand</button></div>
+  </div></div>
+</div>
+<script>$(function(){var showWelcome=<%- JSON.stringify(newUserWelcomeEnabled && !user.welcome_acknowledged && !suppressAutomaticModals) %>;if(showWelcome)$('#newUserWelcomeModal').modal('show');$('#acknowledgeWelcome').on('click',function(){var button=$(this).prop('disabled',true);$.post('/welcome/acknowledge').done(function(){$('#newUserWelcomeModal').modal('hide');$('#newUserWelcomeModal').data('welcomeAcknowledged',true);}).fail(function(){button.prop('disabled',false);window.alert('The acknowledgement could not be saved. Please try again.');});});});</script>
+<% } %>
+
 <% if (login && whatsNewEnabled && whatsNew && whatsNew.version) { %>
 <div class="modal fade" id="whatsNewModal" tabindex="-1" role="dialog" aria-labelledby="whatsNewTitle">
   <div class="modal-dialog" role="document"><div class="modal-content whats-new-modal">
@@ -55,7 +68,9 @@
 $(function () {
   var key = 'pagermon-whats-new:' + <%- JSON.stringify(String(user.id || user.username || 'user')) %>;
   var version = <%- JSON.stringify(String(whatsNew.version)) %>;
-  if (window.localStorage && localStorage.getItem(key) !== version) $('#whatsNewModal').modal('show');
+  var showWhatsNew = function () { if (window.localStorage && localStorage.getItem(key) !== version) $('#whatsNewModal').modal('show'); };
+  if (<%- JSON.stringify(suppressAutomaticModals) %>) return;
+  if (<%- JSON.stringify(newUserWelcomeEnabled && !user.welcome_acknowledged) %>) $('#newUserWelcomeModal').one('hidden.bs.modal', showWhatsNew); else showWhatsNew();
   $('#whatsNewModal').on('hidden.bs.modal', function () { if (window.localStorage) localStorage.setItem(key, version); });
 });
 </script>

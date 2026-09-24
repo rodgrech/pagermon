@@ -58,18 +58,19 @@
     <div class="alert alert-info" ng-if="push.supported && !push.enabled">Push notifications are currently disabled by an administrator.</div>
     <div ng-if="push.supported && push.enabled" class="form-horizontal">
       <div class="form-group">
-        <label class="col-xs-4 col-sm-3 control-label">Capcode</label>
+        <label class="col-xs-4 col-sm-3 control-label">Pagers</label>
         <div class="col-xs-8 col-sm-9">
+          <div class="list-group" ng-if="push.selectedCapcodes.length" style="margin-bottom: 10px;"><div class="list-group-item" ng-repeat="capcode in push.selectedCapcodes track by capcode"><span>{{pushCapcodeLabel(capcode)}}</span><button type="button" class="btn btn-danger btn-xs pull-right" ng-click="removePushCapcode(capcode)" aria-label="Remove pager"><i class="fa fa-times"></i></button></div></div>
           <input class="form-control" type="search" ng-model="push.capcodeSearch" placeholder="Search capcode, alias or agency…" autocomplete="off" style="margin-bottom: 8px;">
-          <select class="form-control" ng-model="push.capcode">
-            <option value="">Select one capcode</option>
+          <div class="input-group"><select class="form-control" ng-model="push.capcode" ng-disabled="push.selectedCapcodes.length >= 3">
+            <option value="">Select a pager to add</option>
             <option ng-repeat="item in filteredPushCapcodes() track by item.address" value="{{item.address}}">{{item.address}} — {{item.alias || 'Unknown'}}{{item.agency ? ' (' + item.agency + ')' : ''}}</option>
-          </select>
-          <span class="help-block">Type above to search. Up to 100 matches are shown. Your account can follow one capcode, shared by every subscribed device.</span>
+          </select><span class="input-group-btn"><button type="button" class="btn btn-primary" ng-click="addPushCapcode()" ng-disabled="!push.capcode || push.selectedCapcodes.length >= 3"><i class="fa fa-plus"></i> Add</button></span></div>
+          <span class="help-block">Follow up to three pagers. These choices are shared by every device subscribed to your account.</span>
         </div>
       </div>
       <div class="btn-group">
-        <button type="button" class="btn btn-success" ng-click="enablePush()"><i class="fa fa-bell"></i> {{push.subscribed ? 'Save capcode' : 'Enable on this device'}}</button>
+        <button type="button" class="btn btn-success" ng-click="enablePush()"><i class="fa fa-bell"></i> {{push.subscribed ? 'Save pagers' : 'Enable on this device'}}</button>
         <button type="button" class="btn btn-default" ng-if="push.subscribed" ng-click="testPush()">Send test</button>
         <button type="button" class="btn btn-danger" ng-if="push.subscribed" ng-click="disablePush()">Disable this device</button>
       </div>

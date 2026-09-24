@@ -167,6 +167,12 @@
                 <span class="help-block">Turn this off to disable the release popup for everyone on this instance.</span>
               </div>
             </div>
+            <div class="form-group">
+              <label for="global.newUserWelcomeEnabled" class="col-xs-4 col-sm-3 control-label">New-user welcome</label>
+              <div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" name="global.newUserWelcomeEnabled" ng-model="settings.global.newUserWelcomeEnabled"> Show a welcome and safety notice until each account acknowledges it</label></div><span class="help-block">The setup guide and safety notice remain available from the user menu after acknowledgement.</span></div>
+            </div>
+            <div class="form-group" ng-hide="!settings.global.newUserWelcomeEnabled"><label for="global.newUserWelcomeTitle" class="col-xs-4 col-sm-3 control-label">Welcome title</label><div class="col-xs-8 col-sm-9"><input class="form-control" type="text" name="global.newUserWelcomeTitle" ng-model="settings.global.newUserWelcomeTitle"></div></div>
+            <div class="form-group" ng-hide="!settings.global.newUserWelcomeEnabled"><label for="global.newUserWelcomeContent" class="col-xs-4 col-sm-3 control-label">Welcome message</label><div class="col-xs-8 col-sm-9"><textarea class="form-control" rows="3" name="global.newUserWelcomeContent" ng-model="settings.global.newUserWelcomeContent"></textarea><span class="help-block">Plain text shown above the standard app-install link and mandatory safety reminder.</span></div></div>
             <div class="form-group" ng-hide="!settings.global.frontPopupEnable">
               <label for="global.frontPopupTitle" class="col-xs-4 col-sm-3 control-label">Modal Title </label>
               <div class="col-xs-8 col-sm-9">

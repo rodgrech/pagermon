@@ -768,14 +768,16 @@ router.route('/push/config')
   .get(isSessionUser, function(req, res, next) {
     nconf.load();
     var config = nconf.get('notifications:webPush') || {};
-    db('users').select('pushcapcode').where('id', req.user.id).first()
-      .then(function(user) {
+    db('user_push_capcodes').select('capcode').where('user_id', req.user.id).orderBy('id')
+      .then(function(rows) {
         return db('push_subscriptions').where('user_id', req.user.id).count({count: '*'}).first()
           .then(function(count) {
+            var capcodes = (rows || []).map(function(row) { return String(row.capcode); });
             res.json({
               enabled: Boolean(config.enabled && config.publicKey),
               publicKey: config.enabled ? (config.publicKey || '') : '',
-              capcode: user && user.pushcapcode ? user.pushcapcode : '',
+              capcodes: capcodes,
+              capcode: capcodes[0] || '',
               deviceCount: Number(count && count.count || 0)
             });
           });
@@ -793,13 +795,20 @@ router.route('/push/subscription')
     nconf.load();
     var config = nconf.get('notifications:webPush') || {};
     var subscription = req.body.subscription || {};
-    var capcode = String(req.body.capcode || '').trim();
+    var requestedCapcodes = Array.isArray(req.body.capcodes) ? req.body.capcodes : [req.body.capcode];
+    var capcodes = requestedCapcodes.map(function(value) { return String(value || '').trim(); }).filter(function(value, index, values) {
+      return value && values.indexOf(value) === index;
+    });
     if (!config.enabled) return res.status(503).json({error: 'Web push is disabled by the administrator.'});
-    if (!/^\d{1,32}$/.test(capcode) || !subscription.endpoint || !subscription.keys || !subscription.keys.p256dh || !subscription.keys.auth) {
-      return res.status(400).json({error: 'A valid capcode and push subscription are required.'});
+    if (!capcodes.length || capcodes.length > 3 || capcodes.some(function(capcode) { return !/^\d{1,32}$/.test(capcode); }) || !subscription.endpoint || !subscription.keys || !subscription.keys.p256dh || !subscription.keys.auth) {
+      return res.status(400).json({error: 'Choose between one and three valid capcodes and provide a push subscription.'});
     }
     return db.transaction(function(trx) {
-      return trx('users').where('id', req.user.id).update({pushcapcode: capcode}).then(function() {
+      return trx('user_push_capcodes').where('user_id', req.user.id).del().then(function() {
+        return trx('user_push_capcodes').insert(capcodes.map(function(capcode) { return {user_id: req.user.id, capcode: capcode}; }));
+      }).then(function() {
+        return trx('users').where('id', req.user.id).update({pushcapcode: capcodes[0]});
+      }).then(function() {
         return trx('push_subscriptions').where('endpoint', subscription.endpoint).first();
       }).then(function(existing) {
         var values = {user_id: req.user.id, endpoint: subscription.endpoint, p256dh: subscription.keys.p256dh, auth: subscription.keys.auth, updated_at: trx.fn.now()};
@@ -807,7 +816,7 @@ router.route('/push/subscription')
         values.created_at = trx.fn.now();
         return trx('push_subscriptions').insert(values);
       });
-    }).then(function() { res.json({status: 'ok', capcode: capcode}); }).catch(next);
+    }).then(function() { res.json({status: 'ok', capcodes: capcodes}); }).catch(next);
   })
   .delete(isSessionUser, function(req, res, next) {
     var endpoint = (req.body && req.body.endpoint) || req.query.endpoint;
