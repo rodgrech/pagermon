@@ -920,7 +920,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
     // needs cleanup
     .controller('SettingsController', ['$scope', '$routeParams', 'Api', 'uuid', '$uibModal', '$filter', '$timeout', '$sanitize', function ($scope, $routeParams, Api, uuid, $uibModal, $filter, $timeout, $sanitize) {
       $scope.alertMessage = {};
-      var validSettingsSections = ['appearance', 'integration-rfs', 'integration-npws', 'integration-bom', 'integration-water', 'integration-aircraft', 'integration-radio', 'integration-radar', 'integration-firms', 'integration-map', 'plugins', 'data', 'accounts', 'monitoring'];
+      var validSettingsSections = ['appearance', 'integration-rfs', 'integration-npws', 'integration-bom', 'integration-water', 'integration-aircraft', 'integration-radio', 'integration-radar', 'integration-lightning', 'integration-firms', 'integration-map', 'plugins', 'data', 'accounts', 'monitoring'];
       var storedSettingsSection = window.sessionStorage.getItem('pagermon-settings-section');
       $scope.activeSettingsSection = validSettingsSections.indexOf(storedSettingsSection) !== -1 ? storedSettingsSection : 'appearance';
       $scope.setSettingsSection = function(section) {

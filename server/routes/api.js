@@ -109,6 +109,7 @@ var rfsIncidentCache = { fetchedAt: 0, data: null };
 var radarCache = { fetchedAt: 0, data: null };
 var waterNswCache = { fetchedAt: 0, data: null };
 var nasaFirmsCache = { fetchedAt: 0, data: null, signature: '' };
+var xweatherLightningCache = { fetchedAt: 0, data: null, signature: '' };
 var npwsIncidentCache = { fetchedAt: 0, data: null };
 var forestryClosureCache = { fetchedAt: 0, data: null };
 var nafcAircraftCache = { fetchedAt: 0, data: [] };
@@ -2024,6 +2025,8 @@ router.route('/central-west/dashboard-config')
     var piawareConfig = integrationConfig('piaware', { enabled: true, pollSeconds: 10 });
     var radarConfig = integrationConfig('weatherRadar', { enabled: true, opacityPercent: 62, defaultVisible: false });
     var firmsConfig = integrationConfig('nasaFirms', { enabled: false, defaultVisible: false });
+    var lightningConfig = integrationConfig('xweatherLightning', { enabled: false, apiKey: '', clientId: '', clientSecret: '', pollSeconds: 60, defaultVisible: false });
+    var lightningCredentials = xweatherCredentials(lightningConfig);
     var npwsConfig = integrationConfig('npws', { enabled: false, feedUrl: '' });
     var mapConfig = integrationConfig('liveMap', { wheelPxPerZoomLevel: 360, centerLatitude: -32.65, centerLongitude: 149.58, initialZoom: 8, pagerIncidentExpiryHours: 24, hideTestPages: false, suppressTestIncidents: false, additionalCriticalKeywords: '', additionalHighKeywords: '', additionalMediumKeywords: '', stopMessageWindowMinutes: 30 });
     res.set('Cache-Control', 'private, no-store');
@@ -2039,6 +2042,9 @@ router.route('/central-west/dashboard-config')
       weatherRadarDefaultVisible: radarConfig.defaultVisible === true,
       nasaFirmsEnabled: firmsConfig.enabled === true && !!firmsConfig.mapKey,
       nasaFirmsDefaultVisible: firmsConfig.defaultVisible === true,
+      lightningEnabled: lightningConfig.enabled === true && !!lightningCredentials.clientId && !!lightningCredentials.clientSecret,
+      lightningPollSeconds: Math.min(Math.max(parseInt(lightningConfig.pollSeconds, 10) || 60, 30), 600),
+      lightningDefaultVisible: lightningConfig.defaultVisible === true,
       npwsEnabled: npwsConfig.enabled === true && !!npwsConfig.feedUrl,
       wheelPxPerZoomLevel: Math.min(Math.max(parseInt(mapConfig.wheelPxPerZoomLevel, 10) || 360, 60), 600),
       mapCenterLatitude: Math.min(Math.max(parseFloat(mapConfig.centerLatitude) || -32.65, -90), 90),
@@ -2162,6 +2168,63 @@ router.route('/central-west/nasa-firms-hotspots')
       logger.main.warn('Unable to retrieve NASA FIRMS hotspots: ' + err.message);
       if (nasaFirmsCache.data) return res.json(nasaFirmsCache.data);
       res.status(502).json({error: 'NASA FIRMS hotspot feed is temporarily unavailable'});
+    });
+  });
+
+function xweatherLightningCenters(value) {
+  return String(value || '').split(/[;\n]+/).map(function(item) {
+    var parts = item.trim().split(/\s*,\s*/);
+    var latitude = Number(parts[0]), longitude = Number(parts[1]);
+    return isFinite(latitude) && latitude >= -90 && latitude <= 90 && isFinite(longitude) && longitude >= -180 && longitude <= 180
+      ? {latitude: latitude, longitude: longitude} : null;
+  }).filter(Boolean).slice(0, 6);
+}
+
+function xweatherCredentials(config) {
+  var combined = String(config && config.apiKey || '').trim();
+  var separator = combined.indexOf('_');
+  if (separator > 0 && separator < combined.length - 1) {
+    return {clientId: combined.slice(0, separator), clientSecret: combined.slice(separator + 1)};
+  }
+  return {clientId: String(config && config.clientId || '').trim(), clientSecret: String(config && config.clientSecret || '').trim()};
+}
+
+router.route('/central-west/lightning')
+  .get(authHelper.isLoggedInMessages, function(req, res) {
+    var config = integrationConfig('xweatherLightning', {enabled: false, apiKey: '', clientId: '', clientSecret: '', queryCenters: '-32.650000,149.580000', radiusKm: 100, cacheSeconds: 60});
+    var credentials = xweatherCredentials(config);
+    if (config.enabled !== true || !credentials.clientId || !credentials.clientSecret) return res.json({disabled: true, strikes: []});
+    var centers = xweatherLightningCenters(config.queryCenters);
+    if (!centers.length) centers = [{latitude: -32.65, longitude: 149.58}];
+    var radiusKm = Math.min(Math.max(parseInt(config.radiusKm, 10) || 100, 1), 100);
+    var cacheMs = Math.min(Math.max(parseInt(config.cacheSeconds, 10) || 60, 30), 600) * 1000;
+    var signature = centers.map(function(point) { return point.latitude + ',' + point.longitude; }).join(';') + '|' + radiusKm;
+    if (xweatherLightningCache.data && xweatherLightningCache.signature === signature && Date.now() - xweatherLightningCache.fetchedAt < cacheMs) return res.json(xweatherLightningCache.data);
+    Promise.all(centers.map(function(point) {
+      return axios.get('https://data.api.xweather.com/lightning/closest', {
+        timeout: 15000,
+        params: {p: point.latitude + ',' + point.longitude, radius: radiusKm + 'km', limit: 1000, filter: 'all', client_id: credentials.clientId, client_secret: credentials.clientSecret},
+        headers: {'Accept': 'application/json', 'User-Agent': 'Central West Alerts Xweather lightning integration'}
+      }).then(function(response) { return response.data && response.data.response || []; });
+    })).then(function(results) {
+      var seen = {}, strikes = [];
+      [].concat.apply([], results).forEach(function(item) {
+        var loc = item && item.loc || {}, ob = item && item.ob || {}, pulse = ob.pulse || {};
+        var latitude = Number(loc.lat), longitude = Number(loc.long), timestamp = Number(ob.timestamp);
+        if (!isFinite(latitude) || !isFinite(longitude) || !isFinite(timestamp)) return;
+        var key = String(item.id || latitude.toFixed(5) + '|' + longitude.toFixed(5) + '|' + timestamp);
+        if (seen[key]) return;
+        seen[key] = true;
+        strikes.push({id: key, latitude: latitude, longitude: longitude, timestamp: timestamp, observedAt: ob.dateTimeISO || '', ageSeconds: Math.max(0, Number(ob.age) || Math.floor(Date.now() / 1000) - timestamp), type: String(pulse.type || '').toUpperCase(), peakAmps: isFinite(Number(pulse.peakamp)) ? Number(pulse.peakamp) : null, sensorCount: isFinite(Number(pulse.numSensors)) ? Number(pulse.numSensors) : null});
+      });
+      strikes.sort(function(a, b) { return b.timestamp - a.timestamp; });
+      var payload = {source: 'Vaisala Xweather', fetchedAt: Math.floor(Date.now() / 1000), strikes: strikes};
+      xweatherLightningCache = {fetchedAt: Date.now(), data: payload, signature: signature};
+      res.json(payload);
+    }).catch(function(err) {
+      logger.main.warn('Unable to retrieve Xweather lightning: ' + err.message);
+      if (xweatherLightningCache.data) return res.json(xweatherLightningCache.data);
+      res.status(502).json({error: 'Xweather lightning feed is temporarily unavailable', strikes: []});
     });
   });
 

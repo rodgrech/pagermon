@@ -129,6 +129,17 @@
       "defaultVisible": false,
       "bounds": "147,-35,151,-30"
     },
+    "xweatherLightning": {
+      "enabled": false,
+      "apiKey": "",
+      "clientId": "",
+      "clientSecret": "",
+      "queryCenters": "-32.650000,149.580000",
+      "radiusKm": 100,
+      "cacheSeconds": 60,
+      "pollSeconds": 60,
+      "defaultVisible": false
+    },
     "npws": {
       "enabled": false,
       "feedUrl": "",

@@ -41,6 +41,7 @@
   var lastRadarEnabled = false;
   var recoveryTimer;
   var satelliteHotspots = [];
+  var lightningStrikes = [];
   var fireDangerDistricts = [];
   var fireDangerFetchedAt = null;
   var fireDangerBoundaries = null;
@@ -78,6 +79,7 @@
       var saved = JSON.parse(localStorage.getItem('cw-map-layers') || '{}');
       if (Object.prototype.hasOwnProperty.call(saved, name)) return saved[name] !== false;
       if (name === 'hotspots') return !!(window.CentralWestMapFeatures && window.CentralWestMapFeatures.nasaFirmsDefaultVisible);
+      if (name === 'lightning') return !!(window.CentralWestMapFeatures && window.CentralWestMapFeatures.lightningDefaultVisible);
       if (name === 'forestry') return false;
       return true;
     }
@@ -637,12 +639,13 @@
       if (element._leaflet_id) delete element._leaflet_id;
       map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel, zoomSnap: 0.5, zoomDelta: 0.5, closePopupOnClick: false, tap: true}).setView(mapCenter, mapInitialZoom);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
+      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), lightning: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
       var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS / NPWS incidents': layerGroups.rfs};
       overlays['Forestry closures and notices'] = layerGroups.forestry;
       overlays['Fire danger districts'] = layerGroups.fireDanger;
       if (features.nasaFirms !== false) overlays['Satellite hotspots (NASA FIRMS)'] = layerGroups.hotspots;
+      if (features.lightning === true) overlays['Lightning strikes (Xweather)'] = layerGroups.lightning;
       if (features.piaware !== false) overlays['Live aircraft'] = layerGroups.aircraft;
       if (features.waterNsw !== false) {
         overlays['WaterNSW dams'] = layerGroups.dams;
@@ -659,7 +662,7 @@
         radarLayer.addTo(layerGroups.radar);
       }
     }
-    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
+    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'lightning', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     renderFireDangerLayer();
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
@@ -694,6 +697,17 @@
       var colour = confidence === 'h' || confidence === 'high' ? '#d94335' : confidence === 'l' || confidence === 'low' ? '#f0a52b' : '#ef6c32';
       var popup = '<div class="cw-incident-popup cw-hotspot-popup"><div class="cw-popup-heading"><i class="fa fa-satellite"></i><strong>UNCONFIRMED SATELLITE HOTSPOT</strong></div><div class="cw-popup-title">NASA FIRMS thermal detection</div><div class="cw-popup-pills"><span><small>Detected</small>' + escapeHtml(hotspot.acquiredAt || 'Unknown') + '</span><span><small>Sensor</small>' + escapeHtml((hotspot.satellite || '') + ' ' + (hotspot.instrument || 'VIIRS')) + '</span></div><p>Satellite thermal anomaly only—not confirmation of a fire.</p><a class="cw-popup-action" href="https://firms.modaps.eosdis.nasa.gov/map/" target="_blank" rel="noopener">Open NASA FIRMS</a></div>';
       L.circleMarker([hotspot.latitude, hotspot.longitude], {radius: 7, color: '#fff', weight: 2, fillColor: colour, fillOpacity: .92}).addTo(layerGroups.hotspots).bindPopup(popup, mapPopupOptions(360));
+    });
+    (lightningStrikes || []).forEach(function(strike) {
+      var ageSeconds = Math.max(0, Number(strike.ageSeconds) || 0);
+      var ageText = ageSeconds < 60 ? Math.max(1, Math.round(ageSeconds)) + ' sec ago' : Math.round(ageSeconds / 60) + ' min ago';
+      var colour = ageSeconds <= 60 ? '#fff13b' : ageSeconds <= 180 ? '#ffad20' : '#ed6a22';
+      var typeLabel = strike.type === 'CG' ? 'Cloud-to-ground strike' : strike.type === 'IC' ? 'In-cloud lightning' : 'Lightning detection';
+      var current = strike.peakAmps === null || typeof strike.peakAmps === 'undefined' ? '' : (Number(strike.peakAmps) / 1000).toFixed(1) + ' kA';
+      var marker = L.divIcon({className: 'cw-lightning-marker', html: '<span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:2px solid #fff;border-radius:50%;background:' + colour + ';color:#263238;box-shadow:0 2px 7px rgba(0,0,0,.55)"><i class="fa fa-bolt"></i></span>', iconSize: [28, 28], iconAnchor: [14, 14]});
+      var compact = '<strong>' + escapeHtml(typeLabel) + '</strong><br>Detected ' + escapeHtml(ageText) + (current ? '<br>Peak current: ' + escapeHtml(current) : '') + '<br><a href="https://www.xweather.com/" target="_blank" rel="noopener">Powered by Vaisala Xweather</a>';
+      var rich = '<div class="cw-incident-popup cw-lightning-popup"><div class="cw-popup-heading"><i class="fa fa-bolt"></i><strong>XWEATHER LIGHTNING</strong></div><div class="cw-popup-title">' + escapeHtml(typeLabel) + '</div><div class="cw-popup-pills"><span><small>Detected</small>' + escapeHtml(ageText) + '</span>' + (current ? '<span><small>Peak current</small>' + escapeHtml(current) + '</span>' : '') + (strike.sensorCount !== null && typeof strike.sensorCount !== 'undefined' ? '<span><small>Sensors</small>' + escapeHtml(strike.sensorCount) + '</span>' : '') + '</div><div class="cw-popup-description">Near-real-time lightning detection. Location and current are estimates; do not use this layer as your only source of safety information.</div><a class="cw-popup-action" href="https://www.xweather.com/" target="_blank" rel="noopener">Powered by Vaisala Xweather</a></div>';
+      L.marker([strike.latitude, strike.longitude], {icon: marker, zIndexOffset: 700}).addTo(layerGroups.lightning).bindPopup(phoneMapPopup() ? compact : rich, mapPopupOptions(370));
     });
     (dams || []).forEach(function (dam) {
       var colour = dam.possibleSpill ? '#bd3e4b' : dam.status === 'full' ? '#dc6b28' : dam.status === 'near-capacity' ? '#e49b21' : '#1683a6';
@@ -753,6 +767,11 @@
 
   function setSatelliteHotspots(hotspots) {
     satelliteHotspots = Array.isArray(hotspots) ? hotspots : [];
+    if (lastRender) renderMap(lastRender.id, lastRender.incidents, lastRender.rfsIncidents, lastRender.aircraft, lastRender.dams, lastRender.gauges, lastRender.algaeSites);
+  }
+
+  function setLightningStrikes(strikes) {
+    lightningStrikes = Array.isArray(strikes) ? strikes : [];
     if (lastRender) renderMap(lastRender.id, lastRender.incidents, lastRender.rfsIncidents, lastRender.aircraft, lastRender.dams, lastRender.gauges, lastRender.algaeSites);
   }
 
@@ -820,5 +839,5 @@
   }
 
   function setForestryClosures(features) { forestryClosures = features || []; queueMapRecovery(false); }
-  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, isInformationalPagerMessage: isInformationalPagerMessage, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots, setForestryClosures: setForestryClosures};
+  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, isInformationalPagerMessage: isInformationalPagerMessage, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots, setLightningStrikes: setLightningStrikes, setForestryClosures: setForestryClosures};
 })(window);
