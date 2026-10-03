@@ -49,11 +49,17 @@ const twoFactorLimiter = rateLimit({
         handler: lockoutCallback,
 });
 
+// Keep DATETIME writes portable. SQLite accepts JavaScript millisecond timestamps,
+// but MySQL/MariaDB correctly reject them for DATETIME columns.
+function currentDatabaseDatetime() {
+        return moment().format('YYYY-MM-DD HH:mm:ss');
+}
+
 function loginComplete(req, res, user, remember) {
         return new Promise(function(resolve, reject) {
                 req.logIn(user, function(err) { if (err) return reject(err); resolve(); });
         }).then(function() {
-                const currentDatetime = moment().format('YYYY-MM-DD HH:mm:ss');
+                const currentDatetime = currentDatabaseDatetime();
                 return db('users').where('id', user.id).update({lastlogondate: currentDatetime});
         }).then(function() {
                 delete req.session.pendingTwoFactorUserId;
@@ -128,10 +134,7 @@ router.route('/login')
                                                         // Update last logon timestamp for user
                                                         const { id } = user;
                                                         // create the datetime, thanks mysql ┌∩┐(◣_◢)┌∩┐
-                                                        const currentTimestamp = moment().unix(); // in seconds
-                                                        const currentDatetime = moment(currentTimestamp * 1000).format(
-                                                                'YYYY-MM-DD HH:mm:ss'
-                                                        );
+                                                        const currentDatetime = currentDatabaseDatetime();
                                                         return db
                                                                 .from('users')
                                                                 .where('id', '=', id)
@@ -234,7 +237,7 @@ router.route('/profile/:id')
                         const { givenname } = req.body;
                         const surname = req.body.surname || '';
                         const { email } = req.body;
-                        const lastlogondate = Date.now();
+                        const lastlogondate = currentDatabaseDatetime();
                         console.time('insert');
                         db.from('users')
                                 .where('username', '=', req.user.username)
@@ -333,7 +336,7 @@ router.route('/register')
                                                                 role: 'user',
                                                                 status: nconf.get('auth:requireApproval') ? 'disabled' : 'active',
                                                                 approvalpending: Boolean(nconf.get('auth:requireApproval')),
-                                                                lastlogondate: Date.now(),
+                                                                lastlogondate: currentDatabaseDatetime(),
                                                         })
                                                         .then(() => {
                                                                 if (nconf.get('auth:requireApproval')) {

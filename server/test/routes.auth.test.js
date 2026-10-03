@@ -283,7 +283,10 @@ describe('POST /auth/profile/:id', () => {
                                 res.status.should.eql(200);
                                 res.body.status.should.eql('ok');
                                 res.body.id.should.eql(1);
-                                done();
+                                db('users').where('username', 'useractive').first().then(user => {
+                                        String(user.lastlogondate).should.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+                                        done();
+                                }).catch(done);
                         });
         });
         it('should not allow saving of other users information', done => {
@@ -393,6 +396,7 @@ describe('POST /auth/register', () => {
                                 db('users').where('username', 'pendinguser').first().then(user => {
                                         user.status.should.eql('disabled');
                                         Boolean(user.approvalpending).should.eql(true);
+                                        String(user.lastlogondate).should.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
                                         done();
                                 }).catch(done);
                         });
