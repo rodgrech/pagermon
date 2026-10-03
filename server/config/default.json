@@ -139,8 +139,8 @@
       "clientSecret": "",
       "queryCenters": "-32.650000,149.580000",
       "radiusKm": 100,
-      "cacheSeconds": 60,
-      "pollSeconds": 60,
+      "cacheSeconds": 3600,
+      "pollSeconds": 3600,
       "defaultVisible": false
     },
     "npws": {
