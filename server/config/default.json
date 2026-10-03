@@ -137,6 +137,7 @@
       "apiKey": "",
       "clientId": "",
       "clientSecret": "",
+      "useMapCenter": true,
       "queryCenters": "-32.650000,149.580000",
       "radiusKm": 100,
       "cacheSeconds": 3600,

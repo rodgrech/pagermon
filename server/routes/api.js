@@ -2215,10 +2215,13 @@ function xweatherCredentials(config) {
 
 router.route('/central-west/lightning')
   .get(authHelper.isLoggedInMessages, function(req, res) {
-    var config = integrationConfig('xweatherLightning', {enabled: false, apiKey: '', clientId: '', clientSecret: '', queryCenters: '-32.650000,149.580000', radiusKm: 100, cacheSeconds: 3600});
+    var config = integrationConfig('xweatherLightning', {enabled: false, apiKey: '', clientId: '', clientSecret: '', useMapCenter: true, queryCenters: '-32.650000,149.580000', radiusKm: 100, cacheSeconds: 3600});
     var credentials = xweatherCredentials(config);
     if (config.enabled !== true || !credentials.clientId || !credentials.clientSecret) return res.json({disabled: true, strikes: []});
-    var centers = xweatherLightningCenters(config.queryCenters);
+    var mapConfig = integrationConfig('liveMap', {centerLatitude: -32.65, centerLongitude: 149.58});
+    var centers = config.useMapCenter !== false
+      ? xweatherLightningCenters(String(mapConfig.centerLatitude) + ',' + String(mapConfig.centerLongitude))
+      : xweatherLightningCenters(config.queryCenters);
     if (!centers.length) centers = [{latitude: -32.65, longitude: 149.58}];
     var radiusKm = Math.min(Math.max(parseInt(config.radiusKm, 10) || 100, 1), 100);
     var cacheMs = Math.min(Math.max(parseInt(config.cacheSeconds, 10) || 3600, 60), 3600) * 1000;
