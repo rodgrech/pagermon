@@ -53,6 +53,8 @@
   "auth": {
     "registration": false,
     "requireApproval": false,
+    "approvalEmailsEnabled": false,
+    "approvalAdminRecipients": "",
     "requireAdminTwoFactor": false,
     "twoFactorRememberDays": 30,
     "user": "admin",

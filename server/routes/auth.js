@@ -17,6 +17,7 @@ const logger = require('../log');
 const passport = require('../auth/local');
 const authHelper = require('../middleware/authhelper')
 const twoFactor = require('../lib/twoFactor');
+const approvalMailer = require('../lib/accountApprovalMailer');
 const QRCode = require('qrcode');
 
 const lockoutCallback = function(req, res) {
@@ -341,6 +342,14 @@ router.route('/register')
                                                         .then(() => {
                                                                 if (nconf.get('auth:requireApproval')) {
                                                                         logger.auth.info(`Created account pending approval: ${req.body.username}`);
+                                                                        const applicant = {
+                                                                                username: req.body.username,
+                                                                                givenname: req.body.givenname,
+                                                                                surname: req.body.surname,
+                                                                                email: req.body.email,
+                                                                        };
+                                                                        approvalMailer.registrationReceived(applicant);
+                                                                        approvalMailer.adminApprovalNeeded(applicant);
                                                                         return res.status(200).json({
                                                                                 status: 'pending',
                                                                                 message: 'Registration received. An administrator must approve your account before you can sign in.',

@@ -15,6 +15,7 @@ var path = require('path');
 var fs = require('fs');
 var net = require('net');
 var webPushNotifications = require('../lib/webPush');
+var approvalMailer = require('../lib/accountApprovalMailer');
 
 function returningId(result) {
   var first = Array.isArray(result) ? result[0] : result;
@@ -1577,7 +1578,7 @@ router.route('/capcodeImport')
 router.route('/user')
   .get(authHelper.isAdmin, function (req, res, next) {
     db.from('users')
-      .select('id','givenname','surname','username','email','role','status','approvalpending','lastlogondate')
+      .select('id','givenname','surname','username','email','role','status','approvalpending','approvaldenialreason','lastlogondate')
       .then((rows) => {
         res.json(rows);
       })
@@ -1695,6 +1696,55 @@ router.route('/userCheck/username/:id')
       })
   });
 
+router.post('/user/:id/approve', authHelper.isAdmin, function (req, res) {
+  var id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).send({ status: 'error', error: 'Invalid user ID' });
+  db('users').where('id', id).first()
+    .then(function (user) {
+      if (!user) return res.status(404).send({ status: 'error', error: 'User not found' });
+      if (!user.approvalpending) return res.status(409).send({ status: 'error', error: 'This user is not awaiting approval' });
+      return db('users').where('id', id).update({
+        status: 'active',
+        approvalpending: false,
+        approvaldenialreason: null
+      }).then(function () {
+        logger.auth.info('Approved account: ' + user.username);
+        approvalMailer.approved(user);
+        res.status(200).send({ status: 'ok' });
+      });
+    })
+    .catch(function (err) {
+      logger.auth.error(err);
+      res.status(500).send({ status: 'error', error: 'Unable to approve user' });
+    });
+});
+
+router.post('/user/:id/deny', authHelper.isAdmin, function (req, res) {
+  var id = parseInt(req.params.id, 10);
+  var reason = String(req.body.reason || '').trim();
+  if (!Number.isFinite(id)) return res.status(400).send({ status: 'error', error: 'Invalid user ID' });
+  if (!reason) return res.status(400).send({ status: 'error', error: 'A denial reason is required' });
+  if (reason.length > 2000) return res.status(400).send({ status: 'error', error: 'Denial reason is too long' });
+  db('users').where('id', id).first()
+    .then(function (user) {
+      if (!user) return res.status(404).send({ status: 'error', error: 'User not found' });
+      if (!user.approvalpending) return res.status(409).send({ status: 'error', error: 'This user is not awaiting approval' });
+      return db('users').where('id', id).update({
+        status: 'disabled',
+        approvalpending: false,
+        approvaldenialreason: reason
+      }).then(function () {
+        logger.auth.info('Denied account: ' + user.username);
+        approvalMailer.denied(user, reason);
+        res.status(200).send({ status: 'ok' });
+      });
+    })
+    .catch(function (err) {
+      logger.auth.error(err);
+      res.status(500).send({ status: 'error', error: 'Unable to deny user' });
+    });
+});
+
 router.route('/user/:id')
   .get(authHelper.isAdmin, function (req, res, next) {
     var id = req.params.id;
@@ -1706,14 +1756,15 @@ router.route('/user/:id')
       "email": "",
       "role": "user",
       "status": "active",
-      "approvalpending": false
+      "approvalpending": false,
+      "approvaldenialreason": null
     };
     if (id == 'new') {
       res.status(200);
       res.json(defaults);
     } else {
       db.from('users')
-        .select('id','givenname','surname','username','email','role','status','approvalpending','lastlogondate','totp_enabled','totp_enrolled_at')
+        .select('id','givenname','surname','username','email','role','status','approvalpending','approvaldenialreason','lastlogondate','totp_enabled','totp_enrolled_at')
         .where('id', id)
         .then(function (row) {
           if (row.length > 0) {
@@ -1776,6 +1827,7 @@ router.route('/user/:id')
               role: req.body.role || 'user',
               status: req.body.status || 'disabled',
               approvalpending: req.body.status === 'active' ? false : Boolean(req.body.approvalpending),
+              approvaldenialreason: req.body.status === 'active' ? null : (req.body.approvaldenialreason || null),
             }
             if (password != null) {
               const salt = bcrypt.genSaltSync();

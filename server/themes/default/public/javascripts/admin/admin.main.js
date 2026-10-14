@@ -33,6 +33,8 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         UserDetail: $resource('/api/user/:id', {id: '@id'}, {
           'post': { method:'POST', isArray: false }
         }),
+        UserApprove: $resource('/api/user/:id/approve', {id: '@id'}, {'post': {method:'POST'}}),
+        UserDeny: $resource('/api/user/:id/deny', {id: '@id'}, {'post': {method:'POST'}}),
         UserTwoFactorReset: $resource('/api/user/:id/two-factor-reset', {id: '@id'}, {'reset': {method:'POST'}}),
         UsernameCheck: $resource('/api/userCheck/username/:id', {id: '@id'}, {
           'post': { method:'POST', isArray: false }
@@ -427,6 +429,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
 
     .controller('UserDetailController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout) {
       $scope.page = 'userDetail';
+      $scope.approval = { reason: '' };
       $scope.alertMessage = {};
 
       // controls the form validation on the username field
@@ -530,6 +533,40 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
             $scope.loading = false;
           });
         }
+      };
+
+      $scope.approveUser = function () {
+        $scope.loading = true;
+        Api.UserApprove.post({id: $routeParams.id}, {}).$promise.then(function () {
+          $scope.user.status = 'active';
+          $scope.user.approvalpending = false;
+          $scope.user.approvaldenialreason = null;
+          $scope.alertMessage = {show: true, type: 'alert-success', text: 'User approved and notification email queued.'};
+          $scope.loading = false;
+        }, function (response) {
+          $scope.alertMessage = {show: true, type: 'alert-danger', text: 'Unable to approve user: ' + ((response.data || {}).error || 'Unknown error')};
+          $scope.loading = false;
+        });
+      };
+
+      $scope.denyUser = function () {
+        var reason = String($scope.approval.reason || '').trim();
+        if (!reason) {
+          $scope.alertMessage = {show: true, type: 'alert-danger', text: 'Enter a reason before denying this application.'};
+          return;
+        }
+        $scope.loading = true;
+        Api.UserDeny.post({id: $routeParams.id}, {reason: reason}).$promise.then(function () {
+          $scope.user.status = 'disabled';
+          $scope.user.approvalpending = false;
+          $scope.user.approvaldenialreason = reason;
+          $scope.showDenial = false;
+          $scope.alertMessage = {show: true, type: 'alert-success', text: 'Application denied and feedback email queued.'};
+          $scope.loading = false;
+        }, function (response) {
+          $scope.alertMessage = {show: true, type: 'alert-danger', text: 'Unable to deny user: ' + ((response.data || {}).error || 'Unknown error')};
+          $scope.loading = false;
+        });
       };
       
       $scope.userDelete = function () {

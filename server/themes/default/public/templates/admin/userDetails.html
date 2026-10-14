@@ -13,8 +13,18 @@
           <form ng-submit="userSubmit()" class="form-horizontal" name="user">
           <h5>User Details</h5>
             <div class="alert alert-info" ng-if="user.approvalpending">
-              <strong>Approval required.</strong> Set this account to Active and save to approve it.
+              <strong>Approval required.</strong> Review this application, then approve it or provide feedback explaining why it was denied.
+              <div style="margin-top: 12px;">
+                <button type="button" class="btn btn-success" ng-click="approveUser()"><i class="fa fa-check"></i> Approve user</button>
+                <button type="button" class="btn btn-danger" ng-click="showDenial = !showDenial"><i class="fa fa-times"></i> Deny application</button>
+              </div>
+              <div ng-if="showDenial" style="margin-top: 12px;">
+                <label for="denialReason">Feedback sent to the applicant</label>
+                <textarea id="denialReason" class="form-control" style="color: #fff; background: #263445; padding: 10px; border: 1px solid #8191a5; border-radius: 4px;" rows="4" maxlength="2000" ng-model="approval.reason" placeholder="Explain why this application was not approved" required></textarea>
+                <button type="button" class="btn btn-danger" style="margin-top: 8px;" ng-disabled="!approval.reason" ng-click="denyUser()">Confirm denial and send email</button>
+              </div>
             </div>
+            <div class="alert alert-warning" ng-if="!user.approvalpending && user.approvaldenialreason"><strong>Application denied.</strong><br>{{user.approvaldenialreason}}</div>
             <div class="form-group has-feedback" ng-class="!user.username || existingUsername ? 'has-error' : 'has-success'">
               <label for="user.username" class="col-xs-4 col-sm-3 control-label">Username</label>
               <div class="col-xs-8 col-sm-9">
@@ -67,7 +77,7 @@
             <div class="form-group">
               <label for="user.status" class="col-xs-4 col-sm-3 control-label">User Status</label>
               <div class="col-xs-8 col-sm-9">
-                <select name="user.status" ng-model="user.status" class="form-control">
+                <select name="user.status" ng-model="user.status" class="form-control" ng-disabled="user.approvalpending">
                   <option value="active">Active</option>
                   <option value="disabled">Disabled</option>
                 </select>
