@@ -285,6 +285,7 @@
                 <span ng-if="message.cwInformational" class="label label-info"><i class="fa fa-info-circle"></i> INFORMATION</span>
                 <span ng-if="message.cwPriority != 'routine'" class="cw-priority-label">{{message.cwPriority}}</span>
                 <div highlight="message.message" replacement="init.replaceText" class="pagerMessage"></div>
+                <button ng-if="role == 'admin'" type="button" class="btn btn-default btn-xs" ng-click="toggleMessageVisibility(message)">{{message.hidden ? 'Unhide' : 'Hide'}}</button><span ng-if="message.hidden" class="label label-warning">Hidden from users</span>
             </td>
         </tbody>
       </table>
@@ -438,6 +439,14 @@
     // Controller
     // TODO: optimise this whole section, consider popping this entire controller out to a separate file
     .controller('MessageController', ['$scope', '$routeParams', 'Api', 'socket', 'adminSocket', '$cookies', '$location', '$window', '$interval', function ($scope, $routeParams, Api, socket, adminSocket, $cookies, $location, $window, $interval) {
+      $scope.toggleMessageVisibility = function (message) {
+        fetch('/api/messages/' + message.id + '/visibility', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({hidden: !message.hidden})}).then(function (response) {
+          if (!response.ok) throw new Error('Unable to change message visibility');
+          return response.json();
+        }).then(function (result) { $scope.$applyAsync(function () { message.hidden = result.hidden; }); }).catch(function (error) { window.alert(error.message); });
+      };
+      socket.on('messageVisibilityChanged', function () { window.location.reload(); });
+      adminSocket.on('messageVisibilityChanged', function () { window.location.reload(); });
       // I hate ejs
       <% if(typeof user != 'undefined'){ %>
         $scope.user="<%=user%>";

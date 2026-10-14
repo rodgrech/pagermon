@@ -414,14 +414,15 @@ router.route('/messages')
             .modify(function (queryBuilder) {
               if (pdwMode) {
                 if (adminShow && req.isAuthenticated() && req.user.role == 'admin') {
-                  queryBuilder.leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id').where('capcodes.ignore', 0).orWhereNull('capcodes.ignore')
+                  queryBuilder.leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id').where(function () { this.where('capcodes.ignore', 0).orWhereNull('capcodes.ignore'); })
                 } else {
                   queryBuilder.innerJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id').where('capcodes.ignore', 0)
                 }
               } else {
-                queryBuilder.leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id').where('capcodes.ignore', 0).orWhereNull('capcodes.ignore')
+                queryBuilder.leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id').where(function () { this.where('capcodes.ignore', 0).orWhereNull('capcodes.ignore'); })
               }
             })
+            .whereNotIn('messages.id', function () { this.select('id').from('messages').where('hidden', true); if (req.user && req.user.role === 'admin') this.whereRaw('1 = 0'); })
             .orderBy('messages.timestamp', 'desc')
             .limit(initData.limit)
             .offset(initData.offset)
@@ -849,6 +850,16 @@ router.route('/push/test')
     }).catch(next);
   });
 
+router.post('/messages/:id/visibility', authHelper.isAdmin, function (req, res) {
+  if (typeof req.body.hidden !== 'boolean') return res.status(400).json({error: 'hidden must be a boolean'});
+  db('messages').where('id', req.params.id).update({hidden: req.body.hidden}).then(function (count) {
+    if (!count) return res.status(404).json({error: 'Message not found'});
+    req.io.emit('messageVisibilityChanged', {id: req.params.id});
+    req.io.of('adminio').emit('messageVisibilityChanged', {id: req.params.id});
+    res.json({status: 'ok', hidden: req.body.hidden});
+  }).catch(function (err) { logger.main.error(err); res.status(500).json({error: 'Unable to change message visibility'}); });
+});
+
 router.route('/messages/:id')
   .get(authHelper.isLoggedInMessages, function (req, res, next) {
     nconf.load();
@@ -861,7 +872,9 @@ router.route('/messages/:id')
       .select('messages.*', 'capcodes.alias', 'capcodes.agency', 'capcodes.icon', 'capcodes.color', 'capcodes.ignore', db.raw('CASE WHEN NOT capcodes.address = messages.address THEN 1 ELSE 0 END as wildcard'))
       .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
       .where('messages.id', id)
+      .modify(function (qb) { if (!req.user || req.user.role !== 'admin') qb.where('messages.hidden', false); })
       .then((row) => {
+        if (!row.length) return res.status(404).json({error: 'Message not found'});
         if (HideCapcode) {
           if (!req.isAuthenticated() || (req.isAuthenticated() && req.user.role == 'user')) {
             row = {
@@ -970,7 +983,7 @@ router.route('/messageSearch')
           qb.whereRaw(`CONTAINS("messages"."message", ?, 1) > 0`, query)
         } else {
           if (address != '')
-            qb.where('messages.address', 'LIKE', address).orWhere('messages.source', address);
+            qb.where(function () { this.where('messages.address', 'LIKE', address).orWhere('messages.source', address); });
           if (agency != '')
             qb.whereIn('messages.alias_id', function (qb2) {
               qb2.select('id').from('capcodes').where('agency', agency).where('ignore', 0);
@@ -978,7 +991,7 @@ router.route('/messageSearch')
           if (alias != '')
             qb.where('messages.alias_id',alias);
         }
-      }).orderBy('messages.timestamp', 'desc')
+      }).whereNotIn('messages.id', function () { this.select('id').from('messages').where('hidden', true); if (req.user && req.user.role === 'admin') this.whereRaw('1 = 0'); }).orderBy('messages.timestamp', 'desc')
       .then((rows) => {
         if (rows) {
           for (row of rows) {
@@ -1887,10 +1900,11 @@ router.route('/central-west/dashboard')
     var hideAddresses = HideCapcode && (!req.isAuthenticated() || req.user.role !== 'admin');
 
     db.from('messages')
+      .modify(function (qb) { if (!req.user || req.user.role !== 'admin') qb.where('messages.hidden', false); })
       .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
       .select('messages.id', 'messages.timestamp', 'messages.message', 'messages.source',
         'messages.address', 'messages.alias_id', 'capcodes.alias', 'capcodes.agency',
-        'capcodes.icon', 'capcodes.color')
+        'capcodes.icon', 'capcodes.color', 'messages.hidden')
       .orderBy('messages.timestamp', 'desc')
       .limit(limit)
       .then(function (rows) {
@@ -1927,6 +1941,7 @@ router.route('/central-west/incident-archive')
     var hideAddresses = HideCapcode && (!req.isAuthenticated() || req.user.role !== 'admin');
     var pattern = '%' + queryText + '%';
     var archiveQuery = db.from('messages')
+      .modify(function (qb) { if (!req.user || req.user.role !== 'admin') qb.where('messages.hidden', false); })
       .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
       .select('messages.id', 'messages.timestamp', 'messages.message', 'messages.source',
         'messages.address', 'messages.alias_id', 'capcodes.alias', 'capcodes.agency',
