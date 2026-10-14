@@ -1,3 +1,11 @@
+# 1.9.1 updates - 2026-10-14
+
+* Added optional account approval emails using the configured SMTP plugin: application receipt, administrator notification, approval and denial.
+* Added explicit Approve and Deny actions under Admin → Users, with required denial feedback stored on the account and emailed to the applicant.
+* Added approval email controls and administrator recipients under Settings → Accounts.
+* Fixed denial feedback binding and improved text contrast across Default, Bushfire and Dark Blue themes.
+* Added an automatic database migration for stored denial feedback.
+
 # TBA
 * Fix PiBuilder @marshy #604
 

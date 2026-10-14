@@ -46,7 +46,7 @@ This fork preserves the original PagerMon workflow while modernising its depende
 - Web push alerts for up to three pager capcodes per account, shared across subscribed devices
 - Default, Dark Blue and Bushfire themes
 - Per-member Web Push notifications for a selected capcode
-- Optional administrator approval for new accounts
+- Optional administrator approval for new accounts, with receipt and decision emails and administrator notifications
 - Local service health plus configurable remote-receiver heartbeats
 - Simple and Advanced HTTP webhooks
 - Additional delivery plugins including Gotify, Pushover, Telegram, Discord, SMTP, Slack and Microsoft Teams
@@ -283,7 +283,15 @@ The reorganised admin interface contains:
 - **Live map** — interaction settings
 - **Database** — database type and connection settings
 - **Messages, privacy and alias tools** — filtering, redaction, visibility, regex rules and templates
-- **Accounts and access** — registration and member approval
+- **Accounts and access** — registration, member approval and approval email notifications
+
+### Registration approval emails
+
+Configure the mail server and sender under **Settings → Integrations → Plugins → SMTP**. Under **Settings → Accounts**, enable **New member approvals** and **Approval emails**, then enter comma-separated administrator addresses in **Approval recipients** and save.
+
+Applicants receive an email confirming that their application is awaiting approval. The configured administrators receive a review notification. In **Admin → Users**, open a pending account and select **Approve user** or **Deny application**. Denial requires feedback, which is stored on the disabled account and included in the applicant's decision email. Approved applicants receive an email telling them they can sign in.
+
+Approval emails are disabled by default. Mail failures are logged without interrupting registration or the account decision. The database migration runs automatically when the updated server starts.
 - **Push notifications** — Web Push state and key readiness
 - **API keys** — decoder and integration credentials
 - **Monitoring and diagnostics** — local service status, remote receivers and analytics
