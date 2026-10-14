@@ -5,13 +5,13 @@
   </div>
 </div>
 <div class="row">
-  <div class="col-sm-4">
+  <div class="col-sm-4" ng-if="permissions.manageAliases">
     <div class="panel panel-default"><div class="panel-heading"><strong><i class="fa fa-address-card"></i> Aliases</strong></div><div class="panel-body"><p>Manage capcodes, agency details, colours and icons.</p><a href="/admin/aliases" class="btn btn-primary btn-block">Manage aliases</a></div></div>
   </div>
-  <div class="col-sm-4">
+  <div class="col-sm-4" ng-if="permissions.manageUsers || permissions.approveUsers">
     <div class="panel panel-default"><div class="panel-heading"><strong><i class="fa fa-users"></i> Members</strong></div><div class="panel-body"><p>Approve registrations and manage existing user accounts.</p><a href="/admin/users" class="btn btn-primary btn-block">Manage members</a></div></div>
   </div>
-  <div class="col-sm-4">
+  <div class="col-sm-4" ng-if="permissions.manageSettings">
     <div class="panel panel-default"><div class="panel-heading"><strong><i class="fa fa-cogs"></i> Settings</strong></div><div class="panel-body"><p>Configure appearance, integrations, privacy and plugins.</p><a href="/admin/settings" class="btn btn-primary btn-block">Open settings</a></div></div>
   </div>
 </div>

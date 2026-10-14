@@ -700,6 +700,7 @@
 
             </section>
             <section ng-show="activeSettingsSection == 'accounts'">
+            <div class="panel panel-default"><div class="panel-heading"><strong>Roles and permissions</strong></div><div class="panel-body"><p>Admins have full access. Select the permissions granted to each other role. Everyone retains normal viewing and personal notification access.</p><div class="table-responsive"><table class="table"><thead><tr><th>Permission</th><th>Superuser</th><th>User</th></tr></thead><tbody><tr ng-repeat="permission in permissionDefinitions"><td>{{permission.label}}</td><td><input type="checkbox" aria-label="Superuser permission" ng-model="settings.auth.rolePermissions.superuser[permission.key]"></td><td><input type="checkbox" aria-label="User permission" ng-model="settings.auth.rolePermissions.user[permission.key]"></td></tr></tbody></table></div><p class="help-block">Account and settings management grant powerful access, including changing roles or permissions.</p></div></div>
             <div class="panel panel-default settings-anchor" id="settings-access">
               <div class="panel-heading"><strong><i class="fa fa-user-shield"></i> Accounts and access</strong></div>
               <div class="panel-body">

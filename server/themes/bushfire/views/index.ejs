@@ -54,15 +54,15 @@
     <div class="row">
       <section class="cw-dashboard">
         <div class="cw-toolbar">
-          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'feed', 'btn-default': dashboardView != 'feed'}" ng-click="setDashboardView('feed')"><i class="fa fa-list"></i> Feed</button>
+          <button ng-if="permissions.viewPagerFeed" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'feed', 'btn-default': dashboardView != 'feed'}" ng-click="setDashboardView('feed')"><i class="fa fa-list"></i> Feed</button>
           <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'incidents', 'btn-default': dashboardView != 'incidents'}" ng-click="setDashboardView('incidents')"><i class="fa fa-layer-group"></i> Incidents <span class="badge" ng-if="newViewCounts.incidents">{{newViewCounts.incidents}}</span></button>
-          <button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'map', 'btn-default': dashboardView != 'map'}" ng-click="setDashboardView('map')"><i class="fa fa-map-marker-alt"></i> Live map <span class="badge" ng-if="rfsIncidents.length">{{rfsIncidents.length}}</span></button>
-          <% if (login && user.role == 'admin') { %><button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'discovery', 'btn-default': dashboardView != 'discovery'}" ng-click="setDashboardView('discovery')"><i class="fa fa-search"></i> Discovery <span class="badge">{{unknownCapcodes.length}}</span></button><% } %>
+          <button ng-if="permissions.viewLiveMap" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'map', 'btn-default': dashboardView != 'map'}" ng-click="setDashboardView('map')"><i class="fa fa-map-marker-alt"></i> Live map <span class="badge" ng-if="rfsIncidents.length">{{rfsIncidents.length}}</span></button>
+          <% if (permissions.viewDiscovery) { %><button class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'discovery', 'btn-default': dashboardView != 'discovery'}" ng-click="setDashboardView('discovery')"><i class="fa fa-search"></i> Discovery <span class="badge">{{unknownCapcodes.length}}</span></button><% } %>
           <button ng-if="integrationFeatures.bom" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'warnings', 'btn-default': dashboardView != 'warnings', 'cw-warning-active': bomWarnings.length}" ng-click="setDashboardView('warnings')"><i class="fa fa-cloud-bolt"></i> BOM warnings <span class="badge" ng-if="bomWarnings.length">{{bomWarnings.length}}</span></button>
-          <button ng-if="integrationFeatures.waterNsw" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'water', 'btn-default': dashboardView != 'water', 'cw-water-alert-active': damAlerts.length}" ng-click="setDashboardView('water')"><i class="fa fa-water"></i> WaterNSW <span class="badge" ng-if="damAlerts.length">{{damAlerts.length}}</span></button>
-          <% if (login) { %><button ng-if="integrationFeatures.radio" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'radio', 'btn-default': dashboardView != 'radio'}" ng-click="setDashboardView('radio')"><i class="fa fa-broadcast-tower"></i> Radio <span class="badge" ng-if="newViewCounts.radio">{{newViewCounts.radio}}</span></button><% } %>
+          <button ng-if="integrationFeatures.waterNsw && permissions.viewWaterNsw" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'water', 'btn-default': dashboardView != 'water', 'cw-water-alert-active': damAlerts.length}" ng-click="setDashboardView('water')"><i class="fa fa-water"></i> WaterNSW <span class="badge" ng-if="damAlerts.length">{{damAlerts.length}}</span></button>
+          <% if (login) { %><button ng-if="integrationFeatures.radio && permissions.viewRadio" class="btn btn-sm" ng-class="{'btn-primary': dashboardView == 'radio', 'btn-default': dashboardView != 'radio'}" ng-click="setDashboardView('radio')"><i class="fa fa-broadcast-tower"></i> Radio <span class="badge" ng-if="newViewCounts.radio">{{newViewCounts.radio}}</span></button><% } %>
           <button class="btn btn-default btn-sm pull-right" ng-click="toggleDarkMode()" title="Toggle dark mode"><i class="fa" ng-class="darkMode ? 'fa-sun' : 'fa-moon'"></i></button>
-          <button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()" title="Full-screen operations display"><i class="fa fa-expand"></i> Operations</button>
+          <button ng-if="permissions.viewLiveMap" class="btn btn-default btn-sm" ng-click="toggleOperationsMode()" title="Full-screen operations display"><i class="fa fa-expand"></i> Operations</button>
         </div>
 
         <div class="cw-health">
@@ -94,7 +94,7 @@
           <p class="cw-map-note">Pager markers show approximate town centres. RFS markers use published feed coordinates, which may represent an LGA centre until accurate spatial information is available. © State of New South Wales (NSW Rural Fire Service). <a href="https://www.rfs.nsw.gov.au/fire-information/fires-near-me" target="_blank" rel="noopener">Current information</a>.</p>
         </div>
 
-        <% if (login && user.role == 'admin') { %><div class="cw-panel" ng-show="dashboardView == 'discovery'">
+        <% if (permissions.viewDiscovery) { %><div class="cw-panel" ng-show="dashboardView == 'discovery'">
           <div class="cw-empty" ng-if="!unknownCapcodes.length">No unknown capcodes in the recent-message window.</div>
           <div class="cw-discovery" ng-repeat="unknown in unknownCapcodes">
             <strong>{{unknown.address || 'Hidden capcode'}}</strong><span class="badge">{{unknown.count}}</span>
@@ -285,7 +285,7 @@
                 <span ng-if="message.cwInformational" class="label label-info"><i class="fa fa-info-circle"></i> INFORMATION</span>
                 <span ng-if="message.cwPriority != 'routine'" class="cw-priority-label">{{message.cwPriority}}</span>
                 <div highlight="message.message" replacement="init.replaceText" class="pagerMessage"></div>
-                <button ng-if="role == 'admin'" type="button" class="btn btn-default btn-xs" ng-click="toggleMessageVisibility(message)">{{message.hidden ? 'Unhide' : 'Hide'}}</button><span ng-if="message.hidden" class="label label-warning">Hidden from users</span>
+                <button ng-if="permissions.moderateMessages" type="button" class="btn btn-default btn-xs" ng-click="toggleMessageVisibility(message)">{{message.hidden ? 'Unhide' : 'Hide'}}</button><span ng-if="message.hidden" class="label label-warning">Hidden from users</span>
             </td>
         </tbody>
       </table>
@@ -439,6 +439,7 @@
     // Controller
     // TODO: optimise this whole section, consider popping this entire controller out to a separate file
     .controller('MessageController', ['$scope', '$routeParams', 'Api', 'socket', 'adminSocket', '$cookies', '$location', '$window', '$interval', function ($scope, $routeParams, Api, socket, adminSocket, $cookies, $location, $window, $interval) {
+      $scope.permissions = <%- JSON.stringify(permissions) %>;
       $scope.toggleMessageVisibility = function (message) {
         fetch('/api/messages/' + message.id + '/visibility', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({hidden: !message.hidden})}).then(function (response) {
           if (!response.ok) throw new Error('Unable to change message visibility');
@@ -455,6 +456,7 @@
         $scope.user="";
       <% } %>
       $scope.dashboardView = /(?:\?|&)view=incidents(?:&|$)/.test(window.location.search) ? 'incidents' : 'feed';
+      if (!$scope.permissions.viewPagerFeed) $scope.dashboardView = 'incidents';
       var timelineQuery = window.location.search.match(/(?:\?|&)incident=([^&]+)/);
       $scope.timelineIncidentFocus = timelineQuery ? decodeURIComponent(timelineQuery[1].replace(/\+/g, ' ')).toLowerCase() : '';
       $scope.incidentTimelineFilter = function (incident) {
@@ -659,6 +661,8 @@
       }
 
       $scope.setDashboardView = function (view) {
+        var tabPermissions = {feed: 'viewPagerFeed', map: 'viewLiveMap', discovery: 'viewDiscovery', radio: 'viewRadio', water: 'viewWaterNsw'};
+        if (tabPermissions[view] && !$scope.permissions[tabPermissions[view]]) return;
         $scope.dashboardView = view;
         markViewSeen(view);
         // A standalone iOS PWA may have been suspended long enough to miss

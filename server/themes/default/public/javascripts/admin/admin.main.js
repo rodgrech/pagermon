@@ -1,4 +1,7 @@
 angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'ui.bootstrap', 'color.picker', 'ui.validate', 'textAngular', 'ngFileSaver', 'angular-sortable-view'])
+    .run(['$rootScope', '$http', function ($rootScope, $http) {
+      $http.get('/api/permissions').then(function (response) { $rootScope.permissions = response.data; });
+    }])
     // Service
     .factory('Api', ['$resource',
      function($resource) {
@@ -983,6 +986,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
           results.settings.auth.keys = [{}];
         $scope.settings = results.settings;
         $scope.plugins = results.plugins;
+        $scope.permissionDefinitions = results.permissionDefinitions || [];
         $scope.themes = results.themes;
         $scope.pwaIconThemes = results.pwaIconThemes || results.themes;
       });

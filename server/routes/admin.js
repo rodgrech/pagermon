@@ -50,6 +50,11 @@ router.route('/settingsData')
         settings.notifications = Object.assign({}, defaultConfig.notifications, settings.notifications || {});
         settings.notifications.webPush = Object.assign({}, defaultConfig.notifications.webPush, settings.notifications.webPush || {});
         settings.auth = Object.assign({}, defaultConfig.auth, settings.auth || {});
+        var permissionModel = require('../lib/permissions');
+        settings.auth.rolePermissions = settings.auth.rolePermissions || {};
+        ['superuser', 'user'].forEach(function (role) {
+            settings.auth.rolePermissions[role] = Object.assign({}, permissionModel.defaults[role], settings.auth.rolePermissions[role] || {});
+        });
         settings.monitoring = Object.assign({}, defaultConfig.monitoring, settings.monitoring || {});
         settings.monitoring.receiverMonitoring = Object.assign({}, defaultConfig.monitoring.receiverMonitoring, settings.monitoring.receiverMonitoring || {});
         if (!Array.isArray(settings.monitoring.receiverMonitoring.remotes)) settings.monitoring.receiverMonitoring.remotes = [];
@@ -64,7 +69,7 @@ router.route('/settingsData')
         });
         let themes = installedSupportedThemes();
         // logger.main.debug(util.format('Plugin Config:\n\n%o',plugins));
-        let data = { "settings": settings, "plugins": plugins, "themes": themes, "pwaIconThemes": themes }
+        let data = { "settings": settings, "plugins": plugins, "themes": themes, "pwaIconThemes": themes, "permissionDefinitions": permissionModel.definitions }
         res.json(data);
     })
     .post(authHelper.isAdmin, function (req, res, next) {
@@ -113,6 +118,10 @@ router.post('/restart', authHelper.isAdmin, function (req, res) {
 });
 
 router.get('*', authHelper.isAdminGUI, function (req, res, next) {
+    var model = require('../lib/permissions');
+    if (/^\/settings/.test(req.path) && !model.has(req.user, 'manageSettings')) return res.status(403).send('Permission denied');
+    if (/^\/aliases/.test(req.path) && !model.has(req.user, 'manageAliases')) return res.status(403).send('Permission denied');
+    if (/^\/users/.test(req.path) && !model.has(req.user, 'manageUsers') && !model.has(req.user, 'approveUsers')) return res.status(403).send('Permission denied');
     res.render('admin', { pageTitle: 'Admin' });
 });
 

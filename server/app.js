@@ -271,6 +271,11 @@ if (process.env.HOSTNAME && /^(1|true|yes)$/i.test(String(process.env.USE_COOKIE
 app.use(session(sessSet));
 app.use(passport.initialize());
 app.use(passport.session()); // persistent login sessions
+app.use(function (req, res, next) {
+  res.locals.permissions = require('./lib/permissions').forUser(req.user);
+  res.locals.hasAdminAccess = require('./lib/permissions').adminAccess(req.user);
+  next();
+});
 app.use(flash());
 app.use(express.static(path.join(__dirname,'themes',theme, 'public')));
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));

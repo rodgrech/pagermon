@@ -285,7 +285,13 @@ The reorganised admin interface contains:
 - **Messages, privacy and alias tools** — filtering, redaction, visibility, regex rules and templates
 - **Accounts and access** — registration, member approval and approval email notifications
 
-### Registration approval emails
+### Roles and permissions
+
+Assign **Admin**, **Superuser** or **User** under Admin → Users. Admin retains full access. Under Settings → Accounts → Roles and permissions, select whether Superusers and Users can view hidden messages, hide/unhide messages, approve registrations, manage accounts, manage aliases or change settings. Superusers initially have hidden-message viewing, moderation and registration approval; Users initially have normal viewing and personal notification access.
+
+Permissions are checked on server requests. Approval-only members can review accounts but cannot edit their details. Account and settings management are powerful permissions: they allow changing roles or permission configuration. The last active Admin account cannot be deleted, disabled or demoted.
+
+### Approval email setup
 
 Configure the mail server and sender under **Settings → Integrations → Plugins → SMTP**. Under **Settings → Accounts**, enable **New member approvals** and **Approval emails**, then enter comma-separated administrator addresses in **Approval recipients** and save.
 

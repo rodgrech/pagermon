@@ -1,6 +1,7 @@
 // pass passport for configuration
 const bcrypt = require('bcryptjs');
 var nconf = require('nconf');
+const permissions = require('../lib/permissions');
 
 var confFile = './config/config.json';
 nconf.file({ file: confFile });
@@ -46,7 +47,7 @@ function isLoggedInMessages (req, res, next) {
 }
 
 function isAdminGUI (req, res, next) {
-    if (req.isAuthenticated() && req.user.role == 'admin') {
+    if (req.isAuthenticated() && permissions.adminAccess(req.user)) {
       if (nconf.get('auth:requireAdminTwoFactor') && !req.user.totp_enabled) return res.redirect('/auth/profile');
       //if the user is authenticated and the user's role is admin carry on
       return next();
@@ -56,6 +57,18 @@ function isAdminGUI (req, res, next) {
 }
 
 function isAdmin (req, res, next) {
+    if (req.isAuthenticated() && req.user.role !== 'admin') {
+      var permission = 'manageSettings';
+      var route = req.path || '';
+      if (/^\/messages\/[^/]+\/visibility$/.test(route)) permission = 'moderateMessages';
+      else if (/^\/user\/[^/]+\/(approve|deny)$/.test(route)) permission = 'approveUsers';
+      else if (/^\/user(?:\/|$)|^\/userCheck\//.test(route)) {
+        if (req.method === 'GET' && permissions.has(req.user, 'approveUsers')) return next();
+        permission = 'manageUsers';
+      } else if (/^\/capcode/.test(route)) permission = 'manageAliases';
+      if (permissions.has(req.user, permission)) return next();
+      return res.status(403).json({error: 'You do not have permission for this action'});
+    }
     const passport = require('../auth/local');
     if (req.isAuthenticated() && req.user.role == 'admin') {
       if (nconf.get('auth:requireAdminTwoFactor') && !req.user.totp_enabled) return res.status(403).json({error: 'Administrator two-factor enrolment is required.'});

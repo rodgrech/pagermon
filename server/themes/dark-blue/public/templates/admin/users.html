@@ -63,7 +63,7 @@
       </table>
     </div>
   </div>
-<div class="btn-group-vertical" id="buttons-management">
+<div class="btn-group-vertical" id="buttons-management" ng-if="permissions.manageUsers">
   <button type="button" ng-disabled="!userSelected()" ng-click="userDelete()" class="btn btn-danger ">Delete Selected</button>
   <button type="button" ng-click="userDetail('new');" class="btn btn-success ">Add New</button>
 </div>

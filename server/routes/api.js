@@ -16,6 +16,7 @@ var fs = require('fs');
 var net = require('net');
 var webPushNotifications = require('../lib/webPush');
 var approvalMailer = require('../lib/accountApprovalMailer');
+var permissions = require('../lib/permissions');
 
 function returningId(result) {
   var first = Array.isArray(result) ? result[0] : result;
@@ -84,6 +85,41 @@ var authHelper = require('../middleware/authhelper')
 router.use(function (req, res, next) {
   res.locals.login = req.isAuthenticated();
   res.locals.user = req.user || false;
+  next();
+});
+
+// Validate role writes and retain at least one active full-access administrator.
+router.use(function (req, res, next) {
+  if (/^\/user(?:\/|$)/.test(req.path) && ['POST', 'DELETE'].includes(req.method)) return authHelper.isAdmin(req, res, next);
+  next();
+});
+router.use(function (req, res, next) {
+  if (!/^\/user(?:\/|$)/.test(req.path) || !['POST', 'DELETE'].includes(req.method)) return next();
+  if (req.body.role && !['admin', 'superuser', 'user'].includes(req.body.role)) return res.status(400).json({error: 'Invalid role'});
+  var target = req.path.split('/')[2];
+  if (!target || target === 'new' || /\/(approve|deny)$/.test(req.path)) return next();
+  var ids = target === 'deleteMultiple' ? req.body.deleteList || [] : [target];
+  db('users').where({role: 'admin', status: 'active'}).select('id').then(function (admins) {
+    var removesAccess = req.method === 'DELETE' || target === 'deleteMultiple' || req.body.role !== 'admin' || req.body.status !== 'active';
+    if (removesAccess && admins.length && admins.every(function (admin) { return ids.map(String).includes(String(admin.id)); })) return res.status(400).json({error: 'At least one active Admin account must remain'});
+    next();
+  }).catch(next);
+});
+
+router.get('/permissions', authHelper.isLoggedIn, function (req, res) {
+  res.json(permissions.forUser(req.user));
+});
+
+router.use(function (req, res, next) {
+  if (!req.isAuthenticated()) return next();
+  var permission;
+  if (req.method === 'GET' && /^\/(messages(?:\/|$)|messageSearch$)/.test(req.path)) permission = 'viewPagerFeed';
+  else if (/^\/central-west\/radio-calls/.test(req.path)) permission = 'viewRadio';
+  else if (/^\/central-west\/waternsw-/.test(req.path)) {
+    if (permissions.has(req.user, 'viewWaterNsw') || permissions.has(req.user, 'viewLiveMap')) return next();
+    permission = 'viewWaterNsw';
+  } else if (/^\/central-west\/(aircraft|weather-radar|nasa-firms-hotspots|lightning|fire-danger-boundaries|forestry-closures)$/.test(req.path)) permission = 'viewLiveMap';
+  if (permission && !permissions.has(req.user, permission)) return res.status(403).json({error: 'You do not have permission to view this tab'});
   next();
 });
 
@@ -422,7 +458,7 @@ router.route('/messages')
                 queryBuilder.leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id').where(function () { this.where('capcodes.ignore', 0).orWhereNull('capcodes.ignore'); })
               }
             })
-            .whereNotIn('messages.id', function () { this.select('id').from('messages').where('hidden', true); if (req.user && req.user.role === 'admin') this.whereRaw('1 = 0'); })
+            .whereNotIn('messages.id', function () { this.select('id').from('messages').where('hidden', true); if (permissions.has(req.user, 'viewHiddenMessages')) this.whereRaw('1 = 0'); })
             .orderBy('messages.timestamp', 'desc')
             .limit(initData.limit)
             .offset(initData.offset)
@@ -434,6 +470,7 @@ router.route('/messages')
                   if (!req.isAuthenticated() || (req.isAuthenticated() && req.user.role == 'user')) {
                     row = {
                       "id": row.id,
+                      "hidden": row.hidden,
                       "message": row.message,
                       "source": row.source,
                       "timestamp": row.timestamp,
@@ -678,6 +715,7 @@ router.route('/messages')
                                         // send to normal user as well if not null alias_id
                                         rowuser = {
                                           "id": row.id,
+                                          "hidden": row.hidden,
                                           "message": row.message,
                                           "source": row.source,
                                           "timestamp": row.timestamp,
@@ -696,6 +734,7 @@ router.route('/messages')
                                         req.io.of('adminio').emit('messagePost', row);
                                         rowuser = {
                                           "id": row.id,
+                                          "hidden": row.hidden,
                                           "message": row.message,
                                           "source": row.source,
                                           "timestamp": row.timestamp,
@@ -713,6 +752,7 @@ router.route('/messages')
                                     req.io.of('adminio').emit('messagePost', row);
                                     rowuser = {
                                       "id": row.id,
+                                      "hidden": row.hidden,
                                       "message": row.message,
                                       "source": row.source,
                                       "timestamp": row.timestamp,
@@ -872,13 +912,14 @@ router.route('/messages/:id')
       .select('messages.*', 'capcodes.alias', 'capcodes.agency', 'capcodes.icon', 'capcodes.color', 'capcodes.ignore', db.raw('CASE WHEN NOT capcodes.address = messages.address THEN 1 ELSE 0 END as wildcard'))
       .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
       .where('messages.id', id)
-      .modify(function (qb) { if (!req.user || req.user.role !== 'admin') qb.where('messages.hidden', false); })
+      .modify(function (qb) { if (!permissions.has(req.user, 'viewHiddenMessages')) qb.where('messages.hidden', false); })
       .then((row) => {
         if (!row.length) return res.status(404).json({error: 'Message not found'});
         if (HideCapcode) {
           if (!req.isAuthenticated() || (req.isAuthenticated() && req.user.role == 'user')) {
             row = {
               "id": row[0].id,
+              "hidden": row[0].hidden,
               "message": row[0].message,
               "source": row[0].source,
               "timestamp": row[0].timestamp,
@@ -991,7 +1032,7 @@ router.route('/messageSearch')
           if (alias != '')
             qb.where('messages.alias_id',alias);
         }
-      }).whereNotIn('messages.id', function () { this.select('id').from('messages').where('hidden', true); if (req.user && req.user.role === 'admin') this.whereRaw('1 = 0'); }).orderBy('messages.timestamp', 'desc')
+      }).whereNotIn('messages.id', function () { this.select('id').from('messages').where('hidden', true); if (permissions.has(req.user, 'viewHiddenMessages')) this.whereRaw('1 = 0'); }).orderBy('messages.timestamp', 'desc')
       .then((rows) => {
         if (rows) {
           for (row of rows) {
@@ -999,6 +1040,7 @@ router.route('/messageSearch')
               if (!req.isAuthenticated() || (req.isAuthenticated() && req.user.role == 'user')) {
                 row = {
                   "id": row.id,
+                  "hidden": row.hidden,
                   "message": row.message,
                   "source": row.source,
                   "timestamp": row.timestamp,
@@ -1894,13 +1936,27 @@ router.route('/user/:id')
 // Central West dashboard data. This is deliberately read-only and derives its
 // state from the existing messages/capcodes tables, so no database migration is
 // required and upgrades remain easy to roll back.
+function withheldIncidentMessage(row, user) {
+  if (!row.hidden || permissions.has(user, 'viewHiddenMessages')) return row;
+  var original = String(row.message || '');
+  var coordinates = null;
+  var pair = original.match(/\[\s*(14\d(?:\.\d+)?|15[0-5](?:\.\d+)?)\s*,\s*(-3\d(?:\.\d+)?)\s*\]/);
+  if (pair) coordinates = {lat: Number(pair[2]), lng: Number(pair[1])};
+  var dms = original.match(/(\d{2})_(\d{2})_(\d{2})_(\d+)_s\s*_\s*(\d{3})_(\d{2})_(\d{2})_(\d+)/i);
+  if (dms) coordinates = {lat: -(Number(dms[1]) + Number(dms[2]) / 60 + Number(dms[3] + '.' + dms[4]) / 3600), lng: Number(dms[5]) + Number(dms[6]) / 60 + Number(dms[7] + '.' + dms[8]) / 3600};
+  return Object.assign({}, row, {
+    message: 'Incident ' + [row.agency, row.alias].filter(Boolean).join(' — ') + ' — Information withheld',
+    informationWithheld: true,
+    withheldCoordinates: coordinates
+  });
+}
+
 router.route('/central-west/dashboard')
   .get(authHelper.isLoggedInMessages, function (req, res) {
     var limit = Math.min(parseInt(req.query.limit, 10) || 500, 1000);
     var hideAddresses = HideCapcode && (!req.isAuthenticated() || req.user.role !== 'admin');
 
     db.from('messages')
-      .modify(function (qb) { if (!req.user || req.user.role !== 'admin') qb.where('messages.hidden', false); })
       .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
       .select('messages.id', 'messages.timestamp', 'messages.message', 'messages.source',
         'messages.address', 'messages.alias_id', 'capcodes.alias', 'capcodes.agency',
@@ -1908,6 +1964,7 @@ router.route('/central-west/dashboard')
       .orderBy('messages.timestamp', 'desc')
       .limit(limit)
       .then(function (rows) {
+        rows = rows.map(function (row) { return withheldIncidentMessage(row, req.user); });
         if (hideAddresses) {
           rows.forEach(function (row) { delete row.address; });
         }
@@ -1941,14 +1998,14 @@ router.route('/central-west/incident-archive')
     var hideAddresses = HideCapcode && (!req.isAuthenticated() || req.user.role !== 'admin');
     var pattern = '%' + queryText + '%';
     var archiveQuery = db.from('messages')
-      .modify(function (qb) { if (!req.user || req.user.role !== 'admin') qb.where('messages.hidden', false); })
       .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
       .select('messages.id', 'messages.timestamp', 'messages.message', 'messages.source',
         'messages.address', 'messages.alias_id', 'capcodes.alias', 'capcodes.agency',
-        'capcodes.icon', 'capcodes.color')
+        'capcodes.icon', 'capcodes.color', 'messages.hidden')
       .where('messages.timestamp', '>=', since);
 
     if (queryText) {
+      if (!permissions.has(req.user, 'viewHiddenMessages')) archiveQuery.where('messages.hidden', false);
       archiveQuery.andWhere(function () {
         this.where('messages.message', 'like', pattern)
           .orWhere('messages.source', 'like', pattern)
@@ -1962,6 +2019,7 @@ router.route('/central-west/incident-archive')
       .then(function (rows) {
         var truncated = rows.length > limit;
         rows = rows.slice(0, limit);
+        rows = rows.map(function (row) { return withheldIncidentMessage(row, req.user); });
         if (hideAddresses) rows.forEach(function (row) { delete row.address; });
         res.set('Cache-Control', 'private, no-store');
         res.status(200).json({

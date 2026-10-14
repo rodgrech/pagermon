@@ -341,6 +341,12 @@
     message.cwInformational = isInformationalPagerMessage(message);
     message.cwPriority = priority(message.message);
     message.cwLocation = message.cwIncident.coordinates || location((message.cwIncident.locality || '') + ' ' + message.message + ' ' + (message.alias || ''));
+    if (message.informationWithheld) {
+      message.cwIncident = {title: 'Incident ' + (message.agency || '') + ' — ' + (message.alias || ''), description: 'Information withheld'};
+      message.cwInformational = false;
+      message.cwLocation = message.withheldCoordinates || location(message.alias || '');
+      if (message.cwLocation) message.cwLocation.name = message.alias || message.agency || 'Incident';
+    }
     if (message.cwLocation && !message.cwLocation.name) message.cwLocation.name = message.cwIncident.locality || 'Incident location';
     return message;
   }
@@ -360,6 +366,7 @@
       var loc = message.cwLocation ? message.cwLocation.name : '';
       var details = message.cwIncident || {};
       var key = incidentGroupKey(message, details, loc, bucket);
+      if (/^\s*WEATHER\b/i.test(String(message.message || ''))) key = 'weather|' + key;
       if (!groups[key]) groups[key] = {agency: message.agency, agencies: [], location: loc, coordinates: message.cwLocation, coordinateAccuracy: details.coordinates && details.coordinates.exact ? 'exact' : 'approximate', details: details, brigades: [], priority: message.cwPriority, messages: [], lastSeen: new Date(Number(message.timestamp) * 1000)};
       groups[key].messages.push(message);
       if (message.agency && groups[key].agencies.indexOf(message.agency) === -1) groups[key].agencies.push(message.agency);
@@ -607,6 +614,11 @@
   }
 
   function pagerPopup(incident) {
+    var latestText = String(incident.messages && incident.messages[0] && incident.messages[0].message || '');
+    if (/^\s*WEATHER\b/i.test(latestText)) {
+      if (phoneMapPopup()) return '<strong>Pager weather</strong><div style="white-space:pre-wrap">' + escapeHtml(latestText) + '</div>';
+      return '<div class="cw-incident-popup"><div class="cw-popup-heading"><i class="fa fa-cloud"></i><strong>PAGER WEATHER</strong></div><div class="cw-popup-description" style="white-space:pre-wrap">' + escapeHtml(latestText) + '</div></div>';
+    }
     var details = incident.details || {};
     var level = incident.rfsMatch && incident.rfsMatch.category || (incident.priority === 'critical' ? 'Critical' : incident.priority === 'high' ? 'High priority' : 'Pager incident');
     var hazard = incidentKind({title: details.title, category: details.type, description: details.subtype || details.description});
@@ -670,6 +682,11 @@
       // A confirmed official match represents the same job. Keep its pager
       // details on the official marker instead of drawing a duplicate pin.
       if (incident.rfsMatch) return;
+      if (/^\s*WEATHER\b/i.test(String(incident.messages[0] && incident.messages[0].message || ''))) {
+        var weatherIcon = L.divIcon({className: 'cw-weather-marker', html: '<span style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:2px solid #fff;border-radius:50%;background:#557fa7;color:#fff;font-size:17px;box-shadow:0 2px 7px rgba(0,0,0,.45)"><i class="fa fa-cloud"></i></span>', iconSize: [34, 34], iconAnchor: [17, 17]});
+        L.marker([incident.coordinates.lat, incident.coordinates.lng], {icon: weatherIcon}).addTo(layerGroups.pager).bindPopup(pagerPopup(incident), mapPopupOptions(390));
+        return;
+      }
       var pagerContent = phoneMapPopup() ? '<strong>' + escapeHtml(incident.location || incident.agency || 'Pager incident') + '</strong><br>' + escapeHtml(incident.agency || 'Unknown agency') + '<br>' + escapeHtml(incident.messages[0] && incident.messages[0].message || '') + '<br><a href="/?view=incidents&incident=' + encodeURIComponent((incident.details && incident.details.incidentId) || incident.location || '') + '">View timeline</a>' : pagerPopup(incident);
       L.marker([incident.coordinates.lat, incident.coordinates.lng]).addTo(layerGroups.pager).bindPopup(pagerContent, mapPopupOptions(390));
     });

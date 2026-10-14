@@ -12,7 +12,7 @@ module.exports = () => {
       .first()
       .then((user) => {
         // check if user returned, if not invalidate existing cookies
-        if (user) {
+        if (user && user.status === 'active') {
           done(null, user);
         } else {
           //this invalidates existing sessions if no user returned.
