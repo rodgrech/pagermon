@@ -132,7 +132,7 @@
   }
 
   var centralWestUnitNames = {
-    CZORANG1: 'Orange 1', CZBOREN1: 'Borenore 1', CZBARRY: 'Barryrenie',
+    CZORANG1: 'Orange 1', CZBOREN1: 'Borenore 1', CZBARRY: 'Barryrenie Station',
     CZBARRY7: 'Barryrenie 7', CZDO: 'Canobolas Duty'
   };
 
@@ -241,7 +241,7 @@
     if (!value || /^(?:RFS|NSW RFS|FRNSW|VRA|TEST|PAGER|CAPCODE)$/i.test(value)) return '';
     value = value.split(/\s+-\s+/)[0]
       .replace(/^NSW\s+RFS\s+/i, '')
-      .replace(/\s+(?:RFB|RURAL FIRE BRIGADE|FIRE BRIGADE|BRIGADE)\b.*$/i, '')
+      .replace(/\s+(?:RFB|RURAL FIRE BRIGADE|FIRE BRIGADE|BRIGADE|STATION)\b.*$/i, '')
       .replace(/\s+(?:CUDGEGONG|CANOBOLAS(?:\s+ZONE)?|CHIFLEY(?:\s+LITHGOW)?|CENTRAL\s+WEST)\s*$/i, '');
     value = cleanPagerField(value);
     return value && /[A-Za-z]/.test(value) ? titleCase(value) : '';
@@ -253,6 +253,7 @@
     if (known[value]) return known[value];
     var parsed = value.match(/^([A-Z]{2})([A-Z]+)(\d+)([A-Z]?)$/);
     var station = stationNameFromAlias(alias);
+    if (/^[A-Z]{2}[A-Z]{3,}$/.test(value) && /\b(?:BRIGADE|RFB|STATION)\b/i.test(String(alias || '')) && station) return station + ' Station';
     if (parsed && station) {
       var agencyPrefix = parsed[1] === 'VR' ? 'VRA ' : '';
       return agencyPrefix + station + ' ' + parsed[3] + parsed[4];
