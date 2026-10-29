@@ -354,12 +354,17 @@
   function groupIncidents(messages) {
     var groups = {};
     var stopPages = [];
+    var followupPages = [];
     (messages || []).forEach(function (message) {
       decorateMessage(message);
       if (message.cwInformational) return;
       if (suppressTestIncidents && isTestPagerMessage(message)) return;
       if (isStopPage(message.message)) {
         stopPages.push(message);
+        return;
+      }
+      if (/^\s*top\s+message\s*\/\//i.test(String(message.message || '')) && isSharedFireNetworkAgency(message.agency)) {
+        followupPages.push(message);
         return;
       }
       var bucket = Math.floor(Number(message.timestamp) / 10800);
@@ -372,6 +377,31 @@
       if (message.agency && groups[key].agencies.indexOf(message.agency) === -1) groups[key].agencies.push(message.agency);
       if (details.brigade && groups[key].brigades.indexOf(details.brigade) === -1) groups[key].brigades.push(details.brigade);
       if (['routine', 'medium', 'high', 'critical'].indexOf(message.cwPriority) > ['routine', 'medium', 'high', 'critical'].indexOf(groups[key].priority)) groups[key].priority = message.cwPriority;
+    });
+    followupPages.forEach(function (message) {
+      var address = normalizedIncidentAddress(String(message.message || '').replace(/^\s*top\s+message\s*\/\//i, ''));
+      var followupTime = Number(message.timestamp);
+      var best = null;
+      if (address.length >= 12) Object.keys(groups).forEach(function (key) {
+        var group = groups[key];
+        if (!group.details.incidentId || !isSharedFireNetworkAgency(group.agency)) return;
+        if (normalizedIncidentAddress(group.details.address).indexOf(address) === -1) return;
+        var priorTimes = group.messages.map(function (candidate) { return Number(candidate.timestamp); }).filter(function (time) { return time <= followupTime; });
+        if (!priorTimes.length) return;
+        var age = followupTime - Math.max.apply(Math, priorTimes);
+        if (age <= stopMessageWindowMinutes * 60 && (!best || age < best.age)) best = {group: group, age: age};
+      });
+      if (best) {
+        best.group.messages.push(message);
+        best.group.lastSeen = new Date(Math.max(best.group.lastSeen.getTime(), followupTime * 1000));
+        if (message.agency && best.group.agencies.indexOf(message.agency) === -1) best.group.agencies.push(message.agency);
+        return;
+      }
+      var loc = message.cwLocation ? message.cwLocation.name : '';
+      var key = incidentGroupKey(message, message.cwIncident || {}, loc, Math.floor(followupTime / 10800));
+      if (!groups[key]) groups[key] = {agency: message.agency, agencies: [], location: loc, coordinates: message.cwLocation, coordinateAccuracy: 'approximate', details: message.cwIncident || {}, brigades: [], priority: message.cwPriority, messages: [], lastSeen: new Date(followupTime * 1000)};
+      groups[key].messages.push(message);
+      if (message.agency && groups[key].agencies.indexOf(message.agency) === -1) groups[key].agencies.push(message.agency);
     });
     stopPages.forEach(function (message) {
       var stopTime = Number(message.timestamp);
@@ -405,6 +435,7 @@
       groups[key] = {agency: message.agency, agencies: message.agency ? [message.agency] : [], location: loc, coordinates: message.cwLocation, coordinateAccuracy: 'approximate', details: details, brigades: [], priority: message.cwPriority, messages: [message], lastSeen: new Date(stopTime * 1000), status: 'unmatched-stop', stoppedAt: new Date(stopTime * 1000)};
     });
     return Object.keys(groups).map(function (key) {
+      groups[key].messages.sort(function (a, b) { return Number(b.timestamp) - Number(a.timestamp); });
       groups[key].brigades.sort(brigadeSort);
       if (groups[key].agencies.length) groups[key].agency = groups[key].agencies.join(' + ');
       return groups[key];
