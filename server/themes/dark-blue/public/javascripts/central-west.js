@@ -291,6 +291,12 @@
 
   function incidentGroupKey(message, details, loc, bucket) {
     var agency = message.agency || 'unknown';
+    if (details.sesJobId && String(agency).toUpperCase().indexOf('SES') !== -1) {
+      return 'ses|job|' + details.sesJobId;
+    }
+    if (details.geocodeAddress && !isSharedFireNetworkAgency(agency)) {
+      return agency + '|address|' + normalizedIncidentAddress(details.geocodeAddress) + '|' + bucket;
+    }
     if (isSharedFireNetworkAgency(agency)) {
       if (details.incidentId) return 'rfs-vra|incident|' + details.incidentId;
       var address = normalizedIncidentAddress(details.address);
@@ -298,6 +304,34 @@
       if (details.coordinates) return 'rfs-vra|coordinates|' + Number(details.coordinates.lat).toFixed(4) + '|' + Number(details.coordinates.lng).toFixed(4) + '|' + bucket;
     }
     return details.incidentId ? agency + '|incident|' + details.incidentId : agency + '|' + (loc || message.address || 'unknown') + '|' + bucket;
+  }
+
+  function pagerStreetAddress(text) {
+    text = String(text || '');
+    var match = text.match(/\bAT\s+([^,.;]{5,100}),\s*([A-Z][A-Z -]{2,50}),?\s*NSW\b/i);
+    if (!match) match = text.match(/\b(\d{1,5}\s+[A-Z][A-Z0-9' -]{2,70}\b(?:RD|ROAD|ST|STREET|AVE|AVENUE|DR|DRIVE|LANE|LN|HWY|HIGHWAY|CT|COURT|CRES|CRESCENT|PL|PLACE)),\s*([A-Z][A-Z -]{2,50}),?\s*NSW\b/i);
+    if (!match || !/\b(?:RD|ROAD|ST|STREET|AVE|AVENUE|DR|DRIVE|LANE|LN|HWY|HIGHWAY|CT|COURT|CRES|CRESCENT|PL|PLACE)\b/i.test(match[1])) return null;
+    return {street: titleCase(match[1]), locality: titleCase(match[2])};
+  }
+
+  function sesPagedUnit(message) {
+    var alias = cleanPagerField(message.alias);
+    var callsign = String(message.message || '').match(/\bWTZ([A-Z]{3,7})\b/i);
+    var station = alias.match(/^(.+?)\s+SES\b/i);
+    return callsign && station ? 'Western Zone ' + titleCase(station[1]) + ' Unit' : alias;
+  }
+
+  function sesIncidentType(text) {
+    text = String(text || '');
+    if (/\b(?:TREE|BRANCH)\b/i.test(text) && /\bBLOCK(?:ING|ED)?\b/i.test(text) && /\bROAD\b/i.test(text)) return 'Tree branch blocking road';
+    if (/\b(?:TREE|BRANCH)\b/i.test(text) && /\bBLOCK(?:ING|ED)?\b/i.test(text)) return 'Tree or branch obstruction';
+    return '';
+  }
+
+  function weatherGroupKey(message) {
+    var alias = String(message.alias || '').toUpperCase();
+    var district = alias.match(/\b(CANOBOLAS|CUDGEGONG|CHIFLEY|LITHGOW)\b/);
+    return 'weather|' + (message.agency || 'unknown') + '|' + (district ? district[1] : String(message.alias_id || message.address || alias || message.source || 'unknown'));
   }
 
   function parsePagerIncident(message) {
@@ -311,6 +345,12 @@
       if (longitude >= 140 && longitude <= 155 && latitude >= -39 && latitude <= -27) details.coordinates = {lat: latitude, lng: longitude, exact: true};
     }
     var parts = text.split(/\s+-\s+/).map(cleanPagerField);
+    if (agency.indexOf('SES') !== -1) {
+      var sesJob = text.match(/\b\d{4}-\d{4}\b/);
+      if (sesJob) details.sesJobId = sesJob[0];
+      details.unit = sesPagedUnit(message);
+      details.type = sesIncidentType(text);
+    }
     var incidentIndex = -1;
     for (var i = 0; i < parts.length; i++) if (/^\d{2}-\d{5,}$/.test(parts[i])) { incidentIndex = i; break; }
     if (incidentIndex >= 0 && (isSharedFireNetworkAgency(agency) || details.coordinates)) {
@@ -328,11 +368,23 @@
     }
     var sesMatch = text.match(/^(.+?)\s+AT\s+([^,]+),\s*([^,]+),\s*([^,]+),\s*NSW\.?\s*(.*)$/i);
     if (sesMatch && (agency.indexOf('SES') !== -1 || /\bCFR\b/i.test(sesMatch[1]))) {
-      details.format = 'ses'; details.callsign = cleanPagerField(sesMatch[1]); details.unit = responseUnitName(details.callsign); details.place = titleCase(sesMatch[2]);
+      details.format = 'ses'; details.callsign = cleanPagerField(sesMatch[1]); details.unit = sesPagedUnit(message) || responseUnitName(details.callsign); details.place = titleCase(sesMatch[2]);
       details.street = titleCase(sesMatch[3]); details.locality = titleCase(sesMatch[4]);
       details.address = [details.place, details.street, details.locality + ', NSW'].join(', ');
       details.geocodeAddress = [details.street, details.locality + ', NSW'].join(', ');
-      details.description = cleanPagerField(sesMatch[5]); details.title = 'SES response — ' + details.locality;
+      details.description = cleanPagerField(sesMatch[5]); details.title = (details.type || 'SES response') + ' — ' + details.locality;
+      return details;
+    }
+    if (agency.indexOf('SES') !== -1) {
+      var streetAddress = pagerStreetAddress(text);
+      if (streetAddress) {
+        details.format = 'ses';
+        details.street = streetAddress.street;
+        details.locality = streetAddress.locality;
+        details.address = [details.street, details.locality + ', NSW'].join(', ');
+        details.geocodeAddress = details.address;
+        details.title = (details.type || 'SES response') + ' — ' + details.locality;
+      }
     }
     return details;
   }
@@ -341,7 +393,7 @@
     message.cwIncident = parsePagerIncident(message);
     message.cwInformational = isInformationalPagerMessage(message);
     message.cwPriority = priority(message.message);
-    message.cwLocation = message.cwIncident.coordinates || location((message.cwIncident.locality || '') + ' ' + message.message + ' ' + (message.alias || ''));
+    message.cwLocation = message.cwIncident.coordinates || (message.cwIncident.locality ? location(message.cwIncident.locality) : location(message.message + ' ' + (message.alias || '')));
     if (message.informationWithheld) {
       message.cwIncident = {title: 'Incident ' + (message.agency || '') + ' — ' + (message.alias || ''), description: 'Information withheld'};
       message.cwInformational = false;
@@ -356,11 +408,17 @@
     var groups = {};
     var stopPages = [];
     var followupPages = [];
+    var latestWeather = {};
+    (messages || []).forEach(function (message) {
+      if (!/^\s*WEATHER\b/i.test(String(message.message || ''))) return;
+      var key = weatherGroupKey(message);
+      if (!latestWeather[key] || Number(message.timestamp) > latestWeather[key].timestamp) latestWeather[key] = {timestamp: Number(message.timestamp), text: cleanPagerField(message.message)};
+    });
     (messages || []).forEach(function (message) {
       decorateMessage(message);
       if (message.cwInformational) return;
       if (suppressTestIncidents && isTestPagerMessage(message)) return;
-      if (isStopPage(message.message)) {
+      if (isStopPage(message.message) && String(message.agency || '').toUpperCase().indexOf('SES') === -1) {
         stopPages.push(message);
         return;
       }
@@ -369,14 +427,24 @@
         return;
       }
       var bucket = Math.floor(Number(message.timestamp) / 10800);
-      var loc = message.cwLocation ? message.cwLocation.name : '';
       var details = message.cwIncident || {};
+      var loc = details.locality || (message.cwLocation ? message.cwLocation.name : '');
       var key = incidentGroupKey(message, details, loc, bucket);
-      if (/^\s*WEATHER\b/i.test(String(message.message || ''))) key = 'weather|' + key;
-      if (!groups[key]) groups[key] = {agency: message.agency, agencies: [], location: loc, coordinates: message.cwLocation, coordinateAccuracy: details.coordinates && details.coordinates.exact ? 'exact' : 'approximate', details: details, brigades: [], priority: message.cwPriority, messages: [], lastSeen: new Date(Number(message.timestamp) * 1000)};
+      var isWeather = /^\s*WEATHER\b/i.test(String(message.message || ''));
+      if (isWeather) {
+        key = weatherGroupKey(message);
+        if (cleanPagerField(message.message) !== latestWeather[key].text) return;
+      }
+      if (!groups[key]) groups[key] = {agency: message.agency, agencies: [], location: loc, coordinates: message.cwLocation, coordinateAccuracy: details.coordinates && details.coordinates.exact ? 'exact' : 'approximate', details: details, brigades: [], priority: message.cwPriority, messages: [], lastSeen: new Date(Number(message.timestamp) * 1000), weather: isWeather};
       groups[key].messages.push(message);
+      groups[key].lastSeen = new Date(Math.max(groups[key].lastSeen.getTime(), Number(message.timestamp) * 1000));
+      if (!groups[key].details.type && details.type) {
+        groups[key].details.type = details.type;
+        groups[key].details.title = details.title;
+      }
       if (message.agency && groups[key].agencies.indexOf(message.agency) === -1) groups[key].agencies.push(message.agency);
-      if (details.brigade && groups[key].brigades.indexOf(details.brigade) === -1) groups[key].brigades.push(details.brigade);
+      var resource = details.brigade || (String(message.agency || '').toUpperCase().indexOf('SES') !== -1 ? details.unit : '');
+      if (resource && groups[key].brigades.indexOf(resource) === -1) groups[key].brigades.push(resource);
       if (['routine', 'medium', 'high', 'critical'].indexOf(message.cwPriority) > ['routine', 'medium', 'high', 'critical'].indexOf(groups[key].priority)) groups[key].priority = message.cwPriority;
     });
     followupPages.forEach(function (message) {
@@ -411,6 +479,7 @@
         var group = groups[key];
         var sameCapcode = group.messages.some(function (candidate) { return String(candidate.address) === String(message.address); });
         if (!sameCapcode) return;
+        if (group.details.geocodeAddress && message.cwIncident.geocodeAddress && normalizedIncidentAddress(group.details.geocodeAddress) !== normalizedIncidentAddress(message.cwIncident.geocodeAddress)) return;
         var priorTimes = group.messages.map(function (candidate) { return Number(candidate.timestamp); }).filter(function (timestamp) { return timestamp <= stopTime; });
         if (!priorTimes.length) return;
         var latestPrior = Math.max.apply(Math, priorTimes);
@@ -435,12 +504,18 @@
       var key = (message.agency || 'unknown') + '|unmatched-stop|' + (loc || message.address || 'unknown') + '|' + bucket;
       groups[key] = {agency: message.agency, agencies: message.agency ? [message.agency] : [], location: loc, coordinates: message.cwLocation, coordinateAccuracy: 'approximate', details: details, brigades: [], priority: message.cwPriority, messages: [message], lastSeen: new Date(stopTime * 1000), status: 'unmatched-stop', stoppedAt: new Date(stopTime * 1000)};
     });
+    Object.keys(groups).forEach(function (key) {
+      var group = groups[key];
+      if (group.status === 'stopped' && group.stoppedAt && group.messages.some(function (message) {
+        return Number(message.timestamp) * 1000 > group.stoppedAt.getTime() && !isStopPage(message.message);
+      })) group.status = 'active';
+    });
     return Object.keys(groups).map(function (key) {
       groups[key].messages.sort(function (a, b) { return Number(b.timestamp) - Number(a.timestamp); });
       groups[key].brigades.sort(brigadeSort);
       if (groups[key].agencies.length) groups[key].agency = groups[key].agencies.join(' + ');
       return groups[key];
-    }).sort(function (a, b) { return b.lastSeen - a.lastSeen; }).slice(0, 50);
+    }).sort(function (a, b) { return b.lastSeen - a.lastSeen; }).filter(function (incident, index) { return index < 50 || incident.weather; });
   }
 
   function unknownCapcodes(messages) {
@@ -539,6 +614,7 @@
     (incidents || []).forEach(function (incident) {
       incident.rfsMatch = null;
       incident.rfsLifecycle = [];
+      incident.retiredAfterRfsRemoval = false;
       if (String(incident.agency || '').toUpperCase().indexOf('RFS') === -1) return;
       if (!incident.coordinates) return;
       (rfsIncidents || []).forEach(function (rfs) {
@@ -563,6 +639,11 @@
         if (removedMatch) {
           incident.rfsLifecycle.push({timestamp: removedMatch.firstSeenAt, label: 'Loaded into public RSS/ICON', state: 'loaded'});
           incident.rfsLifecycle.push({timestamp: removedMatch.removedAt, label: 'Removed from public RSS/ICON', state: 'removed'});
+          // A removed official incident should not reappear as a pager-only map
+          // marker. A fresh, non-stop page after removal can reopen it.
+          incident.retiredAfterRfsRemoval = !(incident.messages || []).some(function (message) {
+            return Number(message.timestamp) > Number(removedMatch.removedAt) && !isStopPage(message.message);
+          });
         }
       }
     });
@@ -659,11 +740,11 @@
     if (!units.length && details.unit) units.push(details.unit);
     if (!units.length && details.callsign) units.push(details.callsign);
     var chips = units.length ? '<div class="cw-popup-label">Units paged</div><div class="cw-popup-units">' + units.map(function(unit) { return '<span>' + escapeHtml(displayUnitName(unit)) + '</span>'; }).join('') + '</div>' : '';
-    var timelineKey = details.incidentId || incident.location || '';
+    var timelineKey = details.incidentId || details.sesJobId || incident.location || '';
     return '<div class="cw-incident-popup">' +
       '<div class="cw-popup-heading"><i class="fa ' + hazard.icon + '"></i><strong>' + escapeHtml(String(level).toUpperCase()) + '</strong></div>' +
       '<div class="cw-popup-title">' + escapeHtml(details.title || incident.location || incident.agency || 'Pager incident') + '</div>' +
-      '<div class="cw-popup-pills">' + (updated ? '<span><small>Updated</small>' + escapeHtml(updated) + '</span>' : '') + (details.incidentId ? '<span><small>Incident</small>' + escapeHtml(details.incidentId) + '</span>' : '') + '<span><small>Pages</small>' + incident.messages.length + '</span></div>' +
+      '<div class="cw-popup-pills">' + (updated ? '<span><small>Updated</small>' + escapeHtml(updated) + '</span>' : '') + (details.incidentId || details.sesJobId ? '<span><small>Incident</small>' + escapeHtml(details.incidentId || details.sesJobId) + '</span>' : '') + '<span><small>Pages</small>' + incident.messages.length + '</span></div>' +
       (details.address ? '<div class="cw-popup-address"><i class="fa fa-map-marker-alt"></i>' + escapeHtml(details.address) + '</div>' : '') + chips +
       '<div class="cw-popup-agency">' + escapeHtml(incident.agency || 'Unknown agency') + '<small>' + (incident.coordinateAccuracy === 'exact' ? 'Coordinates supplied by pager' : incident.coordinateAccuracy === 'address' ? 'Position geocoded from address' : 'Approximate locality position') + '</small></div>' +
       '<a class="cw-popup-action" href="/?view=incidents&incident=' + encodeURIComponent(timelineKey) + '"><i class="fa fa-stream"></i> View full incident timeline</a></div>';

@@ -1964,6 +1964,25 @@ router.route('/central-west/dashboard')
       .orderBy('messages.timestamp', 'desc')
       .limit(limit)
       .then(function (rows) {
+        if (rows.length < limit) return rows;
+        // Keep recent weather bulletins available even when ordinary pager traffic
+        // fills the dashboard's message limit before their 24-hour expiry.
+        return db.from('messages')
+          .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
+          .select('messages.id', 'messages.timestamp', 'messages.message', 'messages.source',
+            'messages.address', 'messages.alias_id', 'capcodes.alias', 'capcodes.agency',
+            'capcodes.icon', 'capcodes.color', 'messages.hidden')
+          .where('messages.timestamp', '>=', Math.floor(Date.now() / 1000) - 86400)
+          .whereRaw("UPPER(TRIM(messages.message)) LIKE 'WEATHER%'")
+          .then(function (weatherRows) {
+            var ids = {};
+            rows.forEach(function (row) { ids[row.id] = true; });
+            weatherRows.forEach(function (row) { if (!ids[row.id]) rows.push(row); });
+            rows.sort(function (a, b) { return Number(b.timestamp) - Number(a.timestamp); });
+            return rows;
+          });
+      })
+      .then(function (rows) {
         rows = rows.map(function (row) { return withheldIncidentMessage(row, req.user); });
         if (hideAddresses) {
           rows.forEach(function (row) { delete row.address; });

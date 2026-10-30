@@ -1,3 +1,11 @@
+# 1.9.2 updates - 2026-10-30
+
+* Kept the latest pager weather bulletin visible until replaced, expiring it after 24 hours without an update.
+* Retired pager map markers when their matched official RFS incident leaves the feed, while retaining the incident timeline and allowing a fresh page to reopen the job.
+* Grouped SES pages by incident number and showed all paged resources, the incident locality and a concise incident type.
+* Geocoded recognizable SES street addresses for map placement instead of using an unrelated town centre.
+* Improved brigade callsign labels for unnumbered station pages.
+
 # 1.9.1 updates - 2026-10-14
 
 * Added optional account approval emails using the configured SMTP plugin: application receipt, administrator notification, approval and denial.

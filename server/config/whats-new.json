@@ -1,22 +1,11 @@
 {
-  "version": "1.9.1",
-  "title": "Central West Alerts 1.9.1",
+  "version": "1.9.2",
+  "title": "Central West Alerts 1.9.2",
   "changes": [
-    "Added optional approval emails: applicants receive confirmation and the final decision, while administrators are notified of applications awaiting review.",
-    "Added Approve and Deny actions in Admin → Users, with required denial feedback and readable input fields across all themes. Configure approval emails under Settings → Accounts using the SMTP plugin settings.",
-    "Added an optional Xweather lightning layer with age-coloured detections, responsive details, secure single-key configuration, shared server caching and Vaisala attribution.",
-    "Added archive search for current and expired incidents, with 7-day, 30-day, 90-day and one-year ranges.",
-    "Classified planned outage and maintenance notices as informational pages so they remain in Feed without being attached to incidents or map jobs.",
-    "Moved NSW RFS controls into a dedicated settings category with separate Incident RSS Feed and Fire Danger sections.",
-    "Improved the live map with responsive sizing, docked information panels and compact mobile popups.",
-    "Added official fire danger graphics, safety guidance, Total Fire Ban information and last-updated details.",
-    "Added richer aircraft details, aircraft-type map symbols and cleaner aircraft popups.",
-    "Improved incident grouping, unit call-sign normalisation and RFS incident correlation.",
-    "Added WaterNSW storage, river, algae and map data with refreshed card layouts.",
-    "Improved night-mode colours across dashboards, cards, buttons, media controls and release messages.",
-    "Added configurable RSS coverage, fire-danger coverage, test-message suppression and pager-incident expiry.",
-    "Added privacy protection for Australian phone numbers before pager messages are stored or published.",
-    "Updated agency branding and icons for RFS, FRNSW, VRA, SES and Marine Rescue NSW.",
-    "Improved PWA notifications, icon selection, mobile interaction and application health monitoring."
+    "Pager weather now shows the latest bulletin for each area until it is replaced or has gone 24 hours without an update.",
+    "Pager map markers retire when a matched official RFS incident closes; the timeline remains in incident history and a fresh page can reopen the job.",
+    "SES pages with the same incident number now form one job with all responding units and a clearer incident type.",
+    "Recognizable SES street addresses are used for map placement rather than an unrelated town centre.",
+    "Unnumbered brigade callsigns now display as station pages."
   ]
 }
