@@ -1,6 +1,7 @@
-const CACHE_NAME = 'pagermon-bushfire-static-v4-forestry-closures';
+const CACHE_NAME = 'pagermon-bushfire-static-v5-aircraft-colours';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
+  '/stylesheets/central-west.css',
   '/stylesheets/textAngular.css',
   '/javascripts/central-west.js',
   '/images/agencies/rfs.png',
