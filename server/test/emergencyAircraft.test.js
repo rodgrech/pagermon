@@ -13,8 +13,11 @@ it('curated rescue, police and medical callsigns classify separately', function(
   assert.equal(classify({flight: 'RSCU206', registration: 'VH-TJI'}).emergencyCategory, 'rescue');
   assert.equal(classify({flight: 'POLAIR3'}).emergencyCategory, 'police');
   assert.equal(classify({flight: 'POL24'}).emergencyCategory, 'police');
-  assert.equal(classify({flight: 'POLAR24'}).emergencyAircraft, false);
+  assert.equal(classify({flight: 'POLAR24'}).emergencyCategory, 'police');
+  assert.equal(classify({flight: 'POLARIS24'}).emergencyAircraft, false);
+  assert.equal(classify({flight: 'POLAIRTEST'}).emergencyAircraft, false);
   assert.equal(classify({flight: 'RFDS4'}).emergencyCategory, 'medical');
+  assert.equal(classify({flight: 'RFDS4'}).emergencyLabel, 'Royal Flying Doctor Service');
   assert.equal(classify({flight: 'JST438'}).emergencyAircraft, false);
 });
 
