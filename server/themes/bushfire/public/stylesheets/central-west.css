@@ -144,17 +144,17 @@ body.cw-dark .cw-popup-heading { background: #22394f; }
 .cw-aircraft-class-civilian .cw-popup-heading { background: #e5f0f8; }
 .cw-aircraft-class-fire .cw-popup-heading { background: #f8e4e4; }
 .cw-aircraft-class-rescue .cw-popup-heading, .cw-aircraft-class-medical .cw-popup-heading { background: #fff0dc; }
-.cw-aircraft-class-police .cw-popup-heading { background: #e3edfa; }
+.cw-aircraft-class-police .cw-popup-heading { background: #dff5f8; }
 .cw-aircraft-class-military .cw-popup-heading { background: #f0e8f3; }
 .cw-aircraft-class-civilian .cw-popup-heading i { background: #2374ab; color: #fff; }
 .cw-aircraft-class-fire .cw-popup-heading i { background: #c43d3d; color: #fff; }
 .cw-aircraft-class-rescue .cw-popup-heading i, .cw-aircraft-class-medical .cw-popup-heading i { background: #d66a0a; color: #fff; }
-.cw-aircraft-class-police .cw-popup-heading i { background: #2879d0; color: #fff; }
+.cw-aircraft-class-police .cw-popup-heading i { background: #0099b8; color: #fff; }
 .cw-aircraft-class-military .cw-popup-heading i { background: #8a668e; color: #fff; }
 body.cw-dark .cw-aircraft-class-civilian .cw-popup-heading { background: #1c4460; }
 body.cw-dark .cw-aircraft-class-fire .cw-popup-heading { background: #59303a; }
 body.cw-dark .cw-aircraft-class-rescue .cw-popup-heading, body.cw-dark .cw-aircraft-class-medical .cw-popup-heading { background: #63401d; }
-body.cw-dark .cw-aircraft-class-police .cw-popup-heading { background: #204a73; }
+body.cw-dark .cw-aircraft-class-police .cw-popup-heading { background: #19505b; }
 body.cw-dark .cw-aircraft-class-military .cw-popup-heading { background: #493958; }
 body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: #1b2c3e; border-color: #31465b; }
 @media (max-width: 600px) {
@@ -184,7 +184,7 @@ body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: 
 .cw-map-aircraft-icon { margin-right: 5px; color: #2374ab; }
 .cw-map-aircraft-icon.cw-map-aircraft-fire { color: #c43d3d; }
 .cw-map-aircraft-icon.cw-map-aircraft-rescue { color: #d66a0a; }
-.cw-map-aircraft-icon.cw-map-aircraft-police { color: #2879d0; }
+.cw-map-aircraft-icon.cw-map-aircraft-police { color: #0099b8; }
 .cw-map-aircraft-icon.cw-map-aircraft-military { color: #8a668e; }
 .cw-map-adsb-lol-icon { margin-right: 5px; color: #8052ad; }
 .cw-map-source-warning { color: #a65316; font-size: 12px; padding: 4px 0; }
@@ -269,7 +269,7 @@ body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: 
 .cw-aircraft-marker.cw-aircraft-adsb-lol { color: #2374ab; }
 .cw-aircraft-marker.cw-aircraft-service-fire { color: #c43d3d; }
 .cw-aircraft-marker.cw-aircraft-service-rescue, .cw-aircraft-marker.cw-aircraft-service-medical { color: #d66a0a; }
-.cw-aircraft-marker.cw-aircraft-service-police { color: #2879d0; }
+.cw-aircraft-marker.cw-aircraft-service-police { color: #0099b8; }
 .cw-aircraft-marker.cw-aircraft-service-military { color: #8a668e; }
 .cw-aircraft-marker.cw-aircraft-stale { opacity: .5; }
 .cw-aircraft-marker.cw-aircraft-service-fire .cw-aircraft-svg { width: 34px; height: 34px; filter: drop-shadow(0 1px 0 #202b33) drop-shadow(0 0 5px rgba(196,61,61,.85)); }
