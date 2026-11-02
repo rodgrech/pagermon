@@ -42,6 +42,8 @@
   var recoveryTimer;
   var satelliteHotspots = [];
   var lightningStrikes = [];
+  var adsbLolAircraft = [];
+  var adsbLolStale = false;
   var fireDangerDistricts = [];
   var fireDangerFetchedAt = null;
   var fireDangerBoundaries = null;
@@ -764,7 +766,7 @@
       if (element._leaflet_id) delete element._leaflet_id;
       map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel, zoomSnap: 0.5, zoomDelta: 0.5, closePopupOnClick: false, tap: true}).setView(mapCenter, mapInitialZoom);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), lightning: L.layerGroup(), aircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
+      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), lightning: L.layerGroup(), aircraft: L.layerGroup(), adsbLol: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
       var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS / NPWS incidents': layerGroups.rfs};
       overlays['Forestry closures and notices'] = layerGroups.forestry;
@@ -772,6 +774,7 @@
       if (features.nasaFirms !== false) overlays['Satellite hotspots (NASA FIRMS)'] = layerGroups.hotspots;
       if (features.lightning === true) overlays['Lightning strikes (Xweather)'] = layerGroups.lightning;
       if (features.piaware !== false) overlays['Live aircraft'] = layerGroups.aircraft;
+      if (features.adsbLol === true) overlays['adsb.lol aircraft'] = layerGroups.adsbLol;
       if (features.waterNsw !== false) {
         overlays['WaterNSW dams'] = layerGroups.dams;
         overlays['River gauges'] = layerGroups.gauges;
@@ -787,7 +790,7 @@
         radarLayer.addTo(layerGroups.radar);
       }
     }
-    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'lightning', 'aircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
+    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'lightning', 'aircraft', 'adsbLol', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     renderFireDangerLayer();
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
@@ -870,14 +873,40 @@
     });
     (aircraft || []).forEach(function (plane) {
       var emergency = plane.emergency && plane.emergency !== 'none';
-      var label = plane.fireCallsign || plane.flight || plane.registration || plane.hex || 'Aircraft';
+      var label = plane.emergencyCallsign || plane.fireCallsign || plane.flight || plane.registration || plane.hex || 'Aircraft';
       var kind = aircraftKind(plane);
-      var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + (plane.fireAircraft ? ' cw-aircraft-fire' : '') + (emergency ? ' cw-plane-emergency' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
+      var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + (plane.emergencyCategory ? ' cw-aircraft-service-' + plane.emergencyCategory : '') + (emergency ? ' cw-plane-emergency' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
       var operator = plane.aircraftOperator || plane.fireOperator || '';
-      var fireInfo = plane.fireAircraft ? '<div class="cw-popup-description"><strong>Fire aviation asset</strong>' + (plane.fireRole ? '<br>Role: ' + escapeHtml(plane.fireRole) : '') + '<br><small>Matched using ' + escapeHtml(plane.fireMatchSource || 'aircraft identity') + '</small></div>' : '';
-      var aircraftPopup = '<div class="cw-incident-popup cw-aircraft-popup"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + (plane.fireAircraft ? 'FIRE AVIATION' : 'AIRCRAFT') + '</strong></div><div class="cw-popup-title">' + escapeHtml(label) + '</div><div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span>' + (plane.aircraftType ? '<span><small>Type</small>' + escapeHtml(plane.aircraftType) + '</span>' : '') + '</div><div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong>' + (operator ? '<br>Operator: ' + escapeHtml(operator) : '') + '</div>' + (plane.fireCallsign && plane.flight && plane.fireCallsign !== plane.flight ? '<div class="cw-popup-description">Transmitted callsign: <strong>' + escapeHtml(plane.flight) + '</strong></div>' : '') + fireInfo + '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '</strong><br>Ground speed: <strong>' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '</strong><br>Track: <strong>' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago</div></div>';
+      var fireInfo = plane.emergencyAircraft ? '<div class="cw-popup-description"><strong>' + escapeHtml(plane.emergencyLabel || 'Emergency aviation') + '</strong>' + (plane.emergencyRole ? '<br>Role: ' + escapeHtml(plane.emergencyRole) : '') + '<br><small>Matched using ' + escapeHtml(plane.emergencyMatchSource || 'aircraft identity') + '; not a live tasking status</small></div>' : '';
+      var aircraftPopup = '<div class="cw-incident-popup cw-aircraft-popup"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + escapeHtml(plane.emergencyAircraft ? (plane.emergencyLabel || 'Emergency aviation').toUpperCase() : 'AIRCRAFT') + '</strong></div><div class="cw-popup-title">' + escapeHtml(label) + '</div><div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span>' + (plane.aircraftType ? '<span><small>Type</small>' + escapeHtml(plane.aircraftType) + '</span>' : '') + '</div><div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong>' + (operator ? '<br>Operator: ' + escapeHtml(operator) : '') + '</div>' + (plane.emergencyCallsign && plane.flight && plane.emergencyCallsign !== plane.flight ? '<div class="cw-popup-description">Transmitted callsign: <strong>' + escapeHtml(plane.flight) + '</strong></div>' : '') + fireInfo + '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '</strong><br>Ground speed: <strong>' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '</strong><br>Track: <strong>' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago</div></div>';
       var aircraftContent = phoneMapPopup() ? '<strong>' + escapeHtml(label) + '</strong><br>' + escapeHtml(aircraftDisplayType(plane, kind)) + '<br>Registration: ' + escapeHtml(plane.registration || 'Unknown') + '<br>Altitude: ' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '<br>Speed: ' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') : aircraftPopup;
-      L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: plane.fireAircraft ? 650 : 500}).addTo(layerGroups.aircraft).bindPopup(aircraftContent, mapPopupOptions(390));
+      L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: plane.emergencyAircraft ? 650 : 500}).addTo(layerGroups.aircraft).bindPopup(aircraftContent, mapPopupOptions(390));
+    });
+    var localHexes = {};
+    (aircraft || []).forEach(function (plane) { if (plane.hex) localHexes[String(plane.hex).toLowerCase()] = true; });
+    adsbLolAircraft.forEach(function (plane) {
+      if (plane.hex && localHexes[String(plane.hex).toLowerCase()]) return;
+      var kind = aircraftKind(plane);
+      var label = plane.emergencyCallsign || plane.flight || plane.registration || plane.hex || 'Aircraft';
+      var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + ' cw-aircraft-adsb-lol' + (plane.emergencyCategory ? ' cw-aircraft-service-' + plane.emergencyCategory : '') + (adsbLolStale ? ' cw-aircraft-stale' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
+      var altitude = plane.altitude === null ? 'Unknown' : plane.altitude === 'ground' ? 'Ground' : plane.altitude + ' ft';
+      var speed = plane.speed === null ? 'Unknown' : plane.speed + ' kt';
+      var track = plane.track === null ? 'Unknown' : plane.track + '°';
+      var sourceLink = '<a href="https://adsb.lol/" target="_blank" rel="noopener">Aircraft data: adsb.lol (ODbL)</a>';
+      var staleNotice = adsbLolStale ? '<br><strong>Stale data — provider unavailable</strong>' : '';
+      var richPopup = '<div class="cw-incident-popup cw-aircraft-popup"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + escapeHtml(plane.emergencyAircraft ? (plane.emergencyLabel || 'Emergency aviation').toUpperCase() : 'AIRCRAFT') + '</strong></div>' +
+        '<div class="cw-popup-title">' + escapeHtml(label) + '</div>' +
+        '<div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span>' +
+        (plane.aircraftType ? '<span><small>Type</small>' + escapeHtml(plane.aircraftType) + '</span>' : '') + '</div>' +
+        '<div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong></div>' +
+        '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(altitude) + '</strong><br>Ground speed: <strong>' + escapeHtml(speed) +
+        '</strong><br>Track: <strong>' + escapeHtml(track) + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago' + staleNotice + '</div>' +
+        (plane.emergencyAircraft ? '<div class="cw-popup-description">Matched using ' + escapeHtml(plane.emergencyMatchSource || 'aircraft identity') + '; not a live tasking status</div>' : '') +
+        '<div class="cw-popup-description">' + sourceLink + '</div></div>';
+      var compactPopup = '<strong>' + escapeHtml(label) + '</strong><br>' + escapeHtml(aircraftDisplayType(plane, kind)) +
+        '<br>Registration: ' + escapeHtml(plane.registration || 'Unknown') + '<br>Altitude: ' + escapeHtml(altitude) +
+        '<br>Speed: ' + escapeHtml(speed) + staleNotice + '<br>' + sourceLink;
+      L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: 450}).addTo(layerGroups.adsbLol).bindPopup(phoneMapPopup() ? compactPopup : richPopup, mapPopupOptions(390));
     });
     queueMapRecovery(false);
   }
@@ -905,6 +934,12 @@
     if (lastRender) renderMap(lastRender.id, lastRender.incidents, lastRender.rfsIncidents, lastRender.aircraft, lastRender.dams, lastRender.gauges, lastRender.algaeSites);
   }
 
+  function setAdsbLolAircraft(aircraft, stale) {
+    adsbLolAircraft = Array.isArray(aircraft) ? aircraft : [];
+    adsbLolStale = !!stale;
+    if (lastRender) renderMap(lastRender.id, lastRender.incidents, lastRender.rfsIncidents, lastRender.aircraft, lastRender.dams, lastRender.gauges, lastRender.algaeSites);
+  }
+
   window.addEventListener('resize', function () { queueMapRecovery(false); });
   window.addEventListener('online', function () { queueMapRecovery(true); });
   document.addEventListener('visibilitychange', function () {
@@ -915,6 +950,7 @@
     var category = String(plane.category || '').toUpperCase();
     var type = String(plane.aircraftType || '').toUpperCase();
     var role = String(plane.fireRole || '').toUpperCase();
+    if (plane.emergencyAircraft && !plane.fireAircraft && /^(A7)$/.test(category)) return 'helicopter';
     if (plane.fireAircraft && /\bRW\b|HELICOPTER/.test(role)) return 'fire-helicopter';
     if (plane.fireAircraft && /SEAT|LAT|FIREBOMB/.test(role)) return 'air-tanker';
     if (plane.fireAircraft && /AAS|RECCE|BIRDDOG|FIRESPOTTER|LEAD/.test(role)) return 'air-attack';
@@ -969,5 +1005,5 @@
   }
 
   function setForestryClosures(features) { forestryClosures = features || []; queueMapRecovery(false); }
-  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, isInformationalPagerMessage: isInformationalPagerMessage, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots, setLightningStrikes: setLightningStrikes, setForestryClosures: setForestryClosures};
+  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, isInformationalPagerMessage: isInformationalPagerMessage, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots, setLightningStrikes: setLightningStrikes, setAdsbLolAircraft: setAdsbLolAircraft, setForestryClosures: setForestryClosures};
 })(window);

@@ -1,3 +1,10 @@
+# 1.11.2 updates - 2026-11-02
+
+* Added optional adsb.lol aircraft coverage with a configurable map-centred search radius, shared server-side cache, rate-limit backoff and stale-data fallback.
+* Matched aircraft from the local PiAware receiver and adsb.lol to NAFC fire aviation and a maintained emergency callsign catalogue.
+* Coloured fire, rescue/aeromedical, police and provider-identified military aircraft separately on all map themes, with consistent aircraft popups.
+* Updated the What's New notice for this release.
+
 # 1.9.2 updates - 2026-10-30
 
 * Kept the latest pager weather bulletin visible until replaced, expiring it after 24 hours without an update.

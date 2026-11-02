@@ -166,6 +166,8 @@ body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: 
 @keyframes cw-incident-pulse { 50% { filter: drop-shadow(0 0 7px rgba(207,63,77,.9)); } }
 .cw-correlation-combined { padding: 9px 11px; border-left: 4px solid #e49b21; border-radius: 4px; background: rgba(228,155,33,.1); }
 .cw-map-aircraft-icon { margin-right: 5px; color: #2374ab; }
+.cw-map-adsb-lol-icon { margin-right: 5px; color: #8052ad; }
+.cw-map-source-warning { color: #a65316; font-size: 12px; padding: 4px 0; }
 .cw-map-lightning-icon { display: inline-flex; width: 19px; height: 19px; margin-right: 5px; align-items: center; justify-content: center; border: 2px solid #fff; border-radius: 50%; background: #ffad20; color: #263238; box-shadow: 0 0 0 1px rgba(38,50,56,.3); font-size: 11px; vertical-align: -4px; }
 .cw-map-dam-icon { display: inline-flex; width: 22px; height: 22px; margin-right: 5px; align-items: center; justify-content: center; border-radius: 5px; background: #1683a6; vertical-align: middle; }
 .cw-map-dam-icon svg { width: 18px; height: 18px; }
@@ -244,7 +246,13 @@ body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: 
 .cw-aircraft-glider { color: #198a71; }
 .cw-aircraft-drone { color: #6d7882; }
 .cw-aircraft-marker.cw-aircraft-fire { color: #d8a900; }
-.cw-aircraft-marker.cw-aircraft-fire .cw-aircraft-svg { width: 34px; height: 34px; filter: drop-shadow(0 1px 0 #202b33) drop-shadow(0 0 5px rgba(255,214,0,.9)); }
+.cw-aircraft-marker.cw-aircraft-adsb-lol { color: #8052ad; }
+.cw-aircraft-marker.cw-aircraft-service-fire { color: #c43d3d; }
+.cw-aircraft-marker.cw-aircraft-service-rescue, .cw-aircraft-marker.cw-aircraft-service-medical { color: #269b58; }
+.cw-aircraft-marker.cw-aircraft-service-police { color: #2879d0; }
+.cw-aircraft-marker.cw-aircraft-service-military { color: #8a668e; }
+.cw-aircraft-marker.cw-aircraft-stale { opacity: .5; }
+.cw-aircraft-marker.cw-aircraft-service-fire .cw-aircraft-svg { width: 34px; height: 34px; filter: drop-shadow(0 1px 0 #202b33) drop-shadow(0 0 5px rgba(196,61,61,.85)); }
 .cw-aircraft-marker.cw-plane-emergency { color: #bd3e4b; animation: cw-plane-pulse 1.2s infinite; }
 @keyframes cw-plane-pulse { 50% { filter: drop-shadow(0 0 7px rgba(189,62,75,.9)); } }
 .cw-operations-header { display: none; }

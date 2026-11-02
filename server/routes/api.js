@@ -17,6 +17,8 @@ var net = require('net');
 var webPushNotifications = require('../lib/webPush');
 var approvalMailer = require('../lib/accountApprovalMailer');
 var permissions = require('../lib/permissions');
+var adsbLol = require('../lib/adsbLol');
+var emergencyAircraft = require('../lib/emergencyAircraft');
 
 function returningId(result) {
   var first = Array.isArray(result) ? result[0] : result;
@@ -168,6 +170,7 @@ var waterNswCacheDirectory = path.join(path.dirname(fs.realpathSync(confFile)), 
 var waterNswCacheFile = path.join(waterNswCacheDirectory, 'waternsw-dams.json');
 var waterNswGaugeCacheFile = path.join(waterNswCacheDirectory, 'waternsw-gauges.json');
 var xweatherLightningCacheFile = path.join(waterNswCacheDirectory, 'xweather-lightning.json');
+var adsbLolCacheFile = path.join(waterNswCacheDirectory, 'adsb-lol-aircraft.json');
 
 // The RFS feed uses Australian day/month/year values without a timezone, for
 // example "12/09/2026 9:17:00 AM". Date.parse() treats that ambiguous value as
@@ -230,6 +233,7 @@ try {
 } catch (lightningCacheError) {
   // A successful API request will create the persistent cache.
 }
+var adsbLolAircraft = adsbLol.createService({axios: axios, logger: logger.main, cacheFile: adsbLolCacheFile});
 function integrationConfig(name, defaults) {
   nconf.load();
   return Object.assign({}, defaults || {}, nconf.get('integrations:' + name) || {});
@@ -2191,6 +2195,7 @@ router.route('/central-west/dashboard-config')
     var bomConfig = integrationConfig('bom', { enabled: true });
     var radioConfig = integrationConfig('radio', { enabled: true });
     var piawareConfig = integrationConfig('piaware', { enabled: true, pollSeconds: 10 });
+    var adsbLolConfig = integrationConfig('adsbLol', { enabled: false, cacheSeconds: 300 });
     var radarConfig = integrationConfig('weatherRadar', { enabled: true, opacityPercent: 62, defaultVisible: false });
     var firmsConfig = integrationConfig('nasaFirms', { enabled: false, defaultVisible: false });
     var lightningConfig = integrationConfig('xweatherLightning', { enabled: false, apiKey: '', clientId: '', clientSecret: '', pollSeconds: 3600, defaultVisible: false });
@@ -2205,6 +2210,8 @@ router.route('/central-west/dashboard-config')
       radioEnabled: radioConfig.enabled !== false,
       piawareEnabled: piawareConfig.enabled !== false,
       piawarePollSeconds: Math.min(Math.max(parseInt(piawareConfig.pollSeconds, 10) || 10, 5), 300),
+      adsbLolEnabled: adsbLolConfig.enabled === true,
+      adsbLolPollSeconds: Math.min(Math.max(parseInt(adsbLolConfig.cacheSeconds, 10) || 300, 10), 3600),
       weatherRadarEnabled: radarConfig.enabled !== false,
       weatherRadarOpacity: Math.min(Math.max(parseInt(radarConfig.opacityPercent, 10) || 62, 10), 100) / 100,
       weatherRadarDefaultVisible: radarConfig.defaultVisible === true,
@@ -2268,14 +2275,7 @@ function loadNafcAircraftRegistry() {
 }
 
 function identifyFireAircraft(item, registry) {
-  var registration = aircraftIdentity(item.r);
-  var flight = aircraftIdentity(item.flight);
-  var match = (registry || []).find(function (candidate) {
-    return (registration && aircraftIdentity(candidate.registration) === registration) || (flight && aircraftIdentity(candidate.callsign) === flight);
-  });
-  if (match) return { fireAircraft: true, fireCallsign: match.callsign, fireRole: match.role, fireManufacturer: match.manufacturer, fireModel: match.model, fireMatchSource: 'NAFC registry' };
-  if (/^(FIREBIRD|HELITAK|BIRDDOG|BOMBER|FIRESCAN|FIRESPOTTER|AIRATTACK|PARKAIR)/.test(flight)) return { fireAircraft: true, fireCallsign: String(item.flight || '').trim(), fireRole: 'Fire and emergency aviation', fireMatchSource: 'Operational callsign' };
-  return { fireAircraft: false };
+  return emergencyAircraft.classify(item, registry);
 }
 
 function lookupHexAircraft(hex) {
@@ -2979,6 +2979,7 @@ router.route('/central-west/aircraft')
             verticalRate: item.baro_rate || item.geom_rate || null,
             emergency: item.emergency || 'none',
             category: item.category || '',
+            dbFlags: Number(item.dbFlags) || 0,
             seen: item.seen || 0,
             messages: item.messages || 0
           }, hexIdentity, fireIdentity, {registration: item.r || hexIdentity.registration || '', aircraftType: item.t || hexIdentity.aircraftType || ''});
@@ -2988,6 +2989,25 @@ router.route('/central-west/aircraft')
         logger.main.warn('Unable to retrieve local PiAware feed: ' + err.message);
         res.status(502).json({ error: 'PiAware receiver is temporarily unavailable' });
       });
+  });
+
+router.route('/central-west/adsb-lol-aircraft')
+  .get(authHelper.isLoggedInMessages, function(req, res) {
+    var config = integrationConfig('adsbLol', {enabled: false, radiusNm: 100, cacheSeconds: 300, maximumAgeSeconds: 120, useMapCenter: true});
+    res.set('Cache-Control', 'private, no-store');
+    if (config.enabled !== true) return res.json({disabled: true, source: 'adsb.lol', aircraft: []});
+    var mapConfig = integrationConfig('liveMap', {centerLatitude: -32.65, centerLongitude: 149.58});
+    var latitude = config.useMapCenter !== false ? mapConfig.centerLatitude : config.centerLatitude;
+    var longitude = config.useMapCenter !== false ? mapConfig.centerLongitude : config.centerLongitude;
+    Promise.all([adsbLolAircraft.get(Object.assign({}, config, {latitude: latitude, longitude: longitude})), loadNafcAircraftRegistry()]).then(function(results) {
+      var payload = results[0];
+      res.json(Object.assign({}, payload, {aircraft: (payload.aircraft || []).map(function(item) {
+        return Object.assign({}, item, emergencyAircraft.classify(item, results[1]));
+      })}));
+    }).catch(function(error) {
+      logger.main.warn('adsb.lol aircraft integration failed: ' + error.message);
+      res.status(503).json({source: 'adsb.lol', unavailable: true, aircraft: []});
+    });
   });
 
 // Read-only bridge to the local Rdio Scanner database. These routes require

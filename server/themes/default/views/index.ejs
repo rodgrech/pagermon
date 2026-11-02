@@ -91,7 +91,8 @@
         <div class="cw-panel" ng-show="dashboardView == 'map'">
           <div class="cw-operations-header" ng-if="operationsMode"><div><strong><%= monitorName || 'PagerMon' %></strong><span>Live Operations Display</span></div><div class="cw-operations-status"><span class="cw-health-dot"></span>{{health.label}}<span ng-if="integrationFeatures.piaware"> · {{aircraft.length}} aircraft</span> · {{rfsIncidents.length}} RFS incidents</div><button class="btn btn-default btn-sm" ng-click="toggleOperationsMode()"><i class="fa fa-compress"></i> Exit</button></div>
           <div id="cw-incident-map"></div>
-          <div class="cw-map-legend"><span><i class="cw-map-dot cw-map-dot-pager"></i> Pager-derived approximate town</span><span><i class="cw-map-incident-legend fa fa-fire"></i> Official NSW RFS incident</span><span ng-if="integrationFeatures.nasaFirms"><i class="cw-map-dot cw-map-dot-hotspot"></i> Unconfirmed NASA FIRMS hotspot</span><span ng-if="integrationFeatures.lightning"><i class="cw-map-lightning-icon fa fa-bolt"></i> Xweather lightning strike</span><span ng-if="integrationFeatures.piaware"><i class="cw-map-aircraft-icon fa fa-plane"></i> Live PiAware aircraft</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-dam-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="cw-dam-water" d="M3 22c3-2 5-2 8 0s5 2 8 0 5-2 10 0v5H3z"/><path class="cw-dam-wall" d="M8 7h16l3 15c-3-2-5-2-8 0s-5 2-8 0c-1.2-.8-2.3-1.2-3.4-1.3L8 7zm4 3v8m4-8v10m4-10v8"/></svg></i> WaterNSW dam</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-gauge-marker"></i> Live river gauge</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-algae-markers"><b></b><b></b><b></b></i> Algae alert</span></div>
+<div class="cw-map-legend"><span><i class="cw-map-dot cw-map-dot-pager"></i> Pager-derived approximate town</span><span><i class="cw-map-incident-legend fa fa-fire"></i> Official NSW RFS incident</span><span ng-if="integrationFeatures.nasaFirms"><i class="cw-map-dot cw-map-dot-hotspot"></i> Unconfirmed NASA FIRMS hotspot</span><span ng-if="integrationFeatures.lightning"><i class="cw-map-lightning-icon fa fa-bolt"></i> Xweather lightning strike</span><span ng-if="integrationFeatures.piaware"><i class="cw-map-aircraft-icon fa fa-plane"></i> Live PiAware aircraft</span><span ng-if="integrationFeatures.adsbLol"><i class="cw-map-adsb-lol-icon fa fa-plane"></i> <a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol</a> aircraft (ODbL)</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-dam-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="cw-dam-water" d="M3 22c3-2 5-2 8 0s5 2 8 0 5-2 10 0v5H3z"/><path class="cw-dam-wall" d="M8 7h16l3 15c-3-2-5-2-8 0s-5 2-8 0c-1.2-.8-2.3-1.2-3.4-1.3L8 7zm4 3v8m4-8v10m4-10v8"/></svg></i> WaterNSW dam</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-gauge-marker"></i> Live river gauge</span><span ng-if="integrationFeatures.waterNsw"><i class="cw-map-algae-markers"><b></b><b></b><b></b></i> Algae alert</span></div>
+<div class="cw-map-source-warning" ng-if="integrationFeatures.adsbLol && adsbLolUnavailable">adsb.lol aircraft data is temporarily unavailable<span ng-if="adsbLolStale">; showing cached positions</span>.</div>
           <p class="cw-map-note">Pager markers show approximate town centres. RFS markers use published feed coordinates, which may represent an LGA centre until accurate spatial information is available. © State of New South Wales (NSW Rural Fire Service). <a href="https://www.rfs.nsw.gov.au/fire-information/fires-near-me" target="_blank" rel="noopener">Current information</a>.</p>
         </div>
 
@@ -413,6 +414,7 @@
                   WaterNswAlgaeAlerts: $resource('/api/central-west/waternsw-algae-alerts'),
                   RfsIncidents: $resource('/api/central-west/rfs-incidents'),
                   Aircraft: $resource('/api/central-west/aircraft'),
+                  AdsbLolAircraft: $resource('/api/central-west/adsb-lol-aircraft'),
                   WeatherRadar: $resource('/api/central-west/weather-radar'),
                   SatelliteHotspots: $resource('/api/central-west/nasa-firms-hotspots'),
                   Lightning: $resource('/api/central-west/lightning'),
@@ -465,7 +467,7 @@
         try { return JSON.stringify(incident).toLowerCase().indexOf($scope.timelineIncidentFocus) !== -1; }
         catch (err) { return true; }
       };
-      $scope.integrationFeatures = {bom: false, fireDanger: false, waterNsw: false, radio: false, piaware: false, weatherRadar: false, nasaFirms: false, lightning: false, npws: false};
+      $scope.integrationFeatures = {bom: false, fireDanger: false, waterNsw: false, radio: false, piaware: false, adsbLol: false, weatherRadar: false, nasaFirms: false, lightning: false, npws: false};
       $scope.darkMode = localStorage.getItem('cw-dark-mode') === 'true';
       document.body.classList.toggle('cw-dark', $scope.darkMode);
       $scope.health = { state: 'loading', label: 'Checking receiver', lastSeen: 'Unknown', uptime: 'Unknown' };
@@ -514,6 +516,7 @@
           waterNsw: config.waterNswEnabled !== false,
           radio: config.radioEnabled !== false,
           piaware: config.piawareEnabled !== false,
+          adsbLol: config.adsbLolEnabled === true,
           weatherRadar: config.weatherRadarEnabled !== false,
           nasaFirms: config.nasaFirmsEnabled === true,
           lightning: config.lightningEnabled === true,
@@ -528,6 +531,10 @@
         } else {
           $scope.aircraft = [];
         }
+        if ($scope.integrationFeatures.adsbLol) {
+          refreshAdsbLolAircraft();
+          adsbLolPoll = $interval(refreshAdsbLolAircraft, Math.max(Number(config.adsbLolPollSeconds) || 300, 10) * 1000);
+        } else CentralWestAlerts.setAdsbLolAircraft([], false);
         if ($scope.integrationFeatures.weatherRadar) {
           var storedRadarPreference = localStorage.getItem('cw-radar-enabled');
           $scope.radarEnabled = storedRadarPreference === null ? config.weatherRadarDefaultVisible === true : storedRadarPreference === 'true';
@@ -850,7 +857,20 @@
           if ($scope.dashboardView === 'map') CentralWestAlerts.renderMap('cw-incident-map', $scope.incidents, $scope.rfsIncidents, $scope.aircraft, $scope.dams, $scope.waterGauges, $scope.algaeSites);
         });
       }
+      function refreshAdsbLolAircraft() {
+        if (!$scope.integrationFeatures.adsbLol) return;
+        Api.AdsbLolAircraft.get().$promise.then(function (data) {
+          $scope.adsbLolUnavailable = !!data.unavailable;
+          $scope.adsbLolStale = !!data.stale && (data.aircraft || []).length > 0;
+          CentralWestAlerts.setAdsbLolAircraft(data.aircraft || [], data.stale || data.unavailable);
+        }, function () {
+          $scope.adsbLolUnavailable = true;
+          $scope.adsbLolStale = false;
+          CentralWestAlerts.setAdsbLolAircraft([], true);
+        });
+      }
       var aircraftPoll;
+      var adsbLolPoll;
       var lightningPoll;
       var radioPoll;
       $scope.refreshRadio = function () {
@@ -1203,6 +1223,7 @@
       // destroy socket when we navigate away
       $scope.$on('$destroy', function() {
         $interval.cancel(aircraftPoll);
+        if (adsbLolPoll) $interval.cancel(adsbLolPoll);
         if (lightningPoll) $interval.cancel(lightningPoll);
         if (radioPoll) $interval.cancel(radioPoll);
         if (waterGaugePoll) $interval.cancel(waterGaugePoll);

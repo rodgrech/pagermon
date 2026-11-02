@@ -1,11 +1,10 @@
 {
-  "version": "1.9.2",
-  "title": "Central West Alerts 1.9.2",
+  "version": "1.11.2",
+  "title": "Central West Alerts 1.11.2",
   "changes": [
-    "Pager weather now shows the latest bulletin for each area until it is replaced or has gone 24 hours without an update.",
-    "Pager map markers retire when a matched official RFS incident closes; the timeline remains in incident history and a fresh page can reopen the job.",
-    "SES pages with the same incident number now form one job with all responding units and a clearer incident type.",
-    "Recognizable SES street addresses are used for map placement rather than an unrelated town centre.",
-    "Unnumbered brigade callsigns now display as station pages."
+    "The live map can show aircraft from adsb.lol alongside the local PiAware receiver, with a configurable search radius and a 10-second cache option.",
+    "Aircraft popups now use a consistent layout across both feeds and show their data source.",
+    "Fire, rescue, aeromedical and police aircraft are identified using the NAFC register or a maintained callsign catalogue. Map colours are red for fire, green for rescue and medical, and blue for police.",
+    "Aircraft identified as military by the ADS-B provider use a distinct purple colour. Aircraft labels indicate identity, not whether they are responding to an incident."
   ]
 }

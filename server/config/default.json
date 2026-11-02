@@ -119,6 +119,15 @@
       "timeoutSeconds": 4,
       "maximumAgeSeconds": 60
     },
+    "adsbLol": {
+      "enabled": false,
+      "useMapCenter": true,
+      "centerLatitude": -32.65,
+      "centerLongitude": 149.58,
+      "radiusNm": 100,
+      "cacheSeconds": 300,
+      "maximumAgeSeconds": 120
+    },
     "weatherRadar": {
       "enabled": true,
       "metadataUrl": "https://api.rainviewer.com/public/weather-maps.json",

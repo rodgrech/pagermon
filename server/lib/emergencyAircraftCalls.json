@@ -1,0 +1,18 @@
+[
+  {"prefix":"FIREBIRD","category":"fire","label":"Fire aviation","source":"NAFC operational callsigns"},
+  {"prefix":"HELITAK","category":"fire","label":"Fire aviation","source":"NAFC operational callsigns"},
+  {"prefix":"BIRDDOG","category":"fire","label":"Fire aviation","source":"NAFC operational callsigns"},
+  {"prefix":"BOMBER","category":"fire","label":"Fire aviation","source":"NAFC operational callsigns"},
+  {"prefix":"FIRESCAN","category":"fire","label":"Fire aviation","source":"NAFC operational callsigns"},
+  {"prefix":"FIRESPOTTER","category":"fire","label":"Fire aviation","source":"NAFC operational callsigns"},
+  {"prefix":"AIRATTACK","category":"fire","label":"Fire aviation","source":"NAFC operational callsigns"},
+  {"prefix":"PARKAIR","category":"fire","label":"Fire aviation","source":"NAFC operational callsigns"},
+  {"prefix":"POLAIR","category":"police","label":"NSW Police aviation","source":"NSW Police Aviation Command"},
+  {"prefix":"CAREFLIGHT","category":"rescue","label":"Rescue / aeromedical aviation","source":"CareFlight"},
+  {"prefix":"TOLLRESCUE","category":"rescue","label":"NSW Ambulance rescue helicopter","source":"NSW Health"},
+  {"prefix":"WESTPACRESCUE","category":"rescue","label":"Westpac Rescue Helicopter","source":"Westpac Rescue Helicopter Service"},
+  {"prefix":"LIFESAVER","category":"rescue","label":"Search and rescue aviation","source":"Surf Life Saving aviation"},
+  {"prefix":"RFDS","category":"medical","label":"Aeromedical aviation","source":"Royal Flying Doctor Service"},
+  {"prefix":"FLYDOC","category":"medical","label":"Aeromedical aviation","source":"Royal Flying Doctor Service"},
+  {"prefix":"AIRAMBULANCE","category":"medical","label":"Aeromedical aviation","source":"NSW Ambulance"}
+]
