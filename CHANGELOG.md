@@ -1,3 +1,10 @@
+# 1.11.2.1 updates - 2026-11-02
+
+* Fixed the adsb.lol default marker colour so purple is reserved for identified military aircraft.
+* Applied the same NAFC, callsign and registered-owner classification to aircraft from both PiAware and adsb.lol.
+* Added a shared, persistent HexDB metadata cache with request limits and rate-limit backoff.
+* Fixed PiAware registered-owner classification and refreshed the What's New notice.
+
 # 1.11.2 updates - 2026-11-02
 
 * Added optional adsb.lol aircraft coverage with a configurable map-centred search radius, shared server-side cache, rate-limit backoff and stale-data fallback.

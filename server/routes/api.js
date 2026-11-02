@@ -19,6 +19,7 @@ var approvalMailer = require('../lib/accountApprovalMailer');
 var permissions = require('../lib/permissions');
 var adsbLol = require('../lib/adsbLol');
 var emergencyAircraft = require('../lib/emergencyAircraft');
+var hexAircraftLookup = require('../lib/hexAircraftLookup');
 
 function returningId(result) {
   var first = Array.isArray(result) ? result[0] : result;
@@ -154,7 +155,6 @@ var xweatherLightningRetryAfter = 0;
 var npwsIncidentCache = { fetchedAt: 0, data: null };
 var forestryClosureCache = { fetchedAt: 0, data: null };
 var nafcAircraftCache = { fetchedAt: 0, data: [] };
-var hexAircraftCache = {};
 var waterNswAttemptSlot = null;
 var waterNswGaugeCache = { fetchedAt: 0, data: null };
 var waterNswGaugeAttemptSlot = null;
@@ -171,6 +171,7 @@ var waterNswCacheFile = path.join(waterNswCacheDirectory, 'waternsw-dams.json');
 var waterNswGaugeCacheFile = path.join(waterNswCacheDirectory, 'waternsw-gauges.json');
 var xweatherLightningCacheFile = path.join(waterNswCacheDirectory, 'xweather-lightning.json');
 var adsbLolCacheFile = path.join(waterNswCacheDirectory, 'adsb-lol-aircraft.json');
+var hexAircraftCacheFile = path.join(waterNswCacheDirectory, 'hex-aircraft.json');
 
 // The RFS feed uses Australian day/month/year values without a timezone, for
 // example "12/09/2026 9:17:00 AM". Date.parse() treats that ambiguous value as
@@ -234,6 +235,7 @@ try {
   // A successful API request will create the persistent cache.
 }
 var adsbLolAircraft = adsbLol.createService({axios: axios, logger: logger.main, cacheFile: adsbLolCacheFile});
+var aircraftMetadata = hexAircraftLookup.createService({axios: axios, logger: logger.main, cacheFile: hexAircraftCacheFile});
 function integrationConfig(name, defaults) {
   nconf.load();
   return Object.assign({}, defaults || {}, nconf.get('integrations:' + name) || {});
@@ -2279,16 +2281,7 @@ function identifyFireAircraft(item, registry) {
 }
 
 function lookupHexAircraft(hex) {
-  var key = aircraftIdentity(hex);
-  if (!key) return Promise.resolve({});
-  var cached = hexAircraftCache[key];
-  if (cached && Date.now() - cached.fetchedAt < 7 * 24 * 60 * 60 * 1000) return Promise.resolve(cached.data);
-  return axios.get('https://hexdb.io/api/v1/aircraft/' + encodeURIComponent(key), { timeout: 4000 }).then(function (response) {
-    var data = response.data || {};
-    var result = {registration: data.Registration || '', aircraftType: data.ICAOTypeCode || '', aircraftModel: data.Type || '', aircraftManufacturer: data.Manufacturer || '', aircraftOperator: data.RegisteredOwners || ''};
-    hexAircraftCache[key] = {fetchedAt: Date.now(), data: result};
-    return result;
-  }).catch(function () { return {}; });
+  return aircraftMetadata.get(hex);
 }
 
 function parseFirmsCsv(csv, source) {
@@ -2965,7 +2958,7 @@ router.route('/central-west/aircraft')
         });
         return Promise.all(aircraft.map(function (item) {
           return lookupHexAircraft(item.hex).then(function (hexIdentity) {
-          var fireIdentity = identifyFireAircraft(Object.assign({}, item, {r: item.r || hexIdentity.registration}), nafcRegistry);
+          var fireIdentity = identifyFireAircraft(Object.assign({}, hexIdentity, item, {r: item.r || hexIdentity.registration}), nafcRegistry);
           return Object.assign({
             hex: item.hex,
             flight: String(item.flight || '').trim(),
@@ -3001,9 +2994,15 @@ router.route('/central-west/adsb-lol-aircraft')
     var longitude = config.useMapCenter !== false ? mapConfig.centerLongitude : config.centerLongitude;
     Promise.all([adsbLolAircraft.get(Object.assign({}, config, {latitude: latitude, longitude: longitude})), loadNafcAircraftRegistry()]).then(function(results) {
       var payload = results[0];
-      res.json(Object.assign({}, payload, {aircraft: (payload.aircraft || []).map(function(item) {
-        return Object.assign({}, item, emergencyAircraft.classify(item, results[1]));
-      })}));
+      return Promise.all((payload.aircraft || []).map(function(item) {
+        return lookupHexAircraft(item.hex).then(function(metadata) {
+          var aircraft = Object.assign({}, metadata, item, {
+            registration: item.registration || metadata.registration || '',
+            aircraftType: item.aircraftType || metadata.aircraftType || ''
+          });
+          return Object.assign(aircraft, emergencyAircraft.classify(aircraft, results[1]));
+        });
+      })).then(function(aircraft) { res.json(Object.assign({}, payload, {aircraft: aircraft})); });
     }).catch(function(error) {
       logger.main.warn('adsb.lol aircraft integration failed: ' + error.message);
       res.status(503).json({source: 'adsb.lol', unavailable: true, aircraft: []});

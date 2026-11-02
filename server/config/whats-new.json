@@ -1,10 +1,10 @@
 {
-  "version": "1.11.2",
-  "title": "Central West Alerts 1.11.2",
+  "version": "1.11.2.1",
+  "title": "Central West Alerts 1.11.2.1 — The I broke something fix",
   "changes": [
-    "The live map can show aircraft from adsb.lol alongside the local PiAware receiver, with a configurable search radius and a 10-second cache option.",
-    "Aircraft popups now use a consistent layout across both feeds and show their data source.",
-    "Fire, rescue, aeromedical and police aircraft are identified using the NAFC register or a maintained callsign catalogue. Map colours are red for fire, green for rescue and medical, and blue for police.",
-    "Aircraft identified as military by the ADS-B provider use a distinct purple colour. Aircraft labels indicate identity, not whether they are responding to an incident."
+    "Fixed aircraft colours: ordinary aircraft are blue, fire aircraft red, rescue and medical aircraft green, police aircraft blue, and identified military aircraft purple.",
+    "Aircraft from both PiAware and adsb.lol now use the same callsign, registration and registered-owner matching rules.",
+    "Registered-owner lookups are shared, rate-limited and cached; an aircraft is shown normally while details are still unavailable.",
+    "Aircraft categories identify the aircraft, not whether it is responding to an incident."
   ]
 }
