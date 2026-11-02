@@ -545,7 +545,6 @@
         item.suggestedAgency = 'Insufficient evidence';
         item.confidence = 0;
       }
-      delete item.samples;
       return item;
     }).sort(function (a, b) { return b.count - a.count; });
   }
@@ -871,30 +870,46 @@
       var popup = '<strong>' + escapeHtml(site.name) + '</strong><br>Algae alert: <strong>' + escapeHtml(site.status) + '</strong><br>Site ' + escapeHtml(site.siteCode) + (site.dominantToxicSpecies ? '<br>Dominant toxic species: ' + escapeHtml(site.dominantToxicSpecies) : '') + (site.comments ? '<br>' + escapeHtml(site.comments) : '') + '<br><a href="https://www.waternsw.com.au/water-services/water-quality/algae-alerts" target="_blank" rel="noopener">Official WaterNSW alert map</a>';
       L.circleMarker([site.latitude, site.longitude], {radius: site.status === 'Red' ? 10 : 8, color: '#fff', weight: 2, fillColor: colour, fillOpacity: .95, className: 'cw-algae-marker cw-algae-' + String(site.status || '').toLowerCase()}).addTo(layerGroups.algae).bindPopup(popup);
     });
+    var mergedRemoteAircraft = [];
+    function sameAircraft(local, remote) {
+      var localHex = String(local.hex || '').trim().toLowerCase();
+      var remoteHex = String(remote.hex || '').trim().toLowerCase();
+      if (localHex && remoteHex) return localHex === remoteHex;
+      var localRegistration = String(local.registration || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      var remoteRegistration = String(remote.registration || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      return !!(localRegistration && remoteRegistration && localRegistration === remoteRegistration);
+    }
     (aircraft || []).forEach(function (plane) {
       var emergency = plane.emergency && plane.emergency !== 'none';
       var label = plane.emergencyCallsign || plane.fireCallsign || plane.flight || plane.registration || plane.hex || 'Aircraft';
       var kind = aircraftKind(plane);
+      var remoteMatch = adsbLolAircraft.find(function (remote) { return sameAircraft(plane, remote); });
+      if (remoteMatch) mergedRemoteAircraft.push(remoteMatch);
+      var sourceInfo = remoteMatch
+        ? 'Position sources: Local ADS-B decoder (PiAware) and external provider — <a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol (ODbL)</a>'
+        : 'Position source: Local ADS-B decoder (PiAware)';
+      var aircraftClass = String(plane.emergencyCategory || 'civilian').toLowerCase().replace(/[^a-z-]/g, '');
       var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + (plane.emergencyCategory ? ' cw-aircraft-service-' + plane.emergencyCategory : '') + (emergency ? ' cw-plane-emergency' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
       var operator = plane.aircraftOperator || plane.fireOperator || '';
       var fireInfo = plane.emergencyAircraft ? '<div class="cw-popup-description"><strong>' + escapeHtml(plane.emergencyLabel || 'Emergency aviation') + '</strong>' + (plane.emergencyRole ? '<br>Role: ' + escapeHtml(plane.emergencyRole) : '') + '<br><small>Matched using ' + escapeHtml(plane.emergencyMatchSource || 'aircraft identity') + '; not a live tasking status</small></div>' : '';
-      var aircraftPopup = '<div class="cw-incident-popup cw-aircraft-popup"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + escapeHtml(plane.emergencyAircraft ? (plane.emergencyLabel || 'Emergency aviation').toUpperCase() : 'AIRCRAFT') + '</strong></div><div class="cw-popup-title">' + escapeHtml(label) + '</div><div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span>' + (plane.aircraftType ? '<span><small>Type</small>' + escapeHtml(plane.aircraftType) + '</span>' : '') + '</div><div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong>' + (operator ? '<br>Operator: ' + escapeHtml(operator) : '') + '</div>' + (plane.emergencyCallsign && plane.flight && plane.emergencyCallsign !== plane.flight ? '<div class="cw-popup-description">Transmitted callsign: <strong>' + escapeHtml(plane.flight) + '</strong></div>' : '') + fireInfo + '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '</strong><br>Ground speed: <strong>' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '</strong><br>Track: <strong>' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago</div></div>';
+      fireInfo += '<div class="cw-popup-description">' + sourceInfo + '</div>';
+      var aircraftPopup = '<div class="cw-incident-popup cw-aircraft-popup cw-aircraft-class-' + aircraftClass + '"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + escapeHtml(plane.emergencyAircraft ? (plane.emergencyLabel || 'Emergency aviation').toUpperCase() : 'AIRCRAFT') + '</strong></div><div class="cw-popup-title">' + escapeHtml(label) + '</div><div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span>' + (plane.aircraftType ? '<span><small>Type</small>' + escapeHtml(plane.aircraftType) + '</span>' : '') + '</div><div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong>' + (operator ? '<br>Operator: ' + escapeHtml(operator) : '') + '</div>' + (plane.emergencyCallsign && plane.flight && plane.emergencyCallsign !== plane.flight ? '<div class="cw-popup-description">Transmitted callsign: <strong>' + escapeHtml(plane.flight) + '</strong></div>' : '') + fireInfo + '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '</strong><br>Ground speed: <strong>' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '</strong><br>Track: <strong>' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago</div></div>';
       var aircraftContent = phoneMapPopup() ? '<strong>' + escapeHtml(label) + '</strong><br>' + escapeHtml(aircraftDisplayType(plane, kind)) + '<br>Registration: ' + escapeHtml(plane.registration || 'Unknown') + '<br>Altitude: ' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '<br>Speed: ' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') : aircraftPopup;
+      if (phoneMapPopup()) aircraftContent += '<br>' + sourceInfo;
       L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: plane.emergencyAircraft ? 650 : 500}).addTo(layerGroups.aircraft).bindPopup(aircraftContent, mapPopupOptions(390));
     });
-    var localHexes = {};
-    (aircraft || []).forEach(function (plane) { if (plane.hex) localHexes[String(plane.hex).toLowerCase()] = true; });
     adsbLolAircraft.forEach(function (plane) {
-      if (plane.hex && localHexes[String(plane.hex).toLowerCase()]) return;
+      if (mergedRemoteAircraft.indexOf(plane) !== -1) return;
       var kind = aircraftKind(plane);
+      var aircraftClass = String(plane.emergencyCategory || 'civilian').toLowerCase().replace(/[^a-z-]/g, '');
       var label = plane.emergencyCallsign || plane.flight || plane.registration || plane.hex || 'Aircraft';
       var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + ' cw-aircraft-adsb-lol' + (plane.emergencyCategory ? ' cw-aircraft-service-' + plane.emergencyCategory : '') + (adsbLolStale ? ' cw-aircraft-stale' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
       var altitude = plane.altitude === null ? 'Unknown' : plane.altitude === 'ground' ? 'Ground' : plane.altitude + ' ft';
       var speed = plane.speed === null ? 'Unknown' : plane.speed + ' kt';
       var track = plane.track === null ? 'Unknown' : plane.track + '°';
-      var sourceLink = '<a href="https://adsb.lol/" target="_blank" rel="noopener">Aircraft data: adsb.lol (ODbL)</a>';
+      var sourceLink = 'Position source: External provider — <a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol (ODbL)</a>';
       var staleNotice = adsbLolStale ? '<br><strong>Stale data — provider unavailable</strong>' : '';
-      var richPopup = '<div class="cw-incident-popup cw-aircraft-popup"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + escapeHtml(plane.emergencyAircraft ? (plane.emergencyLabel || 'Emergency aviation').toUpperCase() : 'AIRCRAFT') + '</strong></div>' +
+      var richPopup = '<div class="cw-incident-popup cw-aircraft-popup cw-aircraft-class-' + aircraftClass + '"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + escapeHtml(plane.emergencyAircraft ? (plane.emergencyLabel || 'Emergency aviation').toUpperCase() : 'AIRCRAFT') + '</strong></div>' +
         '<div class="cw-popup-title">' + escapeHtml(label) + '</div>' +
         '<div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span>' +
         (plane.aircraftType ? '<span><small>Type</small>' + escapeHtml(plane.aircraftType) + '</span>' : '') + '</div>' +
@@ -951,7 +966,7 @@
     var type = String(plane.aircraftType || '').toUpperCase();
     var role = String(plane.fireRole || '').toUpperCase();
     if (plane.emergencyAircraft && !plane.fireAircraft && /^(A7)$/.test(category)) return 'helicopter';
-    if (plane.fireAircraft && /\bRW\b|HELICOPTER/.test(role)) return 'fire-helicopter';
+    if (plane.fireAircraft && /\bRW\b|HELICOPTER/.test(role)) return 'helicopter';
     if (plane.fireAircraft && /SEAT|LAT|FIREBOMB/.test(role)) return 'air-tanker';
     if (plane.fireAircraft && /AAS|RECCE|BIRDDOG|FIRESPOTTER|LEAD/.test(role)) return 'air-attack';
     if (plane.fireAircraft) return 'fire-plane';

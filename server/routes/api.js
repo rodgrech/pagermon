@@ -20,6 +20,7 @@ var permissions = require('../lib/permissions');
 var adsbLol = require('../lib/adsbLol');
 var emergencyAircraft = require('../lib/emergencyAircraft');
 var hexAircraftLookup = require('../lib/hexAircraftLookup');
+var capcodeSuggestions = require('../lib/capcodeSuggestions');
 
 function returningId(result) {
   var first = Array.isArray(result) ? result[0] : result;
@@ -2009,6 +2010,45 @@ router.route('/central-west/dashboard')
         logger.main.error(err);
         res.status(500).send(err);
       });
+  });
+
+var capcodeReferenceCache = {expiresAt: 0, value: null, pending: null};
+function capcodeReference() {
+  if (capcodeReferenceCache.value && Date.now() < capcodeReferenceCache.expiresAt) return Promise.resolve(capcodeReferenceCache.value);
+  if (capcodeReferenceCache.pending) return capcodeReferenceCache.pending;
+  capcodeReferenceCache.pending = db('capcodes').select('address', 'alias', 'agency').whereNotNull('address')
+    .then(function (rows) {
+      capcodeReferenceCache.value = capcodeSuggestions.makeReference(rows);
+      capcodeReferenceCache.expiresAt = Date.now() + 5 * 60 * 1000;
+      return capcodeReferenceCache.value;
+    }).then(function (value) {
+      capcodeReferenceCache.pending = null;
+      return value;
+    }, function (error) {
+      capcodeReferenceCache.pending = null;
+      throw error;
+    });
+  return capcodeReferenceCache.pending;
+}
+
+router.route('/central-west/capcode-suggestions')
+  .post(isSessionUser, function (req, res) {
+    if (!permissions.has(req.user, 'viewDiscovery')) return res.status(403).json({error: 'Discovery access required.'});
+    if (HideCapcode && req.user.role !== 'admin') return res.json({suggestions: {}});
+    var entries = req.body && req.body.entries;
+    if (!Array.isArray(entries) || entries.length > 100) return res.status(400).json({error: 'Provide up to 100 capcodes.'});
+    var safeEntries = entries.map(function (entry) {
+      return {
+        address: String(entry && entry.address || '').slice(0, 16),
+        samples: Array.isArray(entry && entry.samples) ? entry.samples.slice(0, 20).map(function (sample) { return String(sample || '').slice(0, 400); }) : []
+      };
+    });
+    capcodeReference().then(function (reference) {
+      res.json({suggestions: capcodeSuggestions.suggest(safeEntries, reference)});
+    }).catch(function (error) {
+      logger.main.error(error);
+      res.status(500).json({error: 'Capcode suggestions are temporarily unavailable.'});
+    });
   });
 
 // Search historical pager traffic for incidents that have fallen outside the

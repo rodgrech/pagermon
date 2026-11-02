@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-west-alerts-static-v20-aircraft-colours';
+const CACHE_NAME = 'central-west-alerts-static-v22-discovery';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/central-west.css',
