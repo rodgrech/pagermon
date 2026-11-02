@@ -9,6 +9,7 @@ function classify(item, registry) {
   var registration = identity(item.registration || item.r);
   var operator = String(item.aircraftOperator || '').toUpperCase();
   var callsign = callsigns.find(function(entry) { return entry.prefix && flight && flight.indexOf(entry.prefix) === 0; });
+  if (!callsign && /^POL\d{1,4}$/.test(flight)) callsign = {category: 'police', label: 'Police aviation'};
   var nafc = (registry || []).find(function(candidate) {
     return (registration && identity(candidate.registration) === registration) ||
       (flight && identity(candidate.callsign) === flight);
