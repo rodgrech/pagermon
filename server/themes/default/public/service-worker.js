@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-west-alerts-static-v22-discovery';
+const CACHE_NAME = 'central-west-alerts-static-v24-aircraft-operator';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/central-west.css',

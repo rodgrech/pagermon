@@ -11,6 +11,7 @@
   {"prefix":"CAREFLIGHT","category":"rescue","label":"Rescue / aeromedical aviation","source":"CareFlight"},
   {"prefix":"TOLLRESCUE","category":"rescue","label":"NSW Ambulance rescue helicopter","source":"NSW Health"},
   {"prefix":"WESTPACRESCUE","category":"rescue","label":"Westpac Rescue Helicopter","source":"Westpac Rescue Helicopter Service"},
+  {"prefix":"RSCU","category":"rescue","label":"Rescue aviation","source":"Airservices Australia special-task designator"},
   {"prefix":"LIFESAVER","category":"rescue","label":"Search and rescue aviation","source":"Surf Life Saving aviation"},
   {"prefix":"RFDS","category":"medical","label":"Aeromedical aviation","source":"Royal Flying Doctor Service"},
   {"prefix":"FLYDOC","category":"medical","label":"Aeromedical aviation","source":"Royal Flying Doctor Service"},

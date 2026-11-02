@@ -890,11 +890,11 @@
         : 'Position source: Local ADS-B decoder (PiAware)';
       var aircraftClass = String(plane.emergencyCategory || 'civilian').toLowerCase().replace(/[^a-z-]/g, '');
       var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + (plane.emergencyCategory ? ' cw-aircraft-service-' + plane.emergencyCategory : '') + (emergency ? ' cw-plane-emergency' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
-      var operator = plane.aircraftOperator || plane.fireOperator || '';
+      var operator = plane.aircraftOperator || plane.fireOperator || (remoteMatch && remoteMatch.aircraftOperator) || '';
       var fireInfo = plane.emergencyAircraft ? '<div class="cw-popup-description"><strong>' + escapeHtml(plane.emergencyLabel || 'Emergency aviation') + '</strong>' + (plane.emergencyRole ? '<br>Role: ' + escapeHtml(plane.emergencyRole) : '') + '<br><small>Matched using ' + escapeHtml(plane.emergencyMatchSource || 'aircraft identity') + '; not a live tasking status</small></div>' : '';
       fireInfo += '<div class="cw-popup-description">' + sourceInfo + '</div>';
       var aircraftPopup = '<div class="cw-incident-popup cw-aircraft-popup cw-aircraft-class-' + aircraftClass + '"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + escapeHtml(plane.emergencyAircraft ? (plane.emergencyLabel || 'Emergency aviation').toUpperCase() : 'AIRCRAFT') + '</strong></div><div class="cw-popup-title">' + escapeHtml(label) + '</div><div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span>' + (plane.aircraftType ? '<span><small>Type</small>' + escapeHtml(plane.aircraftType) + '</span>' : '') + '</div><div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong>' + (operator ? '<br>Operator: ' + escapeHtml(operator) : '') + '</div>' + (plane.emergencyCallsign && plane.flight && plane.emergencyCallsign !== plane.flight ? '<div class="cw-popup-description">Transmitted callsign: <strong>' + escapeHtml(plane.flight) + '</strong></div>' : '') + fireInfo + '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '</strong><br>Ground speed: <strong>' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '</strong><br>Track: <strong>' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago</div></div>';
-      var aircraftContent = phoneMapPopup() ? '<strong>' + escapeHtml(label) + '</strong><br>' + escapeHtml(aircraftDisplayType(plane, kind)) + '<br>Registration: ' + escapeHtml(plane.registration || 'Unknown') + '<br>Altitude: ' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '<br>Speed: ' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') : aircraftPopup;
+      var aircraftContent = phoneMapPopup() ? '<strong>' + escapeHtml(label) + '</strong><br>' + escapeHtml(aircraftDisplayType(plane, kind)) + (operator ? '<br>Operator: ' + escapeHtml(operator) : '') + '<br>Registration: ' + escapeHtml(plane.registration || 'Unknown') + '<br>Altitude: ' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '<br>Speed: ' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') : aircraftPopup;
       if (phoneMapPopup()) aircraftContent += '<br>' + sourceInfo;
       L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: plane.emergencyAircraft ? 650 : 500}).addTo(layerGroups.aircraft).bindPopup(aircraftContent, mapPopupOptions(390));
     });
@@ -903,6 +903,7 @@
       var kind = aircraftKind(plane);
       var aircraftClass = String(plane.emergencyCategory || 'civilian').toLowerCase().replace(/[^a-z-]/g, '');
       var label = plane.emergencyCallsign || plane.flight || plane.registration || plane.hex || 'Aircraft';
+      var operator = plane.aircraftOperator || plane.fireOperator || '';
       var icon = L.divIcon({className: 'cw-aircraft-marker cw-aircraft-' + kind + ' cw-aircraft-adsb-lol' + (plane.emergencyCategory ? ' cw-aircraft-service-' + plane.emergencyCategory : '') + (adsbLolStale ? ' cw-aircraft-stale' : ''), html: aircraftSvg(kind, plane.track), iconSize: [32, 32], iconAnchor: [16, 16]});
       var altitude = plane.altitude === null ? 'Unknown' : plane.altitude === 'ground' ? 'Ground' : plane.altitude + ' ft';
       var speed = plane.speed === null ? 'Unknown' : plane.speed + ' kt';
@@ -913,12 +914,13 @@
         '<div class="cw-popup-title">' + escapeHtml(label) + '</div>' +
         '<div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span>' +
         (plane.aircraftType ? '<span><small>Type</small>' + escapeHtml(plane.aircraftType) + '</span>' : '') + '</div>' +
-        '<div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong></div>' +
+        '<div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong>' + (operator ? '<br>Operator: ' + escapeHtml(operator) : '') + '</div>' +
         '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(altitude) + '</strong><br>Ground speed: <strong>' + escapeHtml(speed) +
         '</strong><br>Track: <strong>' + escapeHtml(track) + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago' + staleNotice + '</div>' +
         (plane.emergencyAircraft ? '<div class="cw-popup-description">Matched using ' + escapeHtml(plane.emergencyMatchSource || 'aircraft identity') + '; not a live tasking status</div>' : '') +
         '<div class="cw-popup-description">' + sourceLink + '</div></div>';
       var compactPopup = '<strong>' + escapeHtml(label) + '</strong><br>' + escapeHtml(aircraftDisplayType(plane, kind)) +
+        (operator ? '<br>Operator: ' + escapeHtml(operator) : '') +
         '<br>Registration: ' + escapeHtml(plane.registration || 'Unknown') + '<br>Altitude: ' + escapeHtml(altitude) +
         '<br>Speed: ' + escapeHtml(speed) + staleNotice + '<br>' + sourceLink;
       L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: 450}).addTo(layerGroups.adsbLol).bindPopup(phoneMapPopup() ? compactPopup : richPopup, mapPopupOptions(390));
