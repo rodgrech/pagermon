@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pagermon-bushfire-static-v5-aircraft-colours';
+const CACHE_NAME = 'pagermon-bushfire-static-v6-aircraft-colours';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/central-west.css',
