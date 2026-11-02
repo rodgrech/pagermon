@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pagermon-bushfire-static-v11-police-cyan';
+const CACHE_NAME = 'pagermon-bushfire-static-v12-aircraft-layers';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/central-west.css',

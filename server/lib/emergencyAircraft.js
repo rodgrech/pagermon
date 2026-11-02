@@ -16,6 +16,22 @@ function classify(item, registry) {
     return (registration && identity(candidate.registration) === registration) ||
       (flight && identity(candidate.callsign) === flight);
   });
+  // Aircraft can be registered with NAFC yet fly a rescue mission under a
+  // different callsign. The transmitted operational identity takes precedence
+  // over a registration-only registry match.
+  if (callsign && callsign.category !== 'fire') {
+    return {fireAircraft: false, emergencyAircraft: true, emergencyCategory: callsign.category,
+      emergencyLabel: callsign.label, emergencyCallsign: String(item.flight || '').trim(),
+      emergencyRole: callsign.label, emergencyMatchSource: 'Curated callsign catalogue'};
+  }
+  if (callsign && callsign.category === 'fire' && nafc && identity(nafc.callsign) !== flight) {
+    return {fireAircraft: true, emergencyAircraft: true, emergencyCategory: 'fire',
+      emergencyLabel: 'Fire aviation', emergencyCallsign: String(item.flight || '').trim(),
+      emergencyRole: 'Fire aviation', emergencyMatchSource: 'Operational callsign',
+      fireCallsign: String(item.flight || '').trim(), fireRole: 'Fire aviation',
+      fireManufacturer: nafc.manufacturer, fireModel: nafc.model,
+      fireMatchSource: 'Operational callsign'};
+  }
   if (nafc) return {fireAircraft: true, emergencyAircraft: true, emergencyCategory: 'fire', emergencyLabel: 'Fire aviation', emergencyCallsign: nafc.callsign, emergencyRole: nafc.role, emergencyMatchSource: 'NAFC registry', fireCallsign: nafc.callsign, fireRole: nafc.role, fireManufacturer: nafc.manufacturer, fireModel: nafc.model, fireMatchSource: 'NAFC registry'};
   if (callsign && callsign.category === 'fire')
     return {fireAircraft: true, emergencyAircraft: true, emergencyCategory: 'fire', emergencyLabel: 'Fire aviation', emergencyCallsign: String(item.flight || '').trim(), emergencyRole: 'Fire aviation', emergencyMatchSource: 'Operational callsign', fireCallsign: String(item.flight || '').trim(), fireRole: 'Fire aviation', fireMatchSource: 'Operational callsign'};

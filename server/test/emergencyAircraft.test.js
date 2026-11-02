@@ -8,6 +8,21 @@ it('NAFC registry has priority over other aircraft identities', function() {
   assert.equal(result.fireAircraft, true);
 });
 
+it('a Lifesaver rescue callsign overrides a NAFC registration match', function() {
+  var result = classify({flight: 'LIFESAVER 21', registration: 'VH-ABC'}, [{callsign: 'FIREBIRD 217', registration: 'VH-ABC', role: 'Fire operations'}]);
+  assert.equal(result.emergencyCategory, 'rescue');
+  assert.equal(result.fireAircraft, false);
+  assert.equal(result.emergencyCallsign, 'LIFESAVER 21');
+});
+
+it('a Parkair operational callsign is not replaced by a NAFC registration callsign', function() {
+  var result = classify({flight: 'PARKAIR 3', registration: 'VH-ABC'}, [{callsign: 'FIREBIRD 217', registration: 'VH-ABC', role: 'Fire operations'}]);
+  assert.equal(result.emergencyCategory, 'fire');
+  assert.equal(result.emergencyCallsign, 'PARKAIR 3');
+  assert.equal(result.fireCallsign, 'PARKAIR 3');
+  assert.equal(result.emergencyMatchSource, 'Operational callsign');
+});
+
 it('curated rescue, police and medical callsigns classify separately', function() {
   assert.equal(classify({flight: 'TOLLRESCUE1'}).emergencyCategory, 'rescue');
   assert.equal(classify({flight: 'RSCU206', registration: 'VH-TJI'}).emergencyCategory, 'rescue');

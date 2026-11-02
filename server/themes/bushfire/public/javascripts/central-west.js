@@ -765,15 +765,17 @@
       if (element._leaflet_id) delete element._leaflet_id;
       map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel, zoomSnap: 0.5, zoomDelta: 0.5, closePopupOnClick: false, tap: true}).setView(mapCenter, mapInitialZoom);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), lightning: L.layerGroup(), aircraft: L.layerGroup(), adsbLol: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
+      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), lightning: L.layerGroup(), emergencyAircraft: L.layerGroup(), civilianAircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
       var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS / NPWS incidents': layerGroups.rfs};
       overlays['Forestry closures and notices'] = layerGroups.forestry;
       overlays['Fire danger districts'] = layerGroups.fireDanger;
       if (features.nasaFirms !== false) overlays['Satellite hotspots (NASA FIRMS)'] = layerGroups.hotspots;
       if (features.lightning === true) overlays['Lightning strikes (Xweather)'] = layerGroups.lightning;
-      if (features.piaware !== false) overlays['Live aircraft'] = layerGroups.aircraft;
-      if (features.adsbLol === true) overlays['adsb.lol aircraft'] = layerGroups.adsbLol;
+      if (features.piaware !== false || features.adsbLol === true) {
+        overlays['Emergency aircraft'] = layerGroups.emergencyAircraft;
+        overlays['Civilian aircraft'] = layerGroups.civilianAircraft;
+      }
       if (features.waterNsw !== false) {
         overlays['WaterNSW dams'] = layerGroups.dams;
         overlays['River gauges'] = layerGroups.gauges;
@@ -789,7 +791,7 @@
         radarLayer.addTo(layerGroups.radar);
       }
     }
-    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'lightning', 'aircraft', 'adsbLol', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
+    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'lightning', 'emergencyAircraft', 'civilianAircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     renderFireDangerLayer();
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
@@ -896,7 +898,7 @@
       var aircraftPopup = '<div class="cw-incident-popup cw-aircraft-popup cw-aircraft-class-' + aircraftClass + '"><div class="cw-popup-heading"><i class="fa fa-plane"></i><strong>' + escapeHtml(plane.emergencyAircraft ? (plane.emergencyLabel || 'Emergency aviation').toUpperCase() : 'AIRCRAFT') + '</strong></div><div class="cw-popup-title">' + escapeHtml(label) + '</div><div class="cw-popup-pills"><span><small>Registration</small>' + escapeHtml(plane.registration || 'Unknown') + '</span><span><small>ICAO</small>' + escapeHtml(plane.hex || 'Unknown') + '</span>' + (plane.aircraftType ? '<span><small>Type</small>' + escapeHtml(plane.aircraftType) + '</span>' : '') + '</div><div class="cw-popup-description"><strong>' + escapeHtml(aircraftDisplayType(plane, kind)) + '</strong>' + (operator ? '<br>Operator: ' + escapeHtml(operator) : '') + '</div>' + (plane.emergencyCallsign && plane.flight && plane.emergencyCallsign !== plane.flight ? '<div class="cw-popup-description">Transmitted callsign: <strong>' + escapeHtml(plane.flight) + '</strong></div>' : '') + fireInfo + '<div class="cw-popup-description">Altitude: <strong>' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '</strong><br>Ground speed: <strong>' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') + '</strong><br>Track: <strong>' + escapeHtml(plane.track === null ? 'Unknown' : plane.track + '°') + '</strong><br>Seen: ' + escapeHtml(plane.seen) + ' sec ago</div></div>';
       var aircraftContent = phoneMapPopup() ? '<strong>' + escapeHtml(label) + '</strong><br>' + escapeHtml(aircraftDisplayType(plane, kind)) + (operator ? '<br>Operator: ' + escapeHtml(operator) : '') + '<br>Registration: ' + escapeHtml(plane.registration || 'Unknown') + '<br>Altitude: ' + escapeHtml(plane.altitude === null ? 'Unknown' : plane.altitude + ' ft') + '<br>Speed: ' + escapeHtml(plane.speed === null ? 'Unknown' : plane.speed + ' kt') : aircraftPopup;
       if (phoneMapPopup()) aircraftContent += '<br>' + sourceInfo;
-      L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: plane.emergencyAircraft ? 650 : 500}).addTo(layerGroups.aircraft).bindPopup(aircraftContent, mapPopupOptions(390));
+      L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: plane.emergencyAircraft ? 650 : 500}).addTo(plane.emergencyAircraft ? layerGroups.emergencyAircraft : layerGroups.civilianAircraft).bindPopup(aircraftContent, mapPopupOptions(390));
     });
     adsbLolAircraft.forEach(function (plane) {
       if (mergedRemoteAircraft.indexOf(plane) !== -1) return;
@@ -923,7 +925,7 @@
         (operator ? '<br>Operator: ' + escapeHtml(operator) : '') +
         '<br>Registration: ' + escapeHtml(plane.registration || 'Unknown') + '<br>Altitude: ' + escapeHtml(altitude) +
         '<br>Speed: ' + escapeHtml(speed) + staleNotice + '<br>' + sourceLink;
-      L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: 450}).addTo(layerGroups.adsbLol).bindPopup(phoneMapPopup() ? compactPopup : richPopup, mapPopupOptions(390));
+      L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: 450}).addTo(plane.emergencyAircraft ? layerGroups.emergencyAircraft : layerGroups.civilianAircraft).bindPopup(phoneMapPopup() ? compactPopup : richPopup, mapPopupOptions(390));
     });
     queueMapRecovery(false);
   }
