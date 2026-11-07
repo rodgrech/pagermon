@@ -1,3 +1,9 @@
+# 1.11.11 updates - 2026-11-07
+
+* Show the pager incident type with the locality in incident headings across all three themes.
+* Correct RFS address parsing when a page omits the subtype, preventing coordinates from appearing as the incident name.
+* Use the value after `FRINC TYPE:` (or `INC TYPE:`) for Fire and Rescue NSW incident headings.
+
 # 1.11.3 updates - 2026-11-07
 
 * Added a System Admin role, guarded against promotion by ordinary admins, with an optional system-message push setting for all System Admin accounts.

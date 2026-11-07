@@ -362,12 +362,30 @@
       details.brigade = brigadeName(details.callsign, message.alias);
       details.incidentId = parts[incidentIndex];
       details.type = parts[incidentIndex + 1] || '';
-      details.subtype = parts[incidentIndex + 2] || '';
-      details.address = parts[incidentIndex + 3] || '';
+      // Pager formats may omit the subtype. The final field is often a
+      // coordinate pair, so take the last non-coordinate field as the address.
+      var remaining = parts.slice(incidentIndex + 2).filter(function (part) {
+        return !/^\[\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*\]$/.test(part);
+      });
+      details.address = remaining.pop() || '';
+      details.subtype = remaining.join(' - ');
       var addressParts = details.address.split(',').map(cleanPagerField);
-      details.locality = titleCase(addressParts[1] || addressParts[0]);
+      // The trailing postcode and council-area field are not the locality.
+      var hasPostcode = /^\d{4}$/.test(addressParts[addressParts.length - 1] || '');
+      var localityIndex = hasPostcode ? addressParts.length - 2 : addressParts.length - 1;
+      if (localityIndex > 1 && /\(NSW\)/i.test(addressParts[localityIndex])) localityIndex--;
+      details.locality = titleCase((addressParts[localityIndex] || addressParts[0]).replace(/\s*\(NSW\)\s*$/i, ''));
       details.title = cleanPagerField(details.type || details.subtype || 'RFS incident') + (details.locality ? ' — ' + details.locality : '');
       return details;
+    }
+    if (agency.indexOf('FRNSW') !== -1 || agency.indexOf('FIRE & RESCUE') !== -1) {
+      var fireRescueType = text.match(/\b(?:FR)?INC\s*TYPE\s*:\s*(.+?)(?=\s+(?:TURNOUT|INC)\s*:|$)/i);
+      if (fireRescueType) {
+        details.type = titleCase(fireRescueType[1]);
+        var fireRescueLocality = location(message.alias || '');
+        details.locality = fireRescueLocality ? fireRescueLocality.name : '';
+        details.title = details.type + (details.locality ? ' — ' + details.locality : '');
+      }
     }
     var sesMatch = text.match(/^(.+?)\s+AT\s+([^,]+),\s*([^,]+),\s*([^,]+),\s*NSW\.?\s*(.*)$/i);
     if (sesMatch && (agency.indexOf('SES') !== -1 || /\bCFR\b/i.test(sesMatch[1]))) {

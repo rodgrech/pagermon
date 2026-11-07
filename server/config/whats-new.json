@@ -1,10 +1,9 @@
 {
-  "version": "1.11.3",
-  "title": "Central West Alerts 1.11.3",
+  "version": "1.11.11",
+  "title": "Central West Alerts 1.11.11",
   "changes": [
-    "System Admin accounts can receive system-message pushes for new user applications and decoder USB faults.",
-    "A decoder watchdog restarts a stalled receiver 30 seconds after a USB transfer error and reports its status to admins.",
-    "BOM weather warnings now appear above Fire Danger Ratings; Total Fire Ban areas use a more prominent card header.",
-    "Added an experimental AIS Stream vessel layer with server-side configuration."
+    "Incident headings now show the incident type with the locality when the pager provides both.",
+    "Fixed RFS pages without a subtype showing the trailing coordinates as the incident name.",
+    "Fire and Rescue NSW incident headings use the value after FRINC TYPE, including Assist Ambulance and other call types."
   ]
 }
