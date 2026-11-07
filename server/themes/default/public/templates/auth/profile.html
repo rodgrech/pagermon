@@ -1,7 +1,7 @@
 <div class="row" style="padding-top: 11px;">
 </div>
 
-<div class="row" style="padding-top: 20px" ng-if="user.role === 'admin'"><div class="col-xs-12"><hr>
+<div class="row" style="padding-top: 20px" ng-if="(user.role === 'admin' || user.role === 'system_admin')"><div class="col-xs-12"><hr>
   <h5><i class="fa fa-shield"></i> Administrator two-factor authentication</h5>
   <div class="alert alert-success" ng-if="user.totp_enabled">Enabled. Your password and an authenticator code are required on untrusted devices.</div>
   <div ng-if="!user.totp_enabled && !twoFactor.setup"><p>Protect this administrator account with any TOTP authenticator app.</p><button class="btn btn-primary" ng-click="startTwoFactor()">Set up authenticator</button></div>

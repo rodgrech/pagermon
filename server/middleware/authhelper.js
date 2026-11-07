@@ -57,7 +57,7 @@ function isAdminGUI (req, res, next) {
 }
 
 function isAdmin (req, res, next) {
-    if (req.isAuthenticated() && req.user.role !== 'admin') {
+    if (req.isAuthenticated() && req.user.role !== 'admin' && req.user.role !== 'system_admin') {
       var permission = 'manageSettings';
       var route = req.path || '';
       if (/^\/messages\/[^/]+\/visibility$/.test(route)) permission = 'moderateMessages';
@@ -70,7 +70,7 @@ function isAdmin (req, res, next) {
       return res.status(403).json({error: 'You do not have permission for this action'});
     }
     const passport = require('../auth/local');
-    if (req.isAuthenticated() && req.user.role == 'admin') {
+    if (req.isAuthenticated() && (req.user.role === 'admin' || req.user.role === 'system_admin')) {
       if (nconf.get('auth:requireAdminTwoFactor') && !req.user.totp_enabled) return res.status(403).json({error: 'Administrator two-factor enrolment is required.'});
       //if the user is authenticated and the user's role is admin carry on
       return next();

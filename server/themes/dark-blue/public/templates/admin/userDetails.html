@@ -18,7 +18,7 @@
               <div ng-if="showDenial" style="margin-top: 12px;"><label for="denialReason">Feedback sent to the applicant</label><textarea id="denialReason" class="form-control" style="color: #fff; background: #263445; padding: 10px; border: 1px solid #8191a5; border-radius: 4px;" rows="4" maxlength="2000" ng-model="approval.reason" placeholder="Explain why this application was not approved" required></textarea><button type="button" class="btn btn-danger" style="margin-top: 8px;" ng-disabled="!approval.reason" ng-click="denyUser()">Confirm denial and send email</button></div>
             </div>
             <div class="alert alert-warning" ng-if="!user.approvalpending && user.approvaldenialreason"><strong>Application denied.</strong><br>{{user.approvaldenialreason}}</div>
-            <fieldset ng-disabled="!permissions.manageUsers">
+            <fieldset ng-disabled="!permissions.manageUsers || (user.role === 'system_admin' && !permissions.manageSystem)">
             <div class="form-group has-feedback" ng-class="!user.username || existingUsername ? 'has-error' : 'has-success'">
               <label for="user.username" class="col-xs-4 col-sm-3 control-label">Username</label>
               <div class="col-xs-8 col-sm-9">
@@ -64,6 +64,7 @@
                 <select name="user.role" ng-model="user.role" class="form-control">
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
+                  <option value="system_admin" ng-if="permissions.manageSystem">System Admin</option>
                   <option value="superuser">Superuser</option>
                 </select>
                 <span id="helpBlock" class="help-block"></span>
@@ -89,7 +90,7 @@
               </div>
             </div>
             </fieldset>
-            <div class="btn-group-vertical" id="buttons-aliasDetail" ng-if="permissions.manageUsers">
+            <div class="btn-group-vertical" id="buttons-aliasDetail" ng-if="permissions.manageUsers && (user.role !== 'system_admin' || permissions.manageSystem)">
               <button type="button" ng-if="!isNew" ng-click="userDelete()" class="btn btn-danger">Delete</button>
               <button type="button" ng-if="!isNew" ng-click="userReset()" class="btn btn-warning ">Reset Password</button>
               <button type="button" ng-if="!isNew && user.totp_enabled" ng-click="twoFactorReset()" class="btn btn-danger">Reset Two-factor Authentication</button>

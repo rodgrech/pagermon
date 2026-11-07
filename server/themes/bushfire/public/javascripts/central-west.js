@@ -43,6 +43,7 @@
   var satelliteHotspots = [];
   var lightningStrikes = [];
   var adsbLolAircraft = [];
+  var aisStreamVessels = [];
   var adsbLolStale = false;
   var fireDangerDistricts = [];
   var fireDangerFetchedAt = null;
@@ -765,7 +766,7 @@
       if (element._leaflet_id) delete element._leaflet_id;
       map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel, zoomSnap: 0.5, zoomDelta: 0.5, closePopupOnClick: false, tap: true}).setView(mapCenter, mapInitialZoom);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), lightning: L.layerGroup(), emergencyAircraft: L.layerGroup(), civilianAircraft: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
+      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), lightning: L.layerGroup(), emergencyAircraft: L.layerGroup(), civilianAircraft: L.layerGroup(), vessels: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
       var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS / NPWS incidents': layerGroups.rfs};
       overlays['Forestry closures and notices'] = layerGroups.forestry;
@@ -776,6 +777,7 @@
         overlays['Emergency aircraft'] = layerGroups.emergencyAircraft;
         overlays['Civilian aircraft'] = layerGroups.civilianAircraft;
       }
+      if (features.aisStream === true) overlays['Vessels (AIS Stream — experimental)'] = layerGroups.vessels;
       if (features.waterNsw !== false) {
         overlays['WaterNSW dams'] = layerGroups.dams;
         overlays['River gauges'] = layerGroups.gauges;
@@ -791,7 +793,7 @@
         radarLayer.addTo(layerGroups.radar);
       }
     }
-    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'lightning', 'emergencyAircraft', 'civilianAircraft', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
+    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'lightning', 'emergencyAircraft', 'civilianAircraft', 'vessels', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     renderFireDangerLayer();
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
@@ -927,6 +929,19 @@
         '<br>Speed: ' + escapeHtml(speed) + staleNotice + '<br>' + sourceLink;
       L.marker([plane.latitude, plane.longitude], {icon: icon, zIndexOffset: 450}).addTo(plane.emergencyAircraft ? layerGroups.emergencyAircraft : layerGroups.civilianAircraft).bindPopup(phoneMapPopup() ? compactPopup : richPopup, mapPopupOptions(390));
     });
+    aisStreamVessels.forEach(function (vessel) {
+      if (!Number.isFinite(Number(vessel.latitude)) || !Number.isFinite(Number(vessel.longitude))) return;
+      var label = vessel.name || ('MMSI ' + vessel.mmsi);
+      var ageMinutes = Math.max(0, Math.floor((Date.now() - Number(vessel.updatedAt)) / 60000));
+      var popup = '<div class="cw-incident-popup"><div class="cw-popup-heading"><i class="fa fa-ship"></i><strong>VESSEL · EXPERIMENTAL AIS</strong></div>' +
+        '<div class="cw-popup-title">' + escapeHtml(label) + '</div><div class="cw-popup-description">MMSI: ' + escapeHtml(vessel.mmsi) +
+        (vessel.callsign ? '<br>Callsign: ' + escapeHtml(vessel.callsign) : '') +
+        (vessel.speed != null ? '<br>Speed: ' + escapeHtml(vessel.speed) + ' kt' : '') +
+        (vessel.course != null ? '<br>Course: ' + escapeHtml(vessel.course) + '°' : '') +
+        '<br>Seen: ' + ageMinutes + ' min ago</div><div class="cw-popup-description">AIS may be delayed or inaccurate. Not for navigation or operational decisions.<br>Source: <a href="https://www.aisstream.io/" target="_blank" rel="noopener">AIS Stream</a></div></div>';
+      var icon = L.divIcon({className: 'cw-vessel-marker', html: '<i class="fa fa-ship"></i>', iconSize: [26, 26], iconAnchor: [13, 13]});
+      L.marker([vessel.latitude, vessel.longitude], {icon: icon, zIndexOffset: 350}).addTo(layerGroups.vessels).bindPopup(popup, mapPopupOptions(340));
+    });
     queueMapRecovery(false);
   }
 
@@ -956,6 +971,11 @@
   function setAdsbLolAircraft(aircraft, stale) {
     adsbLolAircraft = Array.isArray(aircraft) ? aircraft : [];
     adsbLolStale = !!stale;
+    if (lastRender) renderMap(lastRender.id, lastRender.incidents, lastRender.rfsIncidents, lastRender.aircraft, lastRender.dams, lastRender.gauges, lastRender.algaeSites);
+  }
+
+  function setAisStreamVessels(vessels) {
+    aisStreamVessels = Array.isArray(vessels) ? vessels : [];
     if (lastRender) renderMap(lastRender.id, lastRender.incidents, lastRender.rfsIncidents, lastRender.aircraft, lastRender.dams, lastRender.gauges, lastRender.algaeSites);
   }
 
@@ -1024,5 +1044,5 @@
   }
 
   function setForestryClosures(features) { forestryClosures = features || []; queueMapRecovery(false); }
-  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, isInformationalPagerMessage: isInformationalPagerMessage, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots, setLightningStrikes: setLightningStrikes, setAdsbLolAircraft: setAdsbLolAircraft, setForestryClosures: setForestryClosures};
+  window.CentralWestAlerts = {decorateMessage: decorateMessage, parsePagerIncident: parsePagerIncident, groupIncidents: groupIncidents, isInformationalPagerMessage: isInformationalPagerMessage, unknownCapcodes: unknownCapcodes, correlateIncidents: correlateIncidents, health: health, receiverHealth: receiverHealth, renderMap: renderMap, setRadar: setRadar, setSatelliteHotspots: setSatelliteHotspots, setLightningStrikes: setLightningStrikes, setAdsbLolAircraft: setAdsbLolAircraft, setAisStreamVessels: setAisStreamVessels, setForestryClosures: setForestryClosures};
 })(window);

@@ -18,6 +18,7 @@ const passport = require('../auth/local');
 const authHelper = require('../middleware/authhelper')
 const twoFactor = require('../lib/twoFactor');
 const approvalMailer = require('../lib/accountApprovalMailer');
+const webPush = require('../lib/webPush');
 const QRCode = require('qrcode');
 
 const lockoutCallback = function(req, res) {
@@ -72,7 +73,7 @@ function loginComplete(req, res, user, remember) {
                         res.cookie('pagermon_2fa', raw, {httpOnly: true, sameSite: 'lax', secure: req.secure || req.get('x-forwarded-proto') === 'https', maxAge: days * 86400000});
                 });
         }).then(function() {
-                res.status(200).send({status: 'ok', redirect: user.role === 'admin' ? '/admin' : '/'});
+                res.status(200).send({status: 'ok', redirect: ['admin', 'system_admin'].includes(user.role) ? '/admin' : '/'});
                 logger.auth.info(`Successful login: ${user.username}`);
         });
 }
@@ -113,7 +114,7 @@ router.route('/login')
                                         });
                                         logger.auth.info(`Pending account login blocked: ${user.username}`);
                                 } else if (user.status !== 'disabled') {
-                                        if (user.role === 'admin' && user.totp_enabled) {
+                                        if (['admin', 'system_admin'].includes(user.role) && user.totp_enabled) {
                                                 const trusted = req.cookies.pagermon_2fa;
                                                 const trustedQuery = trusted ? db('two_factor_devices').where({user_id: user.id, token_hash: twoFactor.hash(trusted)}).where('expires_at', '>', moment().format('YYYY-MM-DD HH:mm:ss')).first() : Promise.resolve(null);
                                                 return trustedQuery.then(function(device) {
@@ -143,7 +144,7 @@ router.route('/login')
                                                                         lastlogondate: currentDatetime,
                                                                 })
                                                                 .then(() => {
-                                                                        if (user.role !== 'admin') {
+                                                                        if (!['admin', 'system_admin'].includes(user.role)) {
                                                                                 res.status(200).send({
                                                                                         status: 'ok',
                                                                                         redirect: '/',
@@ -265,7 +266,7 @@ router.route('/profile/:id')
         });
 
 router.post('/two-factor/enrol', authHelper.isLoggedIn, function(req, res) {
-        if (req.user.role !== 'admin') return res.status(403).send({error: 'Two-factor authentication is currently available for administrators.'});
+        if (!['admin', 'system_admin'].includes(req.user.role)) return res.status(403).send({error: 'Two-factor authentication is currently available for administrators.'});
         const secret = twoFactor.newSecret();
         req.session.pendingTotpSecret = secret;
         const issuer = String(nconf.get('global:monitorName') || 'PagerMon');
@@ -280,7 +281,7 @@ router.post('/two-factor/enrol', authHelper.isLoggedIn, function(req, res) {
 
 router.post('/two-factor/confirm', authHelper.isLoggedIn, twoFactorLimiter, function(req, res) {
         const secret = req.session.pendingTotpSecret;
-        if (req.user.role !== 'admin' || !secret) return res.status(400).send({error: 'Start enrolment again.'});
+        if (!['admin', 'system_admin'].includes(req.user.role) || !secret) return res.status(400).send({error: 'Start enrolment again.'});
         if (!twoFactor.verify(secret, req.body.code)) return res.status(400).send({error: 'That code is not valid. Check the device clock and try again.'});
         const codes = twoFactor.recoveryCodes();
         db('users').where('id', req.user.id).update({totp_enabled: true, totp_secret: twoFactor.encrypt(secret), totp_recovery_codes: JSON.stringify(codes.map(twoFactor.hash)), totp_enrolled_at: moment().format('YYYY-MM-DD HH:mm:ss')}).then(function() {
@@ -290,7 +291,7 @@ router.post('/two-factor/confirm', authHelper.isLoggedIn, twoFactorLimiter, func
 });
 
 router.post('/two-factor/disable', authHelper.isLoggedIn, twoFactorLimiter, function(req, res) {
-        if (req.user.role !== 'admin' || !authHelper.comparePass(req.body.password || '', req.user.password)) return res.status(401).send({error: 'Password incorrect.'});
+        if (!['admin', 'system_admin'].includes(req.user.role) || !authHelper.comparePass(req.body.password || '', req.user.password)) return res.status(401).send({error: 'Password incorrect.'});
         db.transaction(function(trx) {
                 return trx('two_factor_devices').where('user_id', req.user.id).del().then(function() {
                         return trx('users').where('id', req.user.id).update({totp_enabled: false, totp_secret: null, totp_recovery_codes: null, totp_enrolled_at: null});
@@ -350,6 +351,9 @@ router.route('/register')
                                                                         };
                                                                         approvalMailer.registrationReceived(applicant);
                                                                         approvalMailer.adminApprovalNeeded(applicant);
+                                                                        webPush.sendSystemMessage('New user awaiting approval', 'A new registration is waiting for review.', '/admin/users', 'system-new-user').catch(function (error) {
+                                                                                logger.auth.error('System push failed: ' + error.message);
+                                                                        });
                                                                         return res.status(200).json({
                                                                                 status: 'pending',
                                                                                 message: 'Registration received. An administrator must approve your account before you can sign in.',

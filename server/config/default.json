@@ -81,6 +81,9 @@
     }
   },
   "notifications": {
+    "systemMessages": {
+      "enabled": false
+    },
     "webPush": {
       "enabled": false,
       "subject": "mailto:admin@example.com",
@@ -127,6 +130,14 @@
       "radiusNm": 100,
       "cacheSeconds": 300,
       "maximumAgeSeconds": 120
+    },
+    "aisStream": {
+      "enabled": false,
+      "apiKey": "",
+      "southLatitude": -34.5,
+      "northLatitude": -31.5,
+      "westLongitude": 150.5,
+      "eastLongitude": 153
     },
     "weatherRadar": {
       "enabled": true,

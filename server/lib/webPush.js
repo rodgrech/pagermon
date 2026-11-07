@@ -77,4 +77,25 @@ function sendTestForUser(userId) {
     });
 }
 
-module.exports = {sendForMessage, sendTestForUser};
+function sendSystemMessage(title, body, url, tag) {
+  nconf.load();
+  const settings = nconf.get('notifications:systemMessages') || {};
+  if (!settings.enabled || !configure()) return Promise.resolve(0);
+  return db('push_subscriptions')
+    .join('users', 'users.id', 'push_subscriptions.user_id')
+    .select('push_subscriptions.endpoint', 'push_subscriptions.p256dh', 'push_subscriptions.auth')
+    .where('users.role', 'system_admin')
+    .where('users.status', 'active')
+    .where('users.approvalpending', false)
+    .then(function (subscriptions) {
+      return sendSubscriptions(subscriptions, {
+        title: String(title).slice(0, 100),
+        body: String(body).slice(0, 240),
+        url: url || '/admin',
+        tag: tag || 'system-message',
+        timestamp: Date.now()
+      }).then(function () { return subscriptions.length; });
+    });
+}
+
+module.exports = {sendForMessage, sendTestForUser, sendSystemMessage};

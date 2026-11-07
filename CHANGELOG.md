@@ -1,3 +1,11 @@
+# 1.11.3 updates - 2026-11-07
+
+* Added a System Admin role, guarded against promotion by ordinary admins, with an optional system-message push setting for all System Admin accounts.
+* Added push notifications for new account applications and decoder USB failures, plus an admin-only decoder health warning and a 30-second USB recovery watchdog for systemd installations.
+* Moved BOM weather warnings above Fire Danger Ratings and highlighted Total Fire Ban districts in the ratings cards across all three themes.
+* Added an experimental AIS Stream vessel layer with server-side configuration and a shared feed.
+* Updated the What's New notice and database migration for the new role.
+
 # 1.11.2.1 updates - 2026-11-02
 
 * Fixed the adsb.lol default marker colour so purple is reserved for identified military aircraft.

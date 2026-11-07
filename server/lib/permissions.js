@@ -18,16 +18,19 @@ const defaults = {
 };
 function has(user, permission) {
   if (!user || (user.status && user.status !== 'active')) return false;
-  if (user.role === 'admin') return true;
+  if (permission === 'manageSystem') return user.role === 'system_admin';
+  if (user.role === 'admin' || user.role === 'system_admin') return true;
   if (!Object.prototype.hasOwnProperty.call(defaults, user.role)) return false;
   const configured = nconf.get('auth:rolePermissions:' + user.role) || {};
   return Object.prototype.hasOwnProperty.call(configured, permission) ? configured[permission] === true : defaults[user.role][permission] === true;
 }
 function forUser(user) {
-  return definitions.reduce(function (result, item) {
+  const result = definitions.reduce(function (result, item) {
     result[item.key] = !user && ['viewPagerFeed', 'viewLiveMap', 'viewWaterNsw'].includes(item.key) ? true : has(user, item.key);
     return result;
   }, {});
+  result.manageSystem = has(user, 'manageSystem');
+  return result;
 }
 function adminAccess(user) {
   return ['manageUsers', 'approveUsers', 'manageAliases', 'manageSettings'].some(function (key) { return has(user, key); });

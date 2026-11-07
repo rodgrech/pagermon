@@ -1,4 +1,4 @@
-var version = "1.11.2.1";
+var version = "1.11.3";
 
 var debug = require('debug')('pagermon:server');
 var io = require('@pm2/io').init({
@@ -130,6 +130,7 @@ var server = http.createServer(app);
 var SocketIOServer = require('socket.io').Server;
 var io = new SocketIOServer(server);
     server.listen(port);
+    require('./lib/systemNotifications').start();
     server.on('error', onError);
     server.on('listening', onListening);
     //Set connection timeout to prevent long running queries failing on large databases - mostly capacode refresh on MySQL

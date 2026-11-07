@@ -45,6 +45,28 @@
   </div>
 </nav>
 
+<% if (login && user && (user.role === 'admin' || user.role === 'system_admin')) { %>
+<div id="decoderUsbWarning" class="alert alert-danger" role="alert" style="display:none; margin:8px auto; max-width:1170px; position:relative; z-index:1031;"></div>
+<script>
+$(function () {
+  function checkDecoderHealth() {
+    $.getJSON('/api/central-west/decoder-health').done(function (health) {
+      var warning = $('#decoderUsbWarning');
+      if (!health || health.state === 'ok') return warning.hide();
+      var detail = health.state === 'error'
+        ? 'USB transfer error detected. Automatic decoder restart is pending (30 seconds).'
+        : health.state === 'restarting'
+          ? 'USB transfer error detected. Decoder is restarting; page reception may be interrupted.'
+          : 'USB transfer error detected earlier. The decoder reopened the SDR automatically; check for fresh pages.';
+      warning.text('Pager decoder: ' + detail).show();
+    });
+  }
+  checkDecoderHealth();
+  window.setInterval(checkDecoderHealth, 15000);
+});
+</script>
+<% } %>
+
 <% if (login) { %>
 <div class="modal fade" id="newUserWelcomeModal" tabindex="-1" role="dialog" aria-labelledby="newUserWelcomeTitle" data-backdrop="static" data-keyboard="false">
   <div class="modal-dialog" role="document"><div class="modal-content whats-new-modal welcome-modal">

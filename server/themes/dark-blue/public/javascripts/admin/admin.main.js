@@ -968,6 +968,7 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         $scope.settings = results.settings;
         $scope.plugins = results.plugins;
         $scope.permissionDefinitions = results.permissionDefinitions || [];
+        $scope.canManageSystem = results.canManageSystem === true;
         $scope.themes = results.themes;
         $scope.pwaIconThemes = results.pwaIconThemes || results.themes;
       });

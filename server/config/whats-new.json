@@ -1,10 +1,10 @@
 {
-  "version": "1.11.2.1",
-  "title": "Central West Alerts 1.11.2.1 — The I broke something fix",
+  "version": "1.11.3",
+  "title": "Central West Alerts 1.11.3",
   "changes": [
-    "Fixed aircraft colours: ordinary aircraft are blue, fire aircraft red, rescue and medical aircraft green, police aircraft blue, and identified military aircraft purple.",
-    "Aircraft from both PiAware and adsb.lol now use the same callsign, registration and registered-owner matching rules.",
-    "Registered-owner lookups are shared, rate-limited and cached; an aircraft is shown normally while details are still unavailable.",
-    "Aircraft categories identify the aircraft, not whether it is responding to an incident."
+    "System Admin accounts can receive system-message pushes for new user applications and decoder USB faults.",
+    "A decoder watchdog restarts a stalled receiver 30 seconds after a USB transfer error and reports its status to admins.",
+    "BOM weather warnings now appear above Fire Danger Ratings; Total Fire Ban areas use a more prominent card header.",
+    "Added an experimental AIS Stream vessel layer with server-side configuration."
   ]
 }

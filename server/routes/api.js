@@ -18,6 +18,7 @@ var webPushNotifications = require('../lib/webPush');
 var approvalMailer = require('../lib/accountApprovalMailer');
 var permissions = require('../lib/permissions');
 var adsbLol = require('../lib/adsbLol');
+var aisStream = require('../lib/aisStream');
 var emergencyAircraft = require('../lib/emergencyAircraft');
 var hexAircraftLookup = require('../lib/hexAircraftLookup');
 var capcodeSuggestions = require('../lib/capcodeSuggestions');
@@ -99,14 +100,31 @@ router.use(function (req, res, next) {
 });
 router.use(function (req, res, next) {
   if (!/^\/user(?:\/|$)/.test(req.path) || !['POST', 'DELETE'].includes(req.method)) return next();
-  if (req.body.role && !['admin', 'superuser', 'user'].includes(req.body.role)) return res.status(400).json({error: 'Invalid role'});
+  if (req.body.role && !['system_admin', 'admin', 'superuser', 'user'].includes(req.body.role)) return res.status(400).json({error: 'Invalid role'});
+  var systemAdmin = req.user && req.user.role === 'system_admin';
+  if (req.body.role === 'system_admin' && !systemAdmin) return res.status(403).json({error: 'Only a System Admin can assign that role'});
   var target = req.path.split('/')[2];
-  if (!target || target === 'new' || /\/(approve|deny)$/.test(req.path)) return next();
+  if (!target || target === 'new') return next();
   var ids = target === 'deleteMultiple' ? req.body.deleteList || [] : [target];
-  db('users').where({role: 'admin', status: 'active'}).select('id').then(function (admins) {
-    var removesAccess = req.method === 'DELETE' || target === 'deleteMultiple' || req.body.role !== 'admin' || req.body.status !== 'active';
-    if (removesAccess && admins.length && admins.every(function (admin) { return ids.map(String).includes(String(admin.id)); })) return res.status(400).json({error: 'At least one active Admin account must remain'});
-    next();
+  if (!Array.isArray(ids)) ids = [ids];
+  if (ids.some(function (id) { return !/^\d+$/.test(String(id)); })) return res.status(400).json({error: 'Invalid user ID'});
+  db('users').whereIn('id', ids).select('id', 'role', 'status').then(function (targets) {
+    if (!systemAdmin && targets.some(function (user) { return user.role === 'system_admin'; })) {
+      return res.status(403).json({error: 'Only a System Admin can change a System Admin account'});
+    }
+    return db('users').where({role: 'system_admin', status: 'active'}).select('id').then(function (systemAdmins) {
+      var removesSystemAdmin = req.method === 'DELETE' || target === 'deleteMultiple' || (req.method === 'POST' && (req.body.role !== 'system_admin' || req.body.status !== 'active'));
+      if (removesSystemAdmin && systemAdmins.length && systemAdmins.every(function (user) { return ids.map(String).includes(String(user.id)); })) {
+        return res.status(400).json({error: 'At least one active System Admin account must remain'});
+      }
+      return db('users').whereIn('role', ['admin', 'system_admin']).where('status', 'active').select('id').then(function (admins) {
+        var removesAdmin = req.method === 'DELETE' || target === 'deleteMultiple' || (req.method === 'POST' && !['admin', 'system_admin'].includes(req.body.role));
+        if (removesAdmin && admins.length && admins.every(function (user) { return ids.map(String).includes(String(user.id)); })) {
+          return res.status(400).json({error: 'At least one active administrator account must remain'});
+        }
+        next();
+      });
+    });
   }).catch(next);
 });
 
@@ -161,6 +179,7 @@ var waterNswGaugeCache = { fetchedAt: 0, data: null };
 var waterNswGaugeAttemptSlot = null;
 var waterNswAlgaeCache = { fetchedAt: 0, data: null };
 var receiverHeartbeatFile = path.join(path.dirname(fs.realpathSync(confFile)), 'receiver-heartbeats.json');
+var decoderHealthFile = path.join(path.dirname(fs.realpathSync(confFile)), 'decoder-health.json');
 var pagerGeocodeFile = path.join(path.dirname(fs.realpathSync(confFile)), 'pager-geocodes.json');
 var rfsLifecycleFile = path.join(path.dirname(fs.realpathSync(confFile)), 'rfs-incident-lifecycle.json');
 var receiverHeartbeats = {};
@@ -172,6 +191,7 @@ var waterNswCacheFile = path.join(waterNswCacheDirectory, 'waternsw-dams.json');
 var waterNswGaugeCacheFile = path.join(waterNswCacheDirectory, 'waternsw-gauges.json');
 var xweatherLightningCacheFile = path.join(waterNswCacheDirectory, 'xweather-lightning.json');
 var adsbLolCacheFile = path.join(waterNswCacheDirectory, 'adsb-lol-aircraft.json');
+var aisStreamCacheFile = path.join(waterNswCacheDirectory, 'ais-stream-vessels.json');
 var hexAircraftCacheFile = path.join(waterNswCacheDirectory, 'hex-aircraft.json');
 
 // The RFS feed uses Australian day/month/year values without a timezone, for
@@ -236,6 +256,7 @@ try {
   // A successful API request will create the persistent cache.
 }
 var adsbLolAircraft = adsbLol.createService({axios: axios, logger: logger.main, cacheFile: adsbLolCacheFile});
+var aisStreamVessels = aisStream.createService({logger: logger.main, cacheFile: aisStreamCacheFile});
 var aircraftMetadata = hexAircraftLookup.createService({axios: axios, logger: logger.main, cacheFile: hexAircraftCacheFile});
 function integrationConfig(name, defaults) {
   nconf.load();
@@ -414,7 +435,7 @@ router.route('/messages')
       initData.limit = parseInt(defaultLimit, 10);
     }
     if (pdwMode) {
-      if (adminShow && req.isAuthenticated() && req.user.role == 'admin') {
+      if (adminShow && req.isAuthenticated() && ['admin', 'system_admin'].includes(req.user.role)) {
         var subquery = db.from('capcodes').where('ignore', '=', 1).select('id')
       } else {
         var subquery = db.from('capcodes').where('ignore', '=', 0).select('id')
@@ -424,7 +445,7 @@ router.route('/messages')
     }
     db.from('messages').where(function () {
       if (pdwMode) {
-        if (adminShow && req.isAuthenticated() && req.user.role == 'admin') {
+        if (adminShow && req.isAuthenticated() && ['admin', 'system_admin'].includes(req.user.role)) {
           this.from('messages').where('alias_id', 'not in', subquery).orWhereNull('alias_id')
         } else {
           this.from('messages').where('alias_id', 'in', subquery)
@@ -456,7 +477,7 @@ router.route('/messages')
             .select('messages.*', 'capcodes.alias', 'capcodes.agency', 'capcodes.icon', 'capcodes.color', 'capcodes.ignore', db.raw('CASE WHEN NOT capcodes.address = messages.address THEN 1 ELSE 0 END as wildcard'))
             .modify(function (queryBuilder) {
               if (pdwMode) {
-                if (adminShow && req.isAuthenticated() && req.user.role == 'admin') {
+                if (adminShow && req.isAuthenticated() && ['admin', 'system_admin'].includes(req.user.role)) {
                   queryBuilder.leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id').where(function () { this.where('capcodes.ignore', 0).orWhereNull('capcodes.ignore'); })
                 } else {
                   queryBuilder.innerJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id').where('capcodes.ignore', 0)
@@ -1013,7 +1034,7 @@ router.route('/messageSearch')
           qb.from('messages');
         }
         if (pdwMode) {
-          if (adminShow && req.isAuthenticated() && req.user.role == 'admin') {
+          if (adminShow && req.isAuthenticated() && ['admin', 'system_admin'].includes(req.user.role)) {
             qb.leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id');
           } else {
             qb.innerJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id');
@@ -1061,7 +1082,7 @@ router.route('/messageSearch')
               }
             }
             if (pdwMode) {
-              if (adminShow && req.isAuthenticated() && req.user.role == 'admin' && !row.ignore || row.ignore == 0) {
+              if (adminShow && req.isAuthenticated() && ['admin', 'system_admin'].includes(req.user.role) && !row.ignore || row.ignore == 0) {
                 data.push(row);
               } else {
                 if (row.ignore == 0)
@@ -1961,7 +1982,7 @@ function withheldIncidentMessage(row, user) {
 router.route('/central-west/dashboard')
   .get(authHelper.isLoggedInMessages, function (req, res) {
     var limit = Math.min(parseInt(req.query.limit, 10) || 500, 1000);
-    var hideAddresses = HideCapcode && (!req.isAuthenticated() || req.user.role !== 'admin');
+    var hideAddresses = HideCapcode && (!req.isAuthenticated() || !['admin', 'system_admin'].includes(req.user.role));
 
     db.from('messages')
       .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
@@ -2034,7 +2055,7 @@ function capcodeReference() {
 router.route('/central-west/capcode-suggestions')
   .post(isSessionUser, function (req, res) {
     if (!permissions.has(req.user, 'viewDiscovery')) return res.status(403).json({error: 'Discovery access required.'});
-    if (HideCapcode && req.user.role !== 'admin') return res.json({suggestions: {}});
+    if (HideCapcode && !['admin', 'system_admin'].includes(req.user.role)) return res.json({suggestions: {}});
     var entries = req.body && req.body.entries;
     if (!Array.isArray(entries) || entries.length > 100) return res.status(400).json({error: 'Provide up to 100 capcodes.'});
     var safeEntries = entries.map(function (entry) {
@@ -2060,7 +2081,7 @@ router.route('/central-west/incident-archive')
     var days = Math.max(1, Math.min(parseInt(req.query.days, 10) || 30, 365));
     var limit = Math.max(1, Math.min(parseInt(req.query.limit, 10) || 1000, 3000));
     var since = Math.floor(Date.now() / 1000) - (days * 86400);
-    var hideAddresses = HideCapcode && (!req.isAuthenticated() || req.user.role !== 'admin');
+    var hideAddresses = HideCapcode && (!req.isAuthenticated() || !['admin', 'system_admin'].includes(req.user.role));
     var pattern = '%' + queryText + '%';
     var archiveQuery = db.from('messages')
       .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
@@ -2218,6 +2239,23 @@ router.route('/central-west/receiver-status')
     });
   });
 
+router.route('/central-west/decoder-health')
+  .get(authHelper.isAdmin, function (req, res) {
+    res.set('Cache-Control', 'private, no-store');
+    var status = {};
+    try {
+      status = JSON.parse(fs.readFileSync(decoderHealthFile, 'utf8')) || {};
+    } catch (error) {
+      if (error.code !== 'ENOENT') logger.main.warn('Unable to read decoder health: ' + error.message);
+    }
+    var validStates = ['error', 'restarting', 'recovered'];
+    var state = validStates.indexOf(status.state) !== -1 ? status.state : 'ok';
+    var errorAt = Number(status.errorAt) || null;
+    var recoveredAt = Number(status.recoveredAt) || null;
+    if (state === 'recovered' && recoveredAt && Date.now() / 1000 - recoveredAt > 3600) state = 'ok';
+    res.status(200).json({state: state, errorAt: errorAt, recoveredAt: recoveredAt});
+  });
+
 router.post('/user/:id/two-factor-reset', authHelper.isAdmin, function(req, res) {
   var id = Number(req.params.id);
   if (!id) return res.status(400).send({error: 'Invalid user.'});
@@ -2238,6 +2276,7 @@ router.route('/central-west/dashboard-config')
     var radioConfig = integrationConfig('radio', { enabled: true });
     var piawareConfig = integrationConfig('piaware', { enabled: true, pollSeconds: 10 });
     var adsbLolConfig = integrationConfig('adsbLol', { enabled: false, cacheSeconds: 300 });
+    var aisConfig = integrationConfig('aisStream', {enabled: false, apiKey: ''});
     var radarConfig = integrationConfig('weatherRadar', { enabled: true, opacityPercent: 62, defaultVisible: false });
     var firmsConfig = integrationConfig('nasaFirms', { enabled: false, defaultVisible: false });
     var lightningConfig = integrationConfig('xweatherLightning', { enabled: false, apiKey: '', clientId: '', clientSecret: '', pollSeconds: 3600, defaultVisible: false });
@@ -2254,6 +2293,7 @@ router.route('/central-west/dashboard-config')
       piawarePollSeconds: Math.min(Math.max(parseInt(piawareConfig.pollSeconds, 10) || 10, 5), 300),
       adsbLolEnabled: adsbLolConfig.enabled === true,
       adsbLolPollSeconds: Math.min(Math.max(parseInt(adsbLolConfig.cacheSeconds, 10) || 300, 10), 3600),
+      aisStreamEnabled: aisConfig.enabled === true && !!aisConfig.apiKey && !!aisStream.settings(aisConfig),
       weatherRadarEnabled: radarConfig.enabled !== false,
       weatherRadarOpacity: Math.min(Math.max(parseInt(radarConfig.opacityPercent, 10) || 62, 10), 100) / 100,
       weatherRadarDefaultVisible: radarConfig.defaultVisible === true,
@@ -3022,6 +3062,14 @@ router.route('/central-west/aircraft')
         logger.main.warn('Unable to retrieve local PiAware feed: ' + err.message);
         res.status(502).json({ error: 'PiAware receiver is temporarily unavailable' });
       });
+  });
+
+router.route('/central-west/ais-stream-vessels')
+  .get(authHelper.isLoggedInMessages, function (req, res) {
+    var config = integrationConfig('aisStream', {enabled: false, apiKey: ''});
+    res.set('Cache-Control', 'private, no-store');
+    if (!aisStreamVessels.configure(config)) return res.json({source: 'AIS Stream', experimental: true, disabled: true, vessels: []});
+    res.json(aisStreamVessels.snapshot());
   });
 
 router.route('/central-west/adsb-lol-aircraft')

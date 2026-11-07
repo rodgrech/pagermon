@@ -49,6 +49,7 @@ router.route('/settingsData')
         });
         settings.notifications = Object.assign({}, defaultConfig.notifications, settings.notifications || {});
         settings.notifications.webPush = Object.assign({}, defaultConfig.notifications.webPush, settings.notifications.webPush || {});
+        settings.notifications.systemMessages = Object.assign({}, defaultConfig.notifications.systemMessages, settings.notifications.systemMessages || {});
         settings.auth = Object.assign({}, defaultConfig.auth, settings.auth || {});
         var permissionModel = require('../lib/permissions');
         settings.auth.rolePermissions = settings.auth.rolePermissions || {};
@@ -69,7 +70,7 @@ router.route('/settingsData')
         });
         let themes = installedSupportedThemes();
         // logger.main.debug(util.format('Plugin Config:\n\n%o',plugins));
-        let data = { "settings": settings, "plugins": plugins, "themes": themes, "pwaIconThemes": themes, "permissionDefinitions": permissionModel.definitions }
+        let data = { "settings": settings, "plugins": plugins, "themes": themes, "pwaIconThemes": themes, "permissionDefinitions": permissionModel.definitions, "canManageSystem": permissionModel.has(req.user, 'manageSystem') }
         res.json(data);
     })
     .post(authHelper.isAdmin, function (req, res, next) {
@@ -88,6 +89,15 @@ router.route('/settingsData')
             if (requestedPwaIconTheme !== 'theme' &&
                 (supportedThemes.indexOf(requestedPwaIconTheme) === -1 || !fs.existsSync('./themes/' + requestedPwaIconTheme))) {
                 return res.status(400).send({ error: 'Selected PWA icon set is not installed.' });
+            }
+
+            // Ordinary administrators may save other settings, but cannot enable
+            // or disable system messages by changing the request payload.
+            req.body.notifications = req.body.notifications || {};
+            if (!req.user || req.user.role !== 'system_admin') {
+                req.body.notifications.systemMessages = (currentConfig.notifications && currentConfig.notifications.systemMessages) || {enabled: false};
+            } else {
+                req.body.notifications.systemMessages = {enabled: req.body.notifications.systemMessages && req.body.notifications.systemMessages.enabled === true};
             }
 
             var pwaIconChanged = currentPwaIconTheme !== requestedPwaIconTheme;

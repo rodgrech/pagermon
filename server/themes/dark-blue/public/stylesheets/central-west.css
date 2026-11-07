@@ -71,6 +71,15 @@ body.cw-dark .cw-status-meta { background: #172637; color: #b9c8d5; }
 .cw-agency-suggestion small { display: block; margin-top: 3px; }
 .cw-correlation { margin: 7px 0; padding: 6px 9px; border-left: 3px solid var(--mw-blue); background: rgba(35,116,171,.07); font-size: 12px; }
 .cw-warning-active { border-color: #dc6b28 !important; }
+.cw-warnings .cw-fdr-card { overflow: hidden; margin-bottom: 14px; border-radius: 4px; box-shadow: 0 1px 3px rgba(20, 35, 50, .12); }
+.cw-warnings .cw-fdr-card > .cw-fdr-card-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-height: 44px; padding: 10px 15px; }
+.cw-warnings .cw-fdr-card.cw-fdr-card-ban > .cw-fdr-card-heading { background: #fa947e; border-color: #e98570; color: #172535; }
+.cw-fdr-ban-label { color: #a52419; font-weight: 700; }
+.cw-fdr-ban-label i { margin-right: 4px; }
+.cw-warnings .cw-fdr-card > .panel-body { padding: 15px; }
+.cw-fdr-ratings { margin: 0 0 10px; }
+.cw-fdr-ratings .label { display: inline-block; margin: 0 4px 4px 0; }
+.cw-fdr-card small { display: block; }
 .cw-warning-header { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--mw-border); }
 .cw-warning-clear { display: flex; gap: 10px; align-items: center; padding: 18px; border-left: 4px solid #24945e; background: rgba(36,148,94,.08); border-radius: 5px; }
 .cw-warning-clear i { color: #24945e; font-size: 22px; }
@@ -267,6 +276,7 @@ body.cw-dark .cw-popup-title, body.cw-dark .cw-popup-pills > span { background: 
 .cw-aircraft-drone { color: #6d7882; }
 .cw-aircraft-marker.cw-aircraft-fire { color: #d8a900; }
 .cw-aircraft-marker.cw-aircraft-adsb-lol { color: #2374ab; }
+.cw-vessel-marker { background: #245c83; color: #fff; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 6px #0007; text-align: center; line-height: 22px; font-size: 13px; }
 .cw-aircraft-marker.cw-aircraft-service-fire { color: #c43d3d; }
 .cw-aircraft-marker.cw-aircraft-service-rescue, .cw-aircraft-marker.cw-aircraft-service-medical { color: #d66a0a; }
 .cw-aircraft-marker.cw-aircraft-service-police { color: #0099b8; }
@@ -304,6 +314,8 @@ body.cw-dark .cw-warning-item h4 { color: #ffb276; }
 body.cw-dark .cw-warning-item { color: #edf4fa; }
 body.cw-dark .cw-warnings .panel-default { background: #1b2c3e; border-color: #31465b; color: #dce6ef; }
 body.cw-dark .cw-warnings .panel-default > .panel-heading { background: #22394f; border-color: #31465b; color: #edf4fa; }
+body.cw-dark .cw-warnings .cw-fdr-card.cw-fdr-card-ban > .cw-fdr-card-heading { background: #9d3c32; border-color: #b04e43; color: #fff; }
+body.cw-dark .cw-fdr-ban-label { color: #fff; }
 body.cw-dark .cw-warnings .panel-default small { color: #c7d5e2; }
 body.cw-dark .cw-dam-card { background: #1b2c3e; border-color: #31465b; }
 body.cw-dark .cw-dam-card h4, body.cw-dark .cw-dam-card strong { color: #edf4fa; }

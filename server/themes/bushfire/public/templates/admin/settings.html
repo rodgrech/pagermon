@@ -15,7 +15,7 @@
             <select id="settings-mobile-page" class="form-control" ng-model="activeSettingsSection" ng-change="setSettingsSection(activeSettingsSection)">
               <option value="appearance">Appearance</option>
               <optgroup label="Integrations — Agency Specific"><option value="integration-rfs">NSW RFS</option><option value="integration-npws">NSW NPWS</option><option value="integration-bom">BOM</option><option value="integration-water">WaterNSW</option></optgroup>
-              <optgroup label="Integrations — Other"><option value="integration-aircraft">Aircraft</option><option value="integration-radio">Radio</option><option value="integration-radar">Weather radar</option><option value="integration-lightning">Lightning</option><option value="integration-firms">NASA FIRMS</option><option value="integration-map">Live map</option><option value="plugins">Plugins</option></optgroup>
+              <optgroup label="Integrations — Other"><option value="integration-aircraft">Aircraft &amp; vessels</option><option value="integration-radio">Radio</option><option value="integration-radar">Weather radar</option><option value="integration-lightning">Lightning</option><option value="integration-firms">NASA FIRMS</option><option value="integration-map">Live map</option><option value="plugins">Plugins</option></optgroup>
               <option value="data">Data &amp; messages</option><option value="accounts">Accounts</option><option value="monitoring">Monitoring</option>
             </select>
           </div>
@@ -29,7 +29,7 @@
               <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-water'}" ng-click="setSettingsSection('integration-water')"><i class="fa fa-water"></i> WaterNSW</button>
             </div>
             <div class="settings-nav-group" ng-show="activeSettingsSection.indexOf('integration-') == 0 || activeSettingsSection == 'plugins'"><span><i class="fa fa-puzzle-piece"></i> Other Integrations</span>
-              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-aircraft'}" ng-click="setSettingsSection('integration-aircraft')"><i class="fa fa-plane"></i> Aircraft</button>
+              <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-aircraft'}" ng-click="setSettingsSection('integration-aircraft')"><i class="fa fa-plane"></i> Aircraft &amp; vessels</button>
               <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-radio'}" ng-click="setSettingsSection('integration-radio')"><i class="fa fa-broadcast-tower"></i> Radio</button>
               <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-radar'}" ng-click="setSettingsSection('integration-radar')"><i class="fa fa-cloud-rain"></i> Weather radar</button>
               <button type="button" class="settings-nav-child" ng-class="{active: activeSettingsSection == 'integration-lightning'}" ng-click="setSettingsSection('integration-lightning')"><i class="fa fa-bolt"></i> Lightning</button>
@@ -262,6 +262,12 @@
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Radius (nautical miles)</label><div class="col-xs-8 col-sm-9"><input type="number" min="1" max="250" class="form-control" ng-model="settings.integrations.adsbLol.radiusNm" ng-disabled="!settings.integrations.adsbLol.enabled"></div></div>
 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Cache seconds</label><div class="col-xs-8 col-sm-9"><input type="number" min="10" max="3600" class="form-control" ng-model="settings.integrations.adsbLol.cacheSeconds" ng-disabled="!settings.integrations.adsbLol.enabled"><span class="help-block">One provider request per refresh for the whole site. Recommended: 300 seconds (up to 288 requests/day). 10 seconds can make up to 8,640 requests/day; use only for short tests because provider limits are dynamic. 429 responses pause requests and cached data is marked stale.</span></div></div>
                 <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Maximum aircraft age</label><div class="col-xs-8 col-sm-9"><input type="number" min="5" max="300" class="form-control" ng-model="settings.integrations.adsbLol.maximumAgeSeconds" ng-disabled="!settings.integrations.adsbLol.enabled"></div></div>
+                <hr><h4>AIS Stream vessel tracking <span class="label label-warning">Experimental</span></h4>
+                <p class="help-block">AIS positions are incomplete and may be delayed or inaccurate. Never use this layer for navigation, dispatch or safety decisions. One server-side WebSocket connection serves all viewers; it reconnects with backoff. <a href="https://www.aisstream.io/documentation/" target="_blank" rel="noopener">AIS Stream documentation</a>.</p>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">Enable AIS Stream</label><div class="col-xs-8 col-sm-9"><div class="checkbox"><label><input type="checkbox" ng-model="settings.integrations.aisStream.enabled"> Show experimental live vessels on the map</label></div><span class="help-block">Off by default. Requires an AIS Stream API key. The key stays on the CWA server.</span></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">AIS Stream API key</label><div class="col-xs-8 col-sm-9"><input type="password" class="form-control" ng-model="settings.integrations.aisStream.apiKey" autocomplete="new-password"></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">South / north latitude</label><div class="col-xs-8 col-sm-9"><div class="row"><div class="col-xs-6"><input type="number" min="-90" max="90" step="any" class="form-control" ng-model="settings.integrations.aisStream.southLatitude" aria-label="South latitude"></div><div class="col-xs-6"><input type="number" min="-90" max="90" step="any" class="form-control" ng-model="settings.integrations.aisStream.northLatitude" aria-label="North latitude"></div></div></div></div>
+                <div class="form-group"><label class="col-xs-4 col-sm-3 control-label">West / east longitude</label><div class="col-xs-8 col-sm-9"><div class="row"><div class="col-xs-6"><input type="number" min="-180" max="180" step="any" class="form-control" ng-model="settings.integrations.aisStream.westLongitude" aria-label="West longitude"></div><div class="col-xs-6"><input type="number" min="-180" max="180" step="any" class="form-control" ng-model="settings.integrations.aisStream.eastLongitude" aria-label="East longitude"></div></div><span class="help-block">Default covers part of the NSW coast. Each span must be 10° or less. The server retains positions for at most 30 minutes and the map checks its cache every 30 seconds; this does not create extra provider connections.</span></div></div>
               </div>
             </div>
             <div class="panel panel-default" ng-show="activeSettingsSection == 'integration-radio'">
@@ -731,6 +737,10 @@
               </div>
             </div>
             <h5>Push notifications</h5>
+            <div class="alert alert-info" ng-if="canManageSystem">
+              <label><input type="checkbox" ng-model="settings.notifications.systemMessages.enabled"> System messages</label>
+              <p>Send decoder USB errors and new-user approval alerts to all System Admin accounts with push enabled on their devices. Only a System Admin can change this setting.</p>
+            </div>
             <div class="panel panel-default">
               <div class="panel-heading">
                 <strong><i class="fa fa-bell"></i> Web push notifications</strong>

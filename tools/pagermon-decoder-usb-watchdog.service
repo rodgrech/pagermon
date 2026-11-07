@@ -1,0 +1,14 @@
+[Unit]
+Description=Restart PagerMon decoder after persistent RTL-SDR USB transfer errors
+After=pagermon-decoder.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/pagermon-decoder-usb-watchdog.py
+Restart=always
+RestartSec=5
+Environment=PAGERMON_DECODER_UNIT=pagermon-decoder.service
+Environment=PAGERMON_DECODER_STATUS_FILE=/var/lib/pagermon/decoder-health.json
+
+[Install]
+WantedBy=multi-user.target
