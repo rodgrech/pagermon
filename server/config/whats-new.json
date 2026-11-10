@@ -1,9 +1,9 @@
 {
-  "version": "1.11.11",
-  "title": "Central West Alerts 1.11.11",
+  "version": "1.11.12",
+  "title": "Central West Alerts 1.11.12",
   "changes": [
-    "Incident headings now show the incident type with the locality when the pager provides both.",
-    "Fixed RFS pages without a subtype showing the trailing coordinates as the incident name.",
-    "Fire and Rescue NSW incident headings use the value after FRINC TYPE, including Assist Ambulance and other call types."
+    "Added a separate RFS incident polygons preview layer to the live map, with its own layer toggle.",
+    "Polygon boundaries come from the same official RFS incident feed as the markers, without changing the published marker positions.",
+    "Incidents without a published polygon continue to display their normal marker."
   ]
 }

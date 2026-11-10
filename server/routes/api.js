@@ -2706,6 +2706,18 @@ router.route('/central-west/rfs-incidents')
         }
         return null;
       }
+      function polygonsFromGeometry(geometry) {
+        if (!geometry) return [];
+        if ((geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') && Array.isArray(geometry.coordinates)) {
+          return [{type: geometry.type, coordinates: geometry.coordinates}];
+        }
+        if (geometry.type === 'GeometryCollection' && Array.isArray(geometry.geometries)) {
+          return geometry.geometries.reduce(function (polygons, part) {
+            return polygons.concat(polygonsFromGeometry(part));
+          }, []);
+        }
+        return [];
+      }
       var incidents = (response.data.features || []).map(function (feature) {
         var point = pointFromGeometry(feature.geometry);
         if (!point) return null;
@@ -2733,7 +2745,8 @@ router.route('/central-west/rfs-incidents')
           link: properties.link || 'https://www.rfs.nsw.gov.au/fire-information/fires-near-me',
           published: properties.pubDate || '',
           latitude: latitude,
-          longitude: longitude
+          longitude: longitude,
+          polygons: polygonsFromGeometry(feature.geometry)
         };
       }).filter(Boolean);
       var currentIds = {};

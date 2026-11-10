@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pagermon-bushfire-static-v12-aircraft-layers';
+const CACHE_NAME = 'pagermon-bushfire-static-v13-rfs-polygons-preview';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/central-west.css',

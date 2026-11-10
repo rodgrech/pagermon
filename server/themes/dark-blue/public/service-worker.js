@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-west-alerts-static-v26-aircraft-layers';
+const CACHE_NAME = 'central-west-alerts-static-v28-rfs-polygons-preview';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/central-west.css',

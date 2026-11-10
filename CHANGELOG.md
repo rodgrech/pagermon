@@ -1,3 +1,10 @@
+# 1.11.12 updates - 2026-11-10
+
+* Added a toggleable RFS incident polygons preview layer on the live map.
+* Preserved the feed's polygon geometry alongside each official incident point, using the existing server-side RFS cache and coverage settings.
+* Kept official markers separate from the polygon layer; a marker can lie outside the published polygon.
+* Refreshed the map script and service-worker cache markers across all three themes.
+
 # 1.11.11 updates - 2026-11-07
 
 * Show the pager incident type with the locality in incident headings across all three themes.

@@ -784,9 +784,10 @@
       if (element._leaflet_id) delete element._leaflet_id;
       map = L.map(element, {wheelDebounceTime: 80, wheelPxPerZoomLevel: mapWheelPxPerZoomLevel, zoomSnap: 0.5, zoomDelta: 0.5, closePopupOnClick: false, tap: true}).setView(mapCenter, mapInitialZoom);
       baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), lightning: L.layerGroup(), emergencyAircraft: L.layerGroup(), civilianAircraft: L.layerGroup(), vessels: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
+      layerGroups = {pager: L.layerGroup(), rfs: L.layerGroup(), rfsPolygons: L.layerGroup(), forestry: L.layerGroup(), fireDanger: L.layerGroup(), hotspots: L.layerGroup(), lightning: L.layerGroup(), emergencyAircraft: L.layerGroup(), civilianAircraft: L.layerGroup(), vessels: L.layerGroup(), dams: L.layerGroup(), gauges: L.layerGroup(), algae: L.layerGroup(), radar: L.layerGroup()};
       Object.keys(layerGroups).forEach(function (name) { if (layerEnabled(name)) layerGroups[name].addTo(map); });
       var overlays = {'Pager incidents': layerGroups.pager, 'NSW RFS / NPWS incidents': layerGroups.rfs};
+      overlays['RFS incident polygons (preview)'] = layerGroups.rfsPolygons;
       overlays['Forestry closures and notices'] = layerGroups.forestry;
       overlays['Fire danger districts'] = layerGroups.fireDanger;
       if (features.nasaFirms !== false) overlays['Satellite hotspots (NASA FIRMS)'] = layerGroups.hotspots;
@@ -811,8 +812,20 @@
         radarLayer.addTo(layerGroups.radar);
       }
     }
-    ['pager', 'rfs', 'forestry', 'fireDanger', 'hotspots', 'lightning', 'emergencyAircraft', 'civilianAircraft', 'vessels', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
+    ['pager', 'rfs', 'rfsPolygons', 'forestry', 'fireDanger', 'hotspots', 'lightning', 'emergencyAircraft', 'civilianAircraft', 'vessels', 'dams', 'gauges', 'algae'].forEach(function (name) { layerGroups[name].clearLayers(); });
     renderFireDangerLayer();
+    (rfsIncidents || []).forEach(function (incident) {
+      if (!Array.isArray(incident.polygons) || !incident.polygons.length) return;
+      var category = String(incident.category || '');
+      var colour = /emergency warning/i.test(category) ? '#b91c1c' : /watch and act/i.test(category) ? '#ea580c' : '#d97706';
+      var popup = '<strong>' + escapeHtml(incident.title || 'RFS incident area') + '</strong><br>' +
+        escapeHtml(incident.agency || 'NSW RFS') + '<br><small>Incident polygon supplied by NSW RFS; check the official map for current boundaries.</small><br>' +
+        '<a href="' + escapeHtml(incident.link || 'https://www.rfs.nsw.gov.au/fire-information/fires-near-me') + '" target="_blank" rel="noopener">Official details</a>';
+      incident.polygons.forEach(function (polygon) {
+        L.geoJSON(polygon, {style: {color: colour, weight: 2, opacity: .9, dashArray: '6 4', fillColor: colour, fillOpacity: .16}})
+          .addTo(layerGroups.rfsPolygons).bindPopup(popup, mapPopupOptions(390));
+      });
+    });
     (incidents || []).forEach(function (incident) {
       if (!incident.coordinates) return;
       if (hideTestPages && isTestPagerIncident(incident)) return;
