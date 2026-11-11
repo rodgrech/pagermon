@@ -1,3 +1,10 @@
+# 1.11.13 updates - 2026-11-11
+
+* Added ThinLine Radio as an explicitly selected, read-only alternative to Rdio Scanner, with an authenticated LAN bridge for call history, audio and talkgroups.
+* Added a theme-matched radio console beside call history on desktop, stacked on phones, across all three themes.
+* Added Scan all, Hold TG and talkgroup selection for browser-side follow playback.
+* Fixed Start Live to begin playback on the button press and keep playing when switching CWA home tabs.
+
 # 1.11.12 updates - 2026-11-10
 
 * Added a toggleable RFS incident polygons preview layer on the live map.

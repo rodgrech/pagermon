@@ -376,3 +376,48 @@ body.cw-dark .whats-new-modal .modal-body { color: #dce6ef; }
   object-fit: contain;
   vertical-align: middle;
 }
+/* ThinLine-compatible radio console: desktop side-by-side, phone stacked. */
+.cw-radio-layout { display: grid; grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.cw-radio-console { padding: 13px; border: 1px solid var(--mw-border); border-radius: 10px; background: var(--mw-panel); }
+.cw-radio-screen { padding: 12px; min-height: 205px; border: 1px solid var(--mw-border); border-radius: 8px; background: var(--mw-bg); color: #263b4f; }
+.cw-radio-brand { text-align: center; font-weight: 700; color: #328454; margin-bottom: 13px; }
+.cw-radio-brand small { font-size: 10px; color: var(--mw-muted); margin-left: 6px; }
+.cw-radio-led { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4abb79; box-shadow: 0 0 5px #4abb79; vertical-align: middle; }
+.cw-radio-screen-line { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--mw-border); font-size: 12px; }
+.cw-radio-screen-line b { padding: 2px 5px; border-radius: 2px; background: #55bd76; color: #10251a; font-size: 10px; }
+.cw-radio-screen-line span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cw-radio-screen-line small { color: var(--mw-muted); white-space: nowrap; }
+.cw-radio-screen-current { text-align: center; padding: 19px 4px 4px; }
+.cw-radio-screen-current small, .cw-radio-screen-current span { display: block; color: var(--mw-muted); font-size: 11px; }
+.cw-radio-screen-current strong { display: block; font-size: 20px; margin: 5px 0; overflow-wrap: anywhere; }
+.cw-radio-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 9px 0; }
+.cw-radio-controls button { min-height: 54px; padding: 5px 2px; border: 1px solid var(--mw-border); border-radius: 7px; background: var(--mw-bg); color: #263b4f; }
+.cw-radio-controls button i, .cw-radio-controls button span { display: block; }
+.cw-radio-controls button i { font-size: 16px; margin-bottom: 4px; }
+.cw-radio-controls button span { font-size: 10px; font-weight: 700; }
+.cw-radio-controls button.is-active { border-color: #399562; color: #328454; }
+.cw-radio-controls button:disabled { opacity: .45; }
+.cw-radio-mode { margin-top: 10px; text-align: center; color: var(--mw-muted); font-size: 10px; font-weight: 700; letter-spacing: .06em; }
+.cw-radio-tuning { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 9px; }
+.cw-radio-tuning button, .cw-radio-tuning select { min-width: 0; padding: 7px; border: 1px solid var(--mw-border); border-radius: 6px; background: var(--mw-bg); color: #263b4f; font-size: 12px; }
+.cw-radio-tuning button.is-active { border-color: #399562; color: #328454; font-weight: 700; }
+.cw-radio-tuning select { grid-column: 1 / -1; width: 100%; }
+.cw-radio-playback-error { margin: 7px 0 0; color: #aa471d; font-size: 12px; }
+.cw-radio-history { min-width: 0; }
+.cw-radio-history-list { max-height: min(65vh, 650px); overflow-y: auto; }
+.cw-radio-history .cw-radio-call { display: grid; grid-template-columns: 25px minmax(0, 1fr); gap: 8px; align-items: center; width: 100%; text-align: left; margin-bottom: 5px; padding: 8px; cursor: pointer; }
+.cw-radio-history .cw-radio-call.is-selected { border-color: var(--mw-blue); }
+.cw-radio-call-play { text-align: center; color: var(--mw-blue); }
+.cw-radio-history .cw-radio-call-title, .cw-radio-history .cw-radio-call-meta { display: flex; }
+.cw-radio-history .cw-radio-call-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cw-radio-history .cw-radio-call-title span { margin-left: auto; }
+.cw-radio-history .cw-radio-call-meta { overflow: hidden; }
+.cw-radio-history .cw-radio-call-meta > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.cw-dark .cw-radio-console { background: #1a293b; border-color: #34465b; }
+body.cw-dark .cw-radio-screen { background: #111c2a; border-color: #34465b; color: #ecf3fb; }
+body.cw-dark .cw-radio-screen-line { border-color: #34465b; }
+body.cw-dark .cw-radio-controls button { background: #22354a; border-color: #34465b; color: #ecf3fb; }
+body.cw-dark .cw-radio-controls button.is-active { border-color: #55bd76; color: #83d8a1; }
+body.cw-dark .cw-radio-tuning button, body.cw-dark .cw-radio-tuning select { background: #22354a; border-color: #34465b; color: #ecf3fb; }
+body.cw-dark .cw-radio-tuning button.is-active { border-color: #55bd76; color: #83d8a1; }
+@media (max-width: 767px) { .cw-radio-layout { grid-template-columns: 1fr; } .cw-radio-history-list { max-height: 55vh; } }

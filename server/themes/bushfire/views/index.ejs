@@ -165,26 +165,51 @@
 
         <% if (login) { %>
         <div class="cw-panel cw-radio" ng-show="dashboardView == 'radio'">
-          <div class="cw-radio-header">
-            <div><strong><i class="fa fa-broadcast-tower"></i> Recent radio traffic</strong><span>NSW PSN calls received by Rdio Scanner</span></div>
-            <button class="btn btn-default btn-sm" ng-click="refreshRadio()" ng-disabled="radioLoading"><i class="fa fa-refresh" ng-class="{'fa-spin': radioLoading}"></i> Refresh</button>
-          </div>
-          <div class="cw-empty" ng-if="radioLoading && !radioCalls.length">Loading recent radio calls…</div>
-          <div class="cw-empty" ng-if="radioError">{{radioError}}</div>
-          <div class="cw-empty" ng-if="!radioLoading && !radioError && !radioCalls.length">No recent radio calls are available.</div>
-          <article class="cw-radio-call" ng-repeat="call in radioCalls track by call.id">
-            <div class="cw-radio-call-main">
-              <div class="cw-radio-call-title"><strong>{{call.talkgroupLabel || ('Talkgroup ' + call.talkgroup)}}</strong><span>{{call.timestamp * 1000 | date:'dd MMM HH:mm:ss'}}</span></div>
-              <div class="cw-radio-call-meta">
-                <span class="cw-radio-agency cw-radio-agency-{{call.agencyCode}}" ng-if="call.agencyName">{{call.agencyName}}</span>
-                <span>{{call.systemLabel || ('System ' + call.system)}}</span>
-                <span>{{call.frequency / 1000000 | number:4}} MHz</span>
-                <span>{{call.sourceLabel || ('Radio ID ' + call.source)}}</span>
+          <div class="cw-radio-layout">
+            <section class="cw-radio-console" aria-label="Radio player">
+              <div class="cw-radio-screen">
+                <div class="cw-radio-brand"><span class="cw-radio-led"></span> Radio <small>{{radioLive ? 'LIVE' : 'HISTORY'}}</small></div>
+                <div class="cw-radio-screen-line"><b>SYS</b><span>{{radioSelected.systemLabel || 'No system selected'}}</span><small> TGID {{radioSelected.talkgroup || '—'}}</small></div>
+                <div class="cw-radio-screen-line"><b>TAG</b><span>{{radioSelected.tagLabel || radioSelected.agencyName || '—'}}</span><small> UID {{radioSelected.source || '—'}}</small></div>
+                <div class="cw-radio-screen-current"><small>{{radioLive ? 'LATEST CALL' : 'REPLAY'}}</small><strong>{{radioSelected.talkgroupLabel || 'Waiting for calls'}}</strong><span>{{radioSelected.timestamp * 1000 | date:'dd MMM HH:mm:ss'}}</span></div>
+                <div class="cw-radio-mode">{{radioHeldKey ? ('HOLD TG · ' + radioHeldLabel) : 'SCAN ALL TALKGROUPS'}}</div>
               </div>
-            </div>
-            <audio class="cw-radio-player" controls preload="none" ng-src="{{call.audioUrl}}">Your browser does not support audio playback.</audio>
-          </article>
-          <p class="cw-radio-note"><i class="fa fa-lock"></i> Radio history and audio are available only to logged-in PageMon users. Playback is manual and does not interrupt the pager feed.</p>
+              <div class="cw-radio-controls">
+                <button type="button" ng-click="toggleRadioLive()" ng-disabled="!radioLive && (radioLoading || !radioDisplayedCalls.length)" ng-class="{'is-active': radioLive}"><i class="fa fa-broadcast-tower"></i><span>{{radioLive ? 'Stop live' : 'Start live'}}</span></button>
+                <button type="button" ng-click="toggleRadioPause()" ng-disabled="!radioSelected.id"><i class="fa" ng-class="radioPaused ? 'fa-play' : 'fa-pause'"></i><span>{{radioPaused ? 'Resume' : 'Pause'}}</span></button>
+                <button type="button" ng-click="replayRadio()" ng-disabled="!radioSelected.id"><i class="fa fa-repeat"></i><span>Replay</span></button>
+                <button type="button" ng-click="skipRadio()" ng-disabled="!radioDisplayedCalls.length"><i class="fa fa-step-forward"></i><span>Latest</span></button>
+              </div>
+              <div class="cw-radio-tuning">
+                <button type="button" ng-click="scanAllRadio()" ng-class="{'is-active': !radioHeldKey}"><i class="fa fa-random"></i> Scan all</button>
+                <button type="button" ng-click="holdSelectedRadio()" ng-disabled="!radioSelected.talkgroup" ng-class="{'is-active': radioHeldKey}"><i class="fa fa-lock"></i> Hold TG</button>
+                <select aria-label="Choose talkgroup" ng-model="radioTalkgroupSelection" ng-change="selectRadioTalkgroup()">
+                  <option value="">Choose a talkgroup…</option>
+                  <option ng-repeat="channel in radioTalkgroups track by channel.key" value="{{channel.key}}">{{channel.label}} · {{channel.systemLabel}}</option>
+                </select>
+              </div>
+              <audio id="cw-radio-audio" class="cw-radio-player" controls preload="none">Your browser does not support audio playback.</audio>
+              <p class="cw-radio-playback-error" ng-if="radioPlaybackError">{{radioPlaybackError}}</p>
+              <p class="cw-radio-note"><i class="fa fa-lock"></i> Live mode plays new calls as they arrive. It is not ThinLine's low-latency stream.</p>
+            </section>
+            <section class="cw-radio-history" aria-label="Call history">
+              <div class="cw-radio-header">
+                <div><strong><i class="fa fa-history"></i> Call history</strong><span>Recent radio traffic from {{radioSourceLabel}}</span></div>
+                <button class="btn btn-default btn-sm" ng-click="refreshRadio()" ng-disabled="radioLoading"><i class="fa fa-refresh" ng-class="{'fa-spin': radioLoading}"></i> Refresh</button>
+              </div>
+              <div class="cw-empty" ng-if="radioLoading && !radioCalls.length">Loading recent radio calls…</div>
+              <div class="cw-empty" ng-if="radioError">{{radioError}}</div>
+              <div class="cw-empty" ng-if="!radioLoading && !radioError && !radioCalls.length">No recent radio calls are available.</div>
+              <div class="cw-empty" ng-if="!radioLoading && !radioError && radioHeldKey && !radioDisplayedCalls.length">No recent calls on this talkgroup yet. Hold mode will wait for the next one.</div>
+              <div class="cw-radio-history-list">
+                <button type="button" class="cw-radio-call" ng-repeat="call in radioDisplayedCalls track by call.id" ng-click="playRadioCall(call)" ng-class="{'is-selected': radioSelected.id == call.id}">
+                  <span class="cw-radio-call-play"><i class="fa fa-play"></i></span>
+                  <span class="cw-radio-call-main"><span class="cw-radio-call-title"><strong>{{call.talkgroupLabel || ('Talkgroup ' + call.talkgroup)}}</strong><span>{{call.timestamp * 1000 | date:'dd MMM HH:mm:ss'}}</span></span>
+                  <span class="cw-radio-call-meta"><span class="cw-radio-agency cw-radio-agency-{{call.agencyCode}}" ng-if="call.agencyName">{{call.agencyName}}</span><span>{{call.systemLabel || ('System ' + call.system)}}</span><span>{{call.sourceLabel || ('Radio ID ' + call.source)}}</span></span></span>
+                </button>
+              </div>
+            </section>
+          </div>
         </div>
         <% } %>
       </section>
@@ -428,7 +453,8 @@
                   Lightning: $resource('/api/central-west/lightning'),
                   NpwsIncidents: $resource('/api/central-west/npws-incidents'),
                   ForestryClosures: $resource('/api/central-west/forestry-closures'),
-                  RadioCalls: $resource('/api/central-west/radio-calls')
+                  RadioCalls: $resource('/api/central-west/radio-calls'),
+                  RadioTalkgroups: $resource('/api/central-west/radio-talkgroups')
                 };
               }])
 
@@ -505,8 +531,19 @@
       $scope.algaeCounts = {};
       $scope.algaeLoading = true;
       $scope.radioCalls = [];
+      $scope.radioDisplayedCalls = [];
+      $scope.radioTalkgroups = [];
+      $scope.radioTalkgroupSelection = '';
+      $scope.radioHeldKey = '';
+      $scope.radioHeldLabel = '';
       $scope.radioLoading = false;
       $scope.radioError = '';
+      $scope.radioSelected = {};
+      $scope.radioSourceLabel = 'radio receiver';
+      $scope.radioLive = false;
+      $scope.radioPaused = false;
+      $scope.radioPlaybackError = '';
+      var radioQueue = [];
       $scope.newViewCounts = {incidents: 0, radio: 0};
       var viewKeys = {incidents: [], radio: []};
       $scope.operationsMode = false;
@@ -887,12 +924,119 @@
       var aisStreamPoll;
       var lightningPoll;
       var radioPoll;
+      function radioAudio() { return $window.document.getElementById('cw-radio-audio'); }
+      function radioCallKey(call) { return String(call.system) + ':' + String(call.talkgroup); }
+      function applyRadioTalkgroup() {
+        radioQueue = [];
+        $scope.radioDisplayedCalls = $scope.radioHeldKey ? $scope.radioCalls.filter(function (call) {
+          return radioCallKey(call) === $scope.radioHeldKey;
+        }) : $scope.radioCalls.slice();
+        if (!$scope.radioSelected.id || ($scope.radioHeldKey && radioCallKey($scope.radioSelected) !== $scope.radioHeldKey)) {
+          $scope.radioSelected = $scope.radioDisplayedCalls[0] || {};
+        }
+        if ($scope.radioLive && !$scope.radioDisplayedCalls.length) {
+          var audio = radioAudio();
+          if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
+        }
+        if ($scope.radioLive && $scope.radioDisplayedCalls.length) $scope.playRadioCall($scope.radioDisplayedCalls[0], true);
+      }
+      $scope.scanAllRadio = function () {
+        $scope.radioHeldKey = '';
+        $scope.radioHeldLabel = '';
+        $scope.radioTalkgroupSelection = '';
+        applyRadioTalkgroup();
+      };
+      $scope.holdSelectedRadio = function () {
+        if (!$scope.radioSelected.talkgroup) return;
+        $scope.radioHeldKey = radioCallKey($scope.radioSelected);
+        $scope.radioHeldLabel = $scope.radioSelected.talkgroupLabel || ('Talkgroup ' + $scope.radioSelected.talkgroup);
+        $scope.radioTalkgroupSelection = $scope.radioHeldKey;
+        applyRadioTalkgroup();
+      };
+      $scope.selectRadioTalkgroup = function () {
+        $scope.radioHeldKey = $scope.radioTalkgroupSelection || '';
+        var channel = $scope.radioTalkgroups.filter(function (item) { return item.key === $scope.radioHeldKey; })[0];
+        $scope.radioHeldLabel = channel ? channel.label : '';
+        applyRadioTalkgroup();
+      };
+      function playNextRadioCall() {
+        if (!$scope.radioLive || !radioQueue.length) return;
+        $scope.playRadioCall(radioQueue.shift(), true);
+        $scope.$applyAsync();
+      }
+      $scope.playRadioCall = function (call, keepLive) {
+        if (!call || !call.audioUrl) return;
+        if (!keepLive) { $scope.radioLive = false; radioQueue = []; }
+        $scope.radioSelected = call;
+        $scope.radioPaused = false;
+        $scope.radioPlaybackError = '';
+        var audio = radioAudio();
+        if (audio) {
+          audio.src = call.audioUrl;
+          audio.onended = playNextRadioCall;
+          var playing = audio.play();
+          if (playing && playing.catch) playing.catch(function () {
+            $scope.$applyAsync(function () {
+              $scope.radioPaused = true;
+              $scope.radioPlaybackError = 'Playback was blocked. Tap the player once to allow audio.';
+            });
+          });
+        }
+      };
+      $scope.toggleRadioLive = function () {
+        $scope.radioLive = !$scope.radioLive;
+        radioQueue = [];
+        if ($scope.radioLive && $scope.radioDisplayedCalls.length) $scope.playRadioCall($scope.radioDisplayedCalls[0], true);
+        if (!$scope.radioLive) {
+          var audio = radioAudio();
+          if (audio) audio.pause();
+          $scope.radioPaused = true;
+        }
+      };
+      $scope.toggleRadioPause = function () {
+        var audio = radioAudio();
+        if (!audio) return;
+        if (audio.paused) {
+          var playing = audio.play();
+          if (playing && playing.catch) playing.catch(function () {});
+          $scope.radioPaused = false;
+        } else {
+          audio.pause();
+          $scope.radioPaused = true;
+        }
+      };
+      $scope.replayRadio = function () {
+        var audio = radioAudio();
+        if (!audio) return;
+        audio.currentTime = 0;
+        var playing = audio.play();
+        if (playing && playing.catch) playing.catch(function () {});
+        $scope.radioPaused = false;
+      };
+      $scope.skipRadio = function () {
+        if ($scope.radioDisplayedCalls.length) $scope.playRadioCall($scope.radioDisplayedCalls[0], $scope.radioLive);
+      };
       $scope.refreshRadio = function () {
-        if (!$scope.integrationFeatures.radio) return;
+        if (!$scope.integrationFeatures.radio || $scope.radioLoading) return;
         $scope.radioLoading = true;
         $scope.radioError = '';
-        Api.RadioCalls.get({limit: 25}).$promise.then(function (data) {
+        Api.RadioCalls.get({limit: 50}).$promise.then(function (data) {
+          var previousId = $scope.radioCalls.length ? $scope.radioCalls[0].id : null;
           $scope.radioCalls = data.calls || [];
+          $scope.radioSourceLabel = data.source === 'thinline' ? 'ThinLine Radio' : 'Rdio Scanner';
+          $scope.radioDisplayedCalls = $scope.radioHeldKey ? $scope.radioCalls.filter(function (call) {
+            return radioCallKey(call) === $scope.radioHeldKey;
+          }) : $scope.radioCalls.slice();
+          if (!$scope.radioSelected.id && $scope.radioDisplayedCalls.length) $scope.radioSelected = $scope.radioDisplayedCalls[0];
+          if ($scope.radioLive && previousId && $scope.radioCalls.length && $scope.radioCalls[0].id !== previousId) {
+            var latest = [];
+            for (var i = 0; i < $scope.radioCalls.length && $scope.radioCalls[i].id !== previousId; i++) latest.push($scope.radioCalls[i]);
+            radioQueue = radioQueue.concat(latest.reverse().filter(function (call) {
+              return !$scope.radioHeldKey || radioCallKey(call) === $scope.radioHeldKey;
+            }));
+            var audio = radioAudio();
+            if (audio && (audio.ended || (!audio.src && !audio.currentSrc))) playNextRadioCall();
+          }
           updateViewBadge('radio', radioKeys());
           $scope.radioLoading = false;
         }, function () {
@@ -901,6 +1045,12 @@
         });
       };
       <% if (login) { %>
+      Api.RadioTalkgroups.get().$promise.then(function (data) {
+        $scope.radioTalkgroups = (data.talkgroups || []).map(function (channel) {
+          channel.key = radioCallKey(channel);
+          return channel;
+        });
+      }, function () { $scope.radioTalkgroups = []; });
       $scope.refreshRadio();
       radioPoll = $interval($scope.refreshRadio, 15000);
       <% } %>

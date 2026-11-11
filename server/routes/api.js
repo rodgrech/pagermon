@@ -3110,16 +3110,37 @@ router.route('/central-west/adsb-lol-aircraft')
     });
   });
 
-// Read-only bridge to the local Rdio Scanner database. These routes require
+// Read-only radio history; Rdio SQLite and ThinLine bridge are separate sources.
+// These routes require
 // an authenticated browser session; PageMon API keys cannot retrieve radio
 // metadata or audio.
+router.route('/central-west/radio-talkgroups')
+  .get(isSessionUser, function (req, res) {
+    var radioConfig = integrationConfig('radio', { enabled: true, sourceMode: 'local' });
+    if (radioConfig.enabled === false || radioConfig.sourceMode !== 'thinline') {
+      return res.status(200).json({ talkgroups: [] });
+    }
+    var remoteBase = String(radioConfig.remoteUrl || '').replace(/\/$/, '');
+    if (!/^https?:\/\//i.test(remoteBase) || !radioConfig.remoteToken) {
+      return res.status(200).json({ talkgroups: [], available: false });
+    }
+    return axios.get(remoteBase + '/talkgroups', { timeout: 10000, headers: { Authorization: 'Bearer ' + radioConfig.remoteToken } })
+      .then(function (response) {
+        res.set('Cache-Control', 'private, max-age=60');
+        res.status(200).json({ talkgroups: Array.isArray(response.data.talkgroups) ? response.data.talkgroups : [] });
+      }).catch(function (error) {
+        logger.main.warn('ThinLine talkgroups unavailable: ' + error.message);
+        res.status(503).json({ error: 'Radio talkgroups are temporarily unavailable.' });
+      });
+  });
+
 router.route('/central-west/radio-calls')
   .get(isSessionUser, function (req, res) {
     var radioConfig = integrationConfig('radio', { enabled: true, sourceMode: 'local', databasePath: '/home/rodgrech/Applications/rdio-scanner.db', maximumCalls: 50 });
     if (radioConfig.enabled === false) return res.status(200).json({ disabled: true, calls: [], fetchedAt: Math.floor(Date.now() / 1000) });
     var maximumCalls = Math.min(Math.max(parseInt(radioConfig.maximumCalls, 10) || 50, 1), 100);
     var limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 25, 1), maximumCalls);
-    if (radioConfig.sourceMode === 'remote') {
+    if (radioConfig.sourceMode === 'remote' || radioConfig.sourceMode === 'thinline') {
       var remoteBase = String(radioConfig.remoteUrl || '').replace(/\/$/, '');
       if (!/^https?:\/\//i.test(remoteBase) || !radioConfig.remoteToken) return res.status(200).json({ calls: [], available: false, fetchedAt: Math.floor(Date.now() / 1000) });
       return axios.get(remoteBase + '/calls', { params: {limit: limit}, timeout: 10000, headers: {Authorization: 'Bearer ' + radioConfig.remoteToken} }).then(function(response) {
@@ -3132,8 +3153,8 @@ router.route('/central-west/radio-calls')
           delete row.dateTime; delete row.groupLabel; delete row.tagLabel; delete row.audioPath;
           row.audioUrl = '/api/central-west/radio-calls/' + row.id + '/audio';
         });
-        res.set('Cache-Control', 'private, no-store'); res.status(200).json({calls: rows, fetchedAt: Number(response.data.fetchedAt) || Math.floor(Date.now()/1000)});
-      }).catch(function(error) { logger.main.warn('Remote Rdio bridge unavailable: ' + error.message); res.status(503).json({error:'Remote radio history is temporarily unavailable.'}); });
+        res.set('Cache-Control', 'private, no-store'); res.status(200).json({calls: rows, source: response.data.source || 'rdio', fetchedAt: Number(response.data.fetchedAt) || Math.floor(Date.now()/1000)});
+      }).catch(function(error) { logger.main.warn('Remote radio bridge unavailable: ' + error.message); res.status(503).json({error:'Remote radio history is temporarily unavailable.'}); });
     }
     var rdioDatabasePath = path.resolve(radioConfig.databasePath);
     if (!fs.existsSync(rdioDatabasePath)) {
@@ -3189,14 +3210,14 @@ router.route('/central-west/radio-calls/:id/audio')
     if (radioConfig.enabled === false) return res.status(404).json({ error: 'Radio integration is disabled.' });
     var id = parseInt(req.params.id, 10);
     if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'Invalid radio call ID.' });
-    if (radioConfig.sourceMode === 'remote') {
+    if (radioConfig.sourceMode === 'remote' || radioConfig.sourceMode === 'thinline') {
       var remoteBase = String(radioConfig.remoteUrl || '').replace(/\/$/, '');
       if (!/^https?:\/\//i.test(remoteBase) || !radioConfig.remoteToken) return res.status(404).json({error:'Remote radio integration is not configured.'});
       var headers = {Authorization:'Bearer ' + radioConfig.remoteToken}; if (req.headers.range) headers.Range=req.headers.range;
       return axios.get(remoteBase + '/calls/' + id + '/audio', {timeout:15000, responseType:'arraybuffer', headers:headers, validateStatus:function(status){return status===200||status===206;}}).then(function(response) {
         ['content-type','content-length','content-range','accept-ranges','cache-control'].forEach(function(name){if(response.headers[name]) res.set(name,response.headers[name]);});
         res.status(response.status).end(Buffer.from(response.data));
-      }).catch(function(error){logger.main.warn('Remote Rdio audio unavailable: '+error.message);res.status(503).json({error:'Remote radio audio is temporarily unavailable.'});});
+      }).catch(function(error){logger.main.warn('Remote radio audio unavailable: '+error.message);res.status(503).json({error:'Remote radio audio is temporarily unavailable.'});});
     }
     var rdioDatabasePath = path.resolve(radioConfig.databasePath);
     if (!fs.existsSync(rdioDatabasePath)) return res.status(404).json({ error: 'Radio integration is not configured on this server.' });

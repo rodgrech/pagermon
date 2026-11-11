@@ -1,9 +1,9 @@
 {
-  "version": "1.11.12",
-  "title": "Central West Alerts 1.11.12",
+  "version": "1.11.13",
+  "title": "Central West Alerts 1.11.13",
   "changes": [
-    "Added a separate RFS incident polygons preview layer to the live map, with its own layer toggle.",
-    "Polygon boundaries come from the same official RFS incident feed as the markers, without changing the published marker positions.",
-    "Incidents without a published polygon continue to display their normal marker."
+    "Added ThinLine Radio as a separate, selectable source alongside Rdio Scanner, with recent call history and playback.",
+    "Added Scan all, Hold TG and talkgroup selection for ThinLine call playback.",
+    "Start Live now begins playing automatically; audio continues while switching between CWA home tabs."
   ]
 }

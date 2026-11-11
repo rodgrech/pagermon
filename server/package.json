@@ -1,6 +1,6 @@
 {
   "name": "pagermon",
-  "version": "1.11.12",
+  "version": "1.11.13",
   "private": true,
   "license": "Unlicense",
   "scripts": {
