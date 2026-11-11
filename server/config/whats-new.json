@@ -1,9 +1,9 @@
 {
-  "version": "1.11.13",
-  "title": "Central West Alerts 1.11.13",
+  "version": "1.11.14",
+  "title": "Central West Alerts 1.11.14",
   "changes": [
-    "Added ThinLine Radio as a separate, selectable source alongside Rdio Scanner, with recent call history and playback.",
-    "Added Scan all, Hold TG and talkgroup selection for ThinLine call playback.",
-    "Start Live now begins playing automatically; audio continues while switching between CWA home tabs."
+    "Added self-service password reset by email from the sign-in page, available when SMTP and a public HTTPS URL are configured.",
+    "Reset links expire after 30 minutes, work once, and revoke existing sessions and trusted two-factor devices.",
+    "Fixed the reset forms so the entered account and new password reach the server."
   ]
 }

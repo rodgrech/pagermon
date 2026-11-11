@@ -12,6 +12,8 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
                 Reset: $resource('/auth/reset/', null, {
                     'post': { method: 'POST', isArray: false }
                 }),
+                ForgotPassword: $resource('/auth/forgot-password', null, {'post': {method: 'POST'}}),
+                PasswordResetLink: $resource('/auth/password-reset/:token', {token: '@token'}, {'post': {method: 'POST'}}),
                 UserDetail: $resource('/api/user/:id', { id: '@id' }, {
                     'post': { method: 'POST', isArray: false }
                 }),
@@ -199,6 +201,31 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
         };
     }])
 
+    .controller('ForgotPasswordController', ['$scope', 'Api', function($scope, Api) {
+        $scope.form = {identity: ''};
+        $scope.submit = function() {
+            $scope.loading = true; $scope.error = '';
+            Api.ForgotPassword.post({}, {identity: $scope.form.identity}).$promise.then(function(response) {
+                $scope.loading = false; $scope.sent = true; $scope.message = response.message;
+            }, function(response) {
+                $scope.loading = false; $scope.error = response.status === 429 ? 'Please wait before trying again.' : 'Unable to process the request right now.';
+            });
+        };
+    }])
+
+    .controller('PasswordResetLinkController', ['$scope', '$routeParams', 'Api', function($scope, $routeParams, Api) {
+        $scope.form = {password: '', confirmPassword: ''};
+        $scope.submit = function() {
+            if ($scope.form.password !== $scope.form.confirmPassword) { $scope.error = 'Passwords do not match.'; return; }
+            $scope.loading = true; $scope.error = '';
+            Api.PasswordResetLink.post({token: $routeParams.token}, {password: $scope.form.password}).$promise.then(function(response) {
+                $scope.loading = false; $scope.done = true; $scope.message = response.message;
+            }, function(response) {
+                $scope.loading = false; $scope.error = (response.data && response.data.error) || 'Unable to reset password.';
+            });
+        };
+    }])
+
     .controller('ProfileController', ['$scope', '$routeParams', 'Api', '$uibModal', '$filter', '$location', '$timeout', '$window', function ($scope, $routeParams, Api, $uibModal, $filter, $location, $timeout, $window) {
         $scope.alertMessage = {};
         $scope.loading = true;
@@ -351,6 +378,14 @@ angular.module('app', ['ngRoute', 'ngResource', 'ngSanitize', 'angular-uuid', 'u
             .when('/register', {
                 templateUrl: '/templates/auth/register.html',
                 controller: 'RegisterController'
+            })
+            .when('/forgot-password', {
+                templateUrl: '/templates/auth/forgot-password.html',
+                controller: 'ForgotPasswordController'
+            })
+            .when('/password-reset/:token', {
+                templateUrl: '/templates/auth/password-reset-link.html',
+                controller: 'PasswordResetLinkController'
             })
             .when('/reset', {
                 templateUrl: '/templates/auth/reset.html',

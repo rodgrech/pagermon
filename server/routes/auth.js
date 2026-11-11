@@ -2,6 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const moment = require('moment');
 const nconf = require('nconf');
 
@@ -18,6 +19,7 @@ const passport = require('../auth/local');
 const authHelper = require('../middleware/authhelper')
 const twoFactor = require('../lib/twoFactor');
 const approvalMailer = require('../lib/accountApprovalMailer');
+const passwordResetMailer = require('../lib/passwordResetMailer');
 const webPush = require('../lib/webPush');
 const QRCode = require('qrcode');
 
@@ -50,6 +52,20 @@ const twoFactorLimiter = rateLimit({
         legacyHeaders: false,
         handler: lockoutCallback,
 });
+
+const passwordResetLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        limit: 3,
+        standardHeaders: true,
+        legacyHeaders: false,
+        handler: lockoutCallback,
+});
+
+function resetTokenHash(token) {
+        return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+const resetRequestResponse = {message: 'If this account can receive a reset email, a link will arrive shortly.'};
 
 // Keep DATETIME writes portable. SQLite accepts JavaScript millisecond timestamps,
 // but MySQL/MariaDB correctly reject them for DATETIME columns.
@@ -405,6 +421,69 @@ router.route('/register')
                 logger.auth.error('Registration attempted with registration disabled');
                 res.status(400).json({ error: 'registration disabled' });
         });
+
+router.get('/forgot-password', function(req, res) {
+        res.render('auth', {pageTitle: 'Password reset'});
+});
+
+router.post('/forgot-password', passwordResetLimiter, function(req, res, next) {
+        const identity = String(req.body.identity || '').trim().toLowerCase();
+        if (!identity || identity.length > 254) return res.status(200).json(resetRequestResponse);
+        if (!passwordResetMailer.configured()) {
+                logger.auth.warn('Password reset requested but email or public URL is not configured');
+                return res.status(200).json(resetRequestResponse);
+        }
+        db('users').whereRaw('LOWER(email) = ?', [identity]).orWhereRaw('LOWER(username) = ?', [identity]).first()
+                .then(function(user) {
+                        if (!user || user.status !== 'active' || user.approvalpending || !user.email || user.email === 'none@none.com') return null;
+                        const token = crypto.randomBytes(32).toString('hex');
+                        const now = currentDatabaseDatetime();
+                        const expires = moment().add(30, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+                        return db.transaction(function(trx) {
+                                return trx('password_reset_tokens').where('user_id', user.id).del()
+                                        .then(function() { return trx('password_reset_tokens').insert({user_id: user.id, token_hash: resetTokenHash(token), expires_at: expires}); });
+                        }).then(function() { return passwordResetMailer.send(user, token); })
+                                .then(function(sent) {
+                                        if (!sent) return db('password_reset_tokens').where({user_id: user.id, token_hash: resetTokenHash(token)}).del();
+                                        logger.auth.info('Password reset email requested for user ID ' + user.id + ' at ' + now);
+                                });
+                }).then(function() { res.status(200).json(resetRequestResponse); }).catch(next);
+});
+
+router.get('/password-reset/:token', function(req, res) {
+        res.set('Cache-Control', 'no-store');
+        res.set('Referrer-Policy', 'no-referrer');
+        res.set('X-Robots-Tag', 'noindex, nofollow');
+        res.render('auth', {pageTitle: 'Password reset'});
+});
+
+router.post('/password-reset/:token', passwordResetLimiter, function(req, res, next) {
+        const token = String(req.params.token || '');
+        const password = String(req.body.password || '');
+        if (!/^[0-9a-f]{64}$/i.test(token)) return res.status(400).json({error: 'This reset link is invalid or expired.'});
+        if (password.length < 12 || password.length > 128) return res.status(400).json({error: 'Choose a password between 12 and 128 characters.'});
+        const now = currentDatabaseDatetime();
+        const hash = bcrypt.hashSync(password, 12);
+        db.transaction(function(trx) {
+                return trx('password_reset_tokens').where({token_hash: resetTokenHash(token)}).whereNull('used_at').where('expires_at', '>', now).first()
+                        .then(function(record) {
+                                if (!record) return false;
+                                return trx('password_reset_tokens').where({id: record.id}).whereNull('used_at').update({used_at: now})
+                                        .then(function(changed) {
+                                                if (changed !== 1) return false;
+                                                return trx('users').where({id: record.user_id, status: 'active'}).update({password: hash, password_reset_at: now})
+                                                        .then(function(updated) {
+                                                                if (updated !== 1) return false;
+                                                                return trx('two_factor_devices').where('user_id', record.user_id).del().then(function() { return true; });
+                                                        });
+                                        });
+                        });
+        }).then(function(updated) {
+                if (!updated) return res.status(400).json({error: 'This reset link is invalid or expired.'});
+                logger.auth.info('Password reset completed');
+                res.status(200).json({message: 'Password updated. You can now sign in.'});
+        }).catch(next);
+});
 
 router.route('/reset')
         .get(function(req, res) {

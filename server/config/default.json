@@ -55,6 +55,8 @@
     "requireApproval": false,
     "approvalEmailsEnabled": false,
     "approvalAdminRecipients": "",
+    "passwordResetEnabled": false,
+    "passwordResetBaseUrl": "",
     "requireAdminTwoFactor": false,
     "twoFactorRememberDays": 30,
     "user": "admin",

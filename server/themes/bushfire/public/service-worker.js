@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pagermon-bushfire-static-v17-1.11.13';
+const CACHE_NAME = 'pagermon-bushfire-static-v18-1.11.14';
 const STATIC_ASSETS = [
   '/stylesheets/style.css',
   '/stylesheets/central-west.css',

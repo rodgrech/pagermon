@@ -1,3 +1,10 @@
+# 1.11.14 updates - 2026-11-12
+
+* Added an optional self-service password reset flow, with a sign-in link and email request and new-password pages across all three themes.
+* Added rate-limited, account-neutral requests; hashed, single-use reset tokens that expire after 30 minutes; and session and trusted 2FA device invalidation after reset.
+* Added SMTP/public HTTPS URL settings and a portable SQLite/MySQL migration.
+* Fixed Angular form bindings so the entered identity and new password are submitted correctly.
+
 # 1.11.13 updates - 2026-11-11
 
 * Added ThinLine Radio as an explicitly selected, read-only alternative to Rdio Scanner, with an authenticated LAN bridge for call history, audio and talkgroups.
